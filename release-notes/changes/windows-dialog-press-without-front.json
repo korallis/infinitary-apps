@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-dialog-press-without-front",
+      "reason": "The Windows installer check presses an app dialog's button with the dialog's own click message instead of Enter, which needs no keyboard and no front, so another window in front, such as OneDrive's backup prompt, can no longer leave the check waiting; the app itself is unchanged."
+    }
+  ]
+}

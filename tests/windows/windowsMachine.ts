@@ -172,17 +172,17 @@ export function stillRunning(pids: readonly number[]): number[] {
  * button's label rather than the button, so the press goes to the nearest
  * element that can be pressed; a classic dialog's button that offers no
  * such pattern gets its window's own click message; failing both, the
- * press brings the dialog to the front, focuses the button and presses
- * Enter as a person's keyboard would, and only once Windows shows both:
- * a key sent while another window is in front would go to that window
- * instead. When nothing could be pressed and
- * treeFile is given, the dialog's accessibility tree is written there.
+ * task dialog's button, which shows no pattern either, gets its dialog's
+ * own click message. None of these needs the dialog in front, where
+ * another window, such as OneDrive's backup prompt, may stay. When nothing
+ * could be pressed and treeFile is given, the dialog's accessibility tree
+ * is written there.
  */
 export function pressDialogButton(pid: number, button: string, treeFile?: string): boolean {
   return ps<boolean>(
     `
     $ErrorActionPreference = 'Stop'
-    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Windows.Forms
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
     $A = [System.Windows.Automation.AutomationElement]
     $invoke = [System.Windows.Automation.InvokePattern]::Pattern
     $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
@@ -207,35 +207,16 @@ export function pressDialogButton(pid: number, button: string, treeFile?: string
           }
           $pressed = [InfDialog.Button]::PostMessage([System.IntPtr]$candidate.Current.NativeWindowHandle, 0x00F5, [System.IntPtr]::Zero, [System.IntPtr]::Zero)
         }
-        # Enter goes to whatever window is in front, so it is pressed only once the dialog is in
-        # front with the button focused: a notification that took the front, such as Windows
-        # Security's, would otherwise take the key and open itself while the dialog stays up.
-        if (-not $pressed -and $candidate.Current.IsKeyboardFocusable -and $window.Current.NativeWindowHandle -ne 0) {
-          if (-not ('InfDialog.Front' -as [type])) {
-            Add-Type -Name Front -Namespace InfDialog -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(System.IntPtr hWnd); [DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern void keybd_event(byte key, byte scan, uint flags, System.UIntPtr extra);'
+        # A task dialog's button, as each of Electron's buttons on Windows is, shows in this tree
+        # as a pane that offers no pattern, named by its id (CommandLink_100, CommandButton_1).
+        # The dialog's own click message presses that id without the focus and capture the
+        # button's own click needs, which a window keeping the front takes away.
+        if (-not $pressed -and $candidate.Current.AutomationId -match '^Command(Link|Button)_(\\d+)$' -and [System.Windows.Automation.TreeWalker]::RawViewWalker.GetParent($candidate).Current.ClassName -eq 'TaskDialog' -and $window.Current.NativeWindowHandle -ne 0) {
+          if (-not ('InfDialog.Button' -as [type])) {
+            Add-Type -Name Button -Namespace InfDialog -MemberDefinition '[DllImport("user32.dll")] public static extern bool PostMessage(System.IntPtr hWnd, uint msg, System.IntPtr w, System.IntPtr l);'
           }
-          $front = [System.IntPtr]$window.Current.NativeWindowHandle
-          # Windows lets a program bring another window to the front just after a key press of its own.
-          # An unassigned key (0xE8) between Alt's press and release keeps Alt alone from opening the
-          # window's menu, which would then take the Enter below.
-          [InfDialog.Front]::keybd_event(0x12, 0, 0, [System.UIntPtr]::Zero)
-          [InfDialog.Front]::keybd_event(0xE8, 0, 0, [System.UIntPtr]::Zero)
-          [InfDialog.Front]::keybd_event(0xE8, 0, 2, [System.UIntPtr]::Zero)
-          [InfDialog.Front]::keybd_event(0x12, 0, 2, [System.UIntPtr]::Zero)
-          [void][InfDialog.Front]::SetForegroundWindow($front)
-          try { $candidate.SetFocus() } catch { }
-          Start-Sleep -Milliseconds 300
-          # The focus may sit on the button that carries the words' element, as the press above climbs.
-          $focused = $A::FocusedElement
-          $onButton = $false
-          $e = $candidate
-          for ($i = 0; $i -lt 3 -and $e -and $focused -and -not $onButton; $i++) {
-            if ($focused.Equals($e)) { $onButton = $true } else { $e = $walker.GetParent($e) }
-          }
-          if ([InfDialog.Front]::GetForegroundWindow() -eq $front -and $onButton) {
-            [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
-            $pressed = $true
-          }
+          # TDM_CLICK_BUTTON
+          $pressed = [InfDialog.Button]::PostMessage([System.IntPtr]$window.Current.NativeWindowHandle, 0x0466, [System.IntPtr][int]$Matches[2], [System.IntPtr]::Zero)
         }
         if ($pressed) { break }
       }
