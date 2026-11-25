@@ -94362,6 +94362,1037 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Close details`;
   }
+  function settingsUsageConnectionAdd() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إضافة اتصال`;
+      case "de":
+        return `Verbindung hinzufügen`;
+      case "es":
+        return `Agregar conexión`;
+      case "fr":
+        return `Ajouter une connexion`;
+      case "ja":
+        return `接続を追加`;
+      case "ko":
+        return `연결 추가`;
+      case "pt-BR":
+        return `Adicionar conexão`;
+      case "zh-Hans":
+        return `添加连接`;
+      case "zh-Hant":
+        return `新增連線`;
+      case "en-XA":
+        return `[Åðð çöññéçţîöñ ~~~~~]`;
+      case "ar-XB":
+        return `‮Add connection‬`;
+    }
+    return `Add connection`;
+  }
+  function settingsUsageConnectionAddHeader() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إضافة ترويسة`;
+      case "de":
+        return `Header hinzufügen`;
+      case "es":
+        return `Agregar encabezado`;
+      case "fr":
+        return `Ajouter un en-tête`;
+      case "ja":
+        return `ヘッダーを追加`;
+      case "ko":
+        return `헤더 추가`;
+      case "pt-BR":
+        return `Adicionar cabeçalho`;
+      case "zh-Hans":
+        return `添加请求头`;
+      case "zh-Hant":
+        return `新增標頭`;
+      case "en-XA":
+        return `[Åðð ĥéáðéŕ ~~~~]`;
+      case "ar-XB":
+        return `‮Add header‬`;
+    }
+    return `Add header`;
+  }
+  function settingsUsageConnectionAddress() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `العنوان`;
+      case "de":
+        return `Adresse`;
+      case "es":
+        return `Dirección`;
+      case "fr":
+        return `Adresse`;
+      case "ja":
+        return `アドレス`;
+      case "ko":
+        return `주소`;
+      case "pt-BR":
+        return `Endereço`;
+      case "zh-Hans":
+        return `地址`;
+      case "zh-Hant":
+        return `位址`;
+      case "en-XA":
+        return `[Åððŕéšš ~~~]`;
+      case "ar-XB":
+        return `‮Address‬`;
+    }
+    return `Address`;
+  }
+  function settingsUsageConnectionAddressHint() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عنوان OpenTelemetry الخاص بالأداة عبر HTTP. يذهب كل نوع من السجلات إلى مساره الخاص تحته.`;
+      case "de":
+        return `Die OpenTelemetry-Adresse des Werkzeugs über HTTP. Jede Art von Eintrag geht an einen eigenen Pfad darunter.`;
+      case "es":
+        return `La dirección de OpenTelemetry de la herramienta por HTTP. Cada tipo de registro va a su propia ruta debajo de ella.`;
+      case "fr":
+        return `L’adresse OpenTelemetry de l’outil en HTTP. Chaque type d’entrée va vers son propre chemin sous cette adresse.`;
+      case "ja":
+        return `ツールの HTTP 経由の OpenTelemetry アドレスです。記録の種類ごとに、その下のそれぞれのパスへ送ります。`;
+      case "ko":
+        return `도구의 HTTP OpenTelemetry 주소입니다. 기록 종류마다 그 아래의 경로로 보냅니다.`;
+      case "pt-BR":
+        return `O endereço OpenTelemetry da ferramenta por HTTP. Cada tipo de registro vai para um caminho próprio abaixo dele.`;
+      case "zh-Hans":
+        return `该工具通过 HTTP 接收 OpenTelemetry 的地址。每类记录发往它下面各自的路径。`;
+      case "zh-Hant":
+        return `該工具透過 HTTP 接收 OpenTelemetry 的位址。每種記錄會送往它底下各自的路徑。`;
+      case "en-XA":
+        return `[Ţĥé ţööļ’š ÖþéñŢéļéɱéţŕý áððŕéšš öṽéŕ ĤŢŢÞ. Éáçĥ ķîñð öƒ ŕéçöŕð ĝöéš ţö îţš öŵñ þáţĥ ûñðéŕ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The tool’s OpenTelemetry address over HTTP. Each kind of record goes to its own path under it.‬`;
+    }
+    return `The tool’s OpenTelemetry address over HTTP. Each kind of record goes to its own path under it.`;
+  }
+  function settingsUsageConnectionCancel() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إلغاء`;
+      case "de":
+        return `Abbrechen`;
+      case "es":
+        return `Cancelar`;
+      case "fr":
+        return `Annuler`;
+      case "ja":
+        return `キャンセル`;
+      case "ko":
+        return `취소`;
+      case "pt-BR":
+        return `Cancelar`;
+      case "zh-Hans":
+        return `取消`;
+      case "zh-Hant":
+        return `取消`;
+      case "en-XA":
+        return `[Çáñçéļ ~~]`;
+      case "ar-XB":
+        return `‮Cancel‬`;
+    }
+    return `Cancel`;
+  }
+  function settingsUsageConnectionClaudeCode(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل استخدام طاقمك إلى ${host} بتنسيق Claude Code: النماذج والرموز والتكلفة التقديرية، ولا يرسل المطالبات أو الردود أبدًا.`;
+      case "de":
+        return `Sendet die Nutzung deiner Crew an ${host} im Format von Claude Code: Modelle, Tokens und geschätzte Kosten, nie Prompts oder Antworten.`;
+      case "es":
+        return `Envía el uso de tu tripulación a ${host} en el formato de Claude Code: modelos, tokens y costo estimado, nunca prompts ni respuestas.`;
+      case "fr":
+        return `Envoie l’utilisation de votre équipage à ${host} au format de Claude Code : modèles, tokens et coût estimé, jamais de prompts ni de réponses.`;
+      case "ja":
+        return `乗組員の使用量を Claude Code の形式で ${host} に送ります。モデル、トークン、推定コストだけで、プロンプトや返答は送りません。`;
+      case "ko":
+        return `선원들의 사용량을 Claude Code 형식으로 ${host}에 보냅니다. 모델, 토큰, 예상 비용만 보내며 프롬프트나 답변은 보내지 않습니다.`;
+      case "pt-BR":
+        return `Envia o uso da sua tripulação para ${host} no formato do Claude Code: modelos, tokens e custo estimado, nunca prompts ou respostas.`;
+      case "zh-Hans":
+        return `以 Claude Code 的格式把船员的用量发送到 ${host}：模型、token 和预估费用，从不包含提示或回复。`;
+      case "zh-Hant":
+        return `以 Claude Code 的格式把船員的用量傳送到 ${host}：模型、token 和預估費用，絕不包含提示或回覆。`;
+      case "en-XA":
+        return `[Šéñðš ýöûŕ çŕéŵ’š ûšáĝé ţö ${host} îñ Çļáûðé Çöðé’š ƒöŕɱáţ: ɱöðéļš, ţöķéñš áñð éšţîɱáţéð çöšţ, ñéṽéŕ þŕöɱþţš öŕ ŕéþļîéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sends your crew’s usage to ‬${host}‮ in Claude Code’s format: models, tokens and estimated cost, never prompts or replies.‬`;
+    }
+    return `Sends your crew’s usage to ${host} in Claude Code’s format: models, tokens and estimated cost, never prompts or replies.`;
+  }
+  function settingsUsageConnectionEdit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعديل`;
+      case "de":
+        return `Bearbeiten`;
+      case "es":
+        return `Editar`;
+      case "fr":
+        return `Modifier`;
+      case "ja":
+        return `編集`;
+      case "ko":
+        return `편집`;
+      case "pt-BR":
+        return `Editar`;
+      case "zh-Hans":
+        return `编辑`;
+      case "zh-Hant":
+        return `編輯`;
+      case "en-XA":
+        return `[Éðîţ ~~]`;
+      case "ar-XB":
+        return `‮Edit‬`;
+    }
+    return `Edit`;
+  }
+  function settingsUsageConnectionFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر حفظ الاتصال. حاول مرة أخرى.`;
+      case "de":
+        return `Die Verbindung konnte nicht gespeichert werden. Bitte versuch es noch einmal.`;
+      case "es":
+        return `No se pudo guardar la conexión. Inténtalo de nuevo.`;
+      case "fr":
+        return `Impossible d’enregistrer la connexion. Veuillez réessayer.`;
+      case "ja":
+        return `接続を保存できませんでした。もう一度お試しください。`;
+      case "ko":
+        return `연결을 저장하지 못했습니다. 다시 시도하세요.`;
+      case "pt-BR":
+        return `Não foi possível salvar a conexão. Tente de novo.`;
+      case "zh-Hans":
+        return `无法保存连接。请再试一次。`;
+      case "zh-Hant":
+        return `無法儲存連線。請再試一次。`;
+      case "en-XA":
+        return `[Çöûļð ñöţ šáṽé ţĥé çöññéçţîöñ. Þļéášé ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Could not save the connection. Please try again.‬`;
+    }
+    return `Could not save the connection. Please try again.`;
+  }
+  function settingsUsageConnectionHeaderKept() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `محفوظة في الأسرار · اكتب لاستبدالها`;
+      case "de":
+        return `In Geheimnisse aufbewahrt · zum Ersetzen tippen`;
+      case "es":
+        return `Guardado en Secretos · escribe para reemplazarlo`;
+      case "fr":
+        return `Gardé dans Secrets · saisissez pour le remplacer`;
+      case "ja":
+        return `シークレットに保管済み・入力すると置き換え`;
+      case "ko":
+        return `비밀 정보에 보관됨 · 바꾸려면 입력`;
+      case "pt-BR":
+        return `Guardado em Segredos · digite para substituir`;
+      case "zh-Hans":
+        return `已保存在机密中 · 输入以替换`;
+      case "zh-Hant":
+        return `已保存在機密中 · 輸入以取代`;
+      case "en-XA":
+        return `[Ķéþţ îñ Šéçŕéţš · ţýþé ţö ŕéþļáçé ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Kept in Secrets · type to replace‬`;
+    }
+    return `Kept in Secrets · type to replace`;
+  }
+  function settingsUsageConnectionHeaderName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اسم الترويسة`;
+      case "de":
+        return `Header-Name`;
+      case "es":
+        return `Nombre del encabezado`;
+      case "fr":
+        return `Nom de l’en-tête`;
+      case "ja":
+        return `ヘッダー名`;
+      case "ko":
+        return `헤더 이름`;
+      case "pt-BR":
+        return `Nome do cabeçalho`;
+      case "zh-Hans":
+        return `请求头名称`;
+      case "zh-Hant":
+        return `標頭名稱`;
+      case "en-XA":
+        return `[Ĥéáðéŕ ñáɱé ~~~~]`;
+      case "ar-XB":
+        return `‮Header name‬`;
+    }
+    return `Header name`;
+  }
+  function settingsUsageConnectionHeaderValue() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `قيمة الترويسة`;
+      case "de":
+        return `Header-Wert`;
+      case "es":
+        return `Valor del encabezado`;
+      case "fr":
+        return `Valeur de l’en-tête`;
+      case "ja":
+        return `ヘッダーの値`;
+      case "ko":
+        return `헤더 값`;
+      case "pt-BR":
+        return `Valor do cabeçalho`;
+      case "zh-Hans":
+        return `请求头值`;
+      case "zh-Hant":
+        return `標頭值`;
+      case "en-XA":
+        return `[Ĥéáðéŕ ṽáļûé ~~~~]`;
+      case "ar-XB":
+        return `‮Header value‬`;
+    }
+    return `Header value`;
+  }
+  function settingsUsageConnectionHeaders() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الترويسات`;
+      case "de":
+        return `Header`;
+      case "es":
+        return `Encabezados`;
+      case "fr":
+        return `En-têtes`;
+      case "ja":
+        return `ヘッダー`;
+      case "ko":
+        return `헤더`;
+      case "pt-BR":
+        return `Cabeçalhos`;
+      case "zh-Hans":
+        return `请求头`;
+      case "zh-Hant":
+        return `標頭`;
+      case "en-XA":
+        return `[Ĥéáðéŕš ~~~]`;
+      case "ar-XB":
+        return `‮Headers‬`;
+    }
+    return `Headers`;
+  }
+  function settingsUsageConnectionHeadersHint() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `محفوظة في الأسرار ولا تُرسَل إلا إلى هذا العنوان.`;
+      case "de":
+        return `In Geheimnisse aufbewahrt und nur an diese Adresse gesendet.`;
+      case "es":
+        return `Guardados en Secretos y enviados solo a esta dirección.`;
+      case "fr":
+        return `Gardés dans Secrets et envoyés uniquement à cette adresse.`;
+      case "ja":
+        return `シークレットに保管され、このアドレスにだけ送られます。`;
+      case "ko":
+        return `비밀 정보에 보관되며 이 주소로만 보냅니다.`;
+      case "pt-BR":
+        return `Guardados em Segredos e enviados só para este endereço.`;
+      case "zh-Hans":
+        return `保存在机密中，只发送到这个地址。`;
+      case "zh-Hant":
+        return `保存在機密中，只傳送到這個位址。`;
+      case "en-XA":
+        return `[Ķéþţ îñ Šéçŕéţš áñð šéñţ öñļý ţö ţĥîš áððŕéšš. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Kept in Secrets and sent only to this address.‬`;
+    }
+    return `Kept in Secrets and sent only to this address.`;
+  }
+  function settingsUsageConnectionKeep() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الإبقاء على الاتصال`;
+      case "de":
+        return `Verbindung behalten`;
+      case "es":
+        return `Conservar conexión`;
+      case "fr":
+        return `Garder la connexion`;
+      case "ja":
+        return `接続を残す`;
+      case "ko":
+        return `연결 유지`;
+      case "pt-BR":
+        return `Manter conexão`;
+      case "zh-Hans":
+        return `保留连接`;
+      case "zh-Hant":
+        return `保留連線`;
+      case "en-XA":
+        return `[Ķééþ çöññéçţîöñ ~~~~~]`;
+      case "ar-XB":
+        return `‮Keep connection‬`;
+    }
+    return `Keep connection`;
+  }
+  function settingsUsageConnectionNone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أرسل استخدام طاقمك إلى أداة مراقبة أو تتبّع تختارها، مثل Grafana أو Datadog أو Langfuse. لا يُرسَل شيء حتى تضيف واحدة.`;
+      case "de":
+        return `Sende die Nutzung deiner Crew an ein Überwachungs- oder Tracing-Werkzeug deiner Wahl, etwa Grafana, Datadog oder Langfuse. Bis du eines hinzufügst, wird nichts gesendet.`;
+      case "es":
+        return `Envía el uso de tu tripulación a una herramienta de monitoreo o trazas que elijas, como Grafana, Datadog o Langfuse. No se envía nada hasta que agregues una.`;
+      case "fr":
+        return `Envoyez l’utilisation de votre équipage à un outil de supervision ou de traces de votre choix, comme Grafana, Datadog ou Langfuse. Rien n’est envoyé tant que vous n’en ajoutez pas un.`;
+      case "ja":
+        return `乗組員の使用量を、Grafana、Datadog、Langfuse など、指定した監視・トレースツールに送ります。追加するまで何も送られません。`;
+      case "ko":
+        return `선원들의 사용량을 Grafana, Datadog, Langfuse처럼 직접 지정한 모니터링 또는 추적 도구로 보냅니다. 추가하기 전에는 아무것도 보내지 않습니다.`;
+      case "pt-BR":
+        return `Envie o uso da sua tripulação para uma ferramenta de monitoramento ou rastreamento que você escolher, como Grafana, Datadog ou Langfuse. Nada é enviado até você adicionar uma.`;
+      case "zh-Hans":
+        return `把船员的用量发送到你指定的监控或追踪工具，例如 Grafana、Datadog 或 Langfuse。在你添加之前，什么都不会发送。`;
+      case "zh-Hant":
+        return `把船員的用量傳送到你指定的監控或追蹤工具，例如 Grafana、Datadog 或 Langfuse。在你新增之前，不會傳送任何內容。`;
+      case "en-XA":
+        return `[Šéñð ýöûŕ çŕéŵ’š ûšáĝé ţö á ɱöñîţöŕîñĝ öŕ ţŕáçîñĝ ţööļ ýöû ñáɱé, šûçĥ áš Ĝŕáƒáñá, Ðáţáðöĝ öŕ Ļáñĝƒûšé. Ñöţĥîñĝ îš šéñţ ûñţîļ ýöû áðð öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Send your crew’s usage to a monitoring or tracing tool you name, such as Grafana, Datadog or Langfuse. Nothing is sent until you add one.‬`;
+    }
+    return `Send your crew’s usage to a monitoring or tracing tool you name, such as Grafana, Datadog or Langfuse. Nothing is sent until you add one.`;
+  }
+  function settingsUsageConnectionProblemAddress() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يمكن استخدام هذا العنوان: اكتبه كاملًا مبتدئًا بـ https://، دون بيانات دخول أو استعلام أو #.`;
+      case "de":
+        return `Diese Adresse lässt sich nicht verwenden: Schreib sie vollständig, beginnend mit https://, ohne Anmeldung, Abfrage oder #.`;
+      case "es":
+        return `Esa dirección no se puede usar: escríbela completa, empezando por https://, sin inicio de sesión, consulta ni #.`;
+      case "fr":
+        return `Cette adresse ne peut pas être utilisée : écrivez-la en entier, en commençant par https://, sans identifiant, requête ni #.`;
+      case "ja":
+        return `このアドレスは使えません。https:// から始めて全体を書き、サインイン情報、クエリ、# を含めないでください。`;
+      case "ko":
+        return `이 주소는 사용할 수 없습니다. https://로 시작하는 전체 주소를 쓰고 로그인 정보, 쿼리, #은 넣지 마세요.`;
+      case "pt-BR":
+        return `Esse endereço não pode ser usado: escreva-o inteiro, começando com https://, sem login, consulta ou #.`;
+      case "zh-Hans":
+        return `这个地址无法使用：请写出完整地址，以 https:// 开头，不要包含登录信息、查询或 #。`;
+      case "zh-Hant":
+        return `這個位址無法使用：請寫出完整位址，以 https:// 開頭，不要包含登入資訊、查詢或 #。`;
+      case "en-XA":
+        return `[Ţĥáţ áððŕéšš çáññöţ ƀé ûšéð: ŵŕîţé îţ ŵĥöļé, šţáŕţîñĝ ŵîţĥ ĥţţþš://, ŵîţĥ ñö šîĝñ-îñ, ǫûéŕý öŕ # îñ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That address cannot be used: write it whole, starting with https://, with no sign-in, query or # in it.‬`;
+    }
+    return `That address cannot be used: write it whole, starting with https://, with no sign-in, query or # in it.`;
+  }
+  function settingsUsageConnectionProblemDestination() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يشير هذا العنوان إلى مكان لا يتصل به Infinitary.`;
+      case "de":
+        return `Diese Adresse zeigt an einen Ort, mit dem sich Infinitary nicht verbindet.`;
+      case "es":
+        return `Esa dirección apunta a un lugar al que Infinitary no se conecta.`;
+      case "fr":
+        return `Cette adresse mène à un endroit auquel Infinitary ne se connecte pas.`;
+      case "ja":
+        return `このアドレスは Infinitary が接続しない場所を指しています。`;
+      case "ko":
+        return `이 주소는 Infinitary가 연결하지 않는 곳을 가리킵니다.`;
+      case "pt-BR":
+        return `Esse endereço aponta para um lugar ao qual o Infinitary não se conecta.`;
+      case "zh-Hans":
+        return `这个地址指向 Infinitary 不会连接的地方。`;
+      case "zh-Hant":
+        return `這個位址指向 Infinitary 不會連線的地方。`;
+      case "en-XA":
+        return `[Ţĥáţ áððŕéšš þöîñţš šöɱéŵĥéŕé Îñƒîñîţáŕý ðöéš ñöţ çöññéçţ ţö. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That address points somewhere Infinitary does not connect to.‬`;
+    }
+    return `That address points somewhere Infinitary does not connect to.`;
+  }
+  function settingsUsageConnectionProblemHeader() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يمكن إرسال ترويسة: أعطِ كل واحدة اسمًا بسيطًا يُستخدم مرة واحدة، وسطرًا واحدًا من نص عادي.`;
+      case "de":
+        return `Ein Header lässt sich nicht senden: Gib jedem einen einfachen Namen, nur einmal verwendet, und eine Zeile einfachen Text.`;
+      case "es":
+        return `Un encabezado no se puede enviar: dale a cada uno un nombre simple, usado una sola vez, y una línea de texto simple.`;
+      case "fr":
+        return `Un en-tête ne peut pas être envoyé : donnez à chacun un nom simple, utilisé une seule fois, et une ligne de texte simple.`;
+      case "ja":
+        return `送れないヘッダーがあります。それぞれに一度だけ使うシンプルな名前と、1 行のプレーンテキストを指定してください。`;
+      case "ko":
+        return `보낼 수 없는 헤더가 있습니다. 각각 한 번만 쓰는 간단한 이름과 한 줄의 일반 텍스트를 넣으세요.`;
+      case "pt-BR":
+        return `Um cabeçalho não pode ser enviado: dê a cada um nome simples, usado uma só vez, e uma linha de texto simples.`;
+      case "zh-Hans":
+        return `有请求头无法发送：每个请求头请用一个只出现一次的简单名称，值为一行纯文本。`;
+      case "zh-Hant":
+        return `有標頭無法傳送：每個標頭請用只出現一次的簡單名稱，值為一行純文字。`;
+      case "en-XA":
+        return `[Å ĥéáðéŕ çáññöţ ƀé šéñţ: ĝîṽé éáçĥ á þļáîñ ñáɱé, ûšéð öñçé, áñð öñé ļîñé öƒ þļáîñ ţéẋţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A header cannot be sent: give each a plain name, used once, and one line of plain text.‬`;
+    }
+    return `A header cannot be sent: give each a plain name, used once, and one line of plain text.`;
+  }
+  function settingsUsageConnectionProblemHeaderValue() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعطِ كل ترويسة جديدة قيمة.`;
+      case "de":
+        return `Gib jedem neuen Header einen Wert.`;
+      case "es":
+        return `Dale un valor a cada encabezado nuevo.`;
+      case "fr":
+        return `Donnez une valeur à chaque nouvel en-tête.`;
+      case "ja":
+        return `新しいヘッダーにはそれぞれ値を入れてください。`;
+      case "ko":
+        return `새 헤더마다 값을 넣으세요.`;
+      case "pt-BR":
+        return `Dê um valor a cada cabeçalho novo.`;
+      case "zh-Hans":
+        return `请为每个新请求头填写值。`;
+      case "zh-Hant":
+        return `請為每個新標頭填寫值。`;
+      case "en-XA":
+        return `[Ĝîṽé éáçĥ ñéŵ ĥéáðéŕ á ṽáļûé. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Give each new header a value.‬`;
+    }
+    return `Give each new header a value.`;
+  }
+  function settingsUsageConnectionProblemNoSecrets() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يحفظ هذا الحاسوب أي أسرار، لذا لا يمكن أن تكون لهذا الاتصال ترويسات هنا.`;
+      case "de":
+        return `Dieser Computer bewahrt keine Geheimnisse auf, daher kann diese Verbindung hier keine Header haben.`;
+      case "es":
+        return `Esta computadora no guarda secretos, así que esta conexión no puede tener encabezados aquí.`;
+      case "fr":
+        return `Cet ordinateur ne garde aucun secret, donc cette connexion ne peut pas avoir d’en-têtes ici.`;
+      case "ja":
+        return `このコンピューターはシークレットを保管しないため、ここではこの接続にヘッダーを付けられません。`;
+      case "ko":
+        return `이 컴퓨터는 비밀 정보를 보관하지 않으므로 여기서는 이 연결에 헤더를 둘 수 없습니다.`;
+      case "pt-BR":
+        return `Este computador não guarda segredos, então esta conexão não pode ter cabeçalhos aqui.`;
+      case "zh-Hans":
+        return `这台电脑不保存机密，所以这里的连接不能带请求头。`;
+      case "zh-Hant":
+        return `這台電腦不保存機密，所以這裡的連線不能帶標頭。`;
+      case "en-XA":
+        return `[Ţĥîš çöɱþûţéŕ ķééþš ñö šéçŕéţš, šö ţĥîš çöññéçţîöñ çáññöţ ĥáṽé ĥéáðéŕš ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This computer keeps no secrets, so this connection cannot have headers here.‬`;
+    }
+    return `This computer keeps no secrets, so this connection cannot have headers here.`;
+  }
+  function settingsUsageConnectionProblemNotFound() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر العثور على هذا العنوان.`;
+      case "de":
+        return `Diese Adresse wurde nicht gefunden.`;
+      case "es":
+        return `No se encontró esa dirección.`;
+      case "fr":
+        return `Cette adresse est introuvable.`;
+      case "ja":
+        return `このアドレスが見つかりませんでした。`;
+      case "ko":
+        return `이 주소를 찾을 수 없습니다.`;
+      case "pt-BR":
+        return `Esse endereço não foi encontrado.`;
+      case "zh-Hans":
+        return `找不到这个地址。`;
+      case "zh-Hant":
+        return `找不到這個位址。`;
+      case "en-XA":
+        return `[Ţĥáţ áððŕéšš çöûļð ñöţ ƀé ƒöûñð. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That address could not be found.‬`;
+    }
+    return `That address could not be found.`;
+  }
+  function settingsUsageConnectionProblemPlainHttp() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `http العادي مخصّص لأداة على هذا الحاسوب فقط: استخدم عنوان https الخاص بالأداة.`;
+      case "de":
+        return `Einfaches http gibt es nur für ein Werkzeug auf diesem Computer: Verwende die https-Adresse des Werkzeugs.`;
+      case "es":
+        return `El http simple es solo para una herramienta en esta computadora: usa la dirección https de la herramienta.`;
+      case "fr":
+        return `Le http simple est réservé à un outil sur cet ordinateur : utilisez l’adresse https de l’outil.`;
+      case "ja":
+        return `通常の http はこのコンピューター上のツールにだけ使えます。ツールの https アドレスを使ってください。`;
+      case "ko":
+        return `일반 http는 이 컴퓨터의 도구에만 쓸 수 있습니다. 도구의 https 주소를 쓰세요.`;
+      case "pt-BR":
+        return `O http simples é só para uma ferramenta neste computador: use o endereço https da ferramenta.`;
+      case "zh-Hans":
+        return `普通 http 只能用于这台电脑上的工具：请使用该工具的 https 地址。`;
+      case "zh-Hant":
+        return `一般 http 只能用於這台電腦上的工具：請使用該工具的 https 位址。`;
+      case "en-XA":
+        return `[Þļáîñ ĥţţþ îš öñļý ƒöŕ á ţööļ öñ ţĥîš çöɱþûţéŕ: ûšé ţĥé ţööļ’š ĥţţþš áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Plain http is only for a tool on this computer: use the tool’s https address.‬`;
+    }
+    return `Plain http is only for a tool on this computer: use the tool’s https address.`;
+  }
+  function settingsUsageConnectionProblemSecretsLocked() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على الأسرار حفظ ترويسة الآن. افتح الإعدادات ← الأسرار، ثم احفظ مرة أخرى.`;
+      case "de":
+        return `Geheimnisse konnte gerade keinen Header aufbewahren. Öffne Einstellungen → Geheimnisse und speichere dann erneut.`;
+      case "es":
+        return `Secretos no pudo guardar un encabezado ahora. Abre Configuración → Secretos y vuelve a guardar.`;
+      case "fr":
+        return `Secrets n’a pas pu garder un en-tête pour l’instant. Ouvrez Réglages → Secrets, puis enregistrez de nouveau.`;
+      case "ja":
+        return `シークレットが今ヘッダーを保管できませんでした。設定 → シークレットを開いてから、もう一度保存してください。`;
+      case "ko":
+        return `비밀 정보가 지금 헤더를 보관하지 못했습니다. 설정 → 비밀 정보를 연 다음 다시 저장하세요.`;
+      case "pt-BR":
+        return `Segredos não conseguiu guardar um cabeçalho agora. Abra Ajustes → Segredos e salve de novo.`;
+      case "zh-Hans":
+        return `机密暂时无法保存请求头。请打开设置 → 机密，然后再保存一次。`;
+      case "zh-Hant":
+        return `機密暫時無法保存標頭。請開啟設定 → 機密，然後再儲存一次。`;
+      case "en-XA":
+        return `[Šéçŕéţš çöûļð ñöţ ķééþ á ĥéáðéŕ ĵûšţ ñöŵ. Öþéñ Šéţţîñĝš → Šéçŕéţš, ţĥéñ šáṽé áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Secrets could not keep a header just now. Open Settings → Secrets, then save again.‬`;
+    }
+    return `Secrets could not keep a header just now. Open Settings → Secrets, then save again.`;
+  }
+  function settingsUsageConnectionReads() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الأداة التي تقرؤه`;
+      case "de":
+        return `Welches Werkzeug sie liest`;
+      case "es":
+        return `Qué herramienta la lee`;
+      case "fr":
+        return `Quel outil la lit`;
+      case "ja":
+        return `読み取るツール`;
+      case "ko":
+        return `읽는 도구`;
+      case "pt-BR":
+        return `Qual ferramenta o lê`;
+      case "zh-Hans":
+        return `读取它的工具`;
+      case "zh-Hant":
+        return `讀取它的工具`;
+      case "en-XA":
+        return `[Ŵĥîçĥ ţööļ ŕéáðš îţ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Which tool reads it‬`;
+    }
+    return `Which tool reads it`;
+  }
+  function settingsUsageConnectionReadsClaudeCode() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أداة تقرأ تقارير Claude Code نفسه`;
+      case "de":
+        return `Ein Werkzeug, das die eigenen Berichte von Claude Code liest`;
+      case "es":
+        return `Una herramienta que lee los informes propios de Claude Code`;
+      case "fr":
+        return `Un outil qui lit les rapports de Claude Code lui-même`;
+      case "ja":
+        return `Claude Code 自身の報告を読み取るツール`;
+      case "ko":
+        return `Claude Code 자체 보고를 읽는 도구`;
+      case "pt-BR":
+        return `Uma ferramenta que lê os relatórios do próprio Claude Code`;
+      case "zh-Hans":
+        return `读取 Claude Code 自身报告的工具`;
+      case "zh-Hant":
+        return `讀取 Claude Code 自身回報的工具`;
+      case "en-XA":
+        return `[Å ţööļ ţĥáţ ŕéáðš Çļáûðé Çöðé’š öŵñ ŕéþöŕţš ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A tool that reads Claude Code’s own reports‬`;
+    }
+    return `A tool that reads Claude Code’s own reports`;
+  }
+  function settingsUsageConnectionReadsStandard() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أداة OpenTelemetry قياسية، مثل Grafana أو Datadog أو Langfuse`;
+      case "de":
+        return `Ein Standardwerkzeug für OpenTelemetry, etwa Grafana, Datadog oder Langfuse`;
+      case "es":
+        return `Una herramienta estándar de OpenTelemetry, como Grafana, Datadog o Langfuse`;
+      case "fr":
+        return `Un outil OpenTelemetry standard, comme Grafana, Datadog ou Langfuse`;
+      case "ja":
+        return `Grafana、Datadog、Langfuse などの標準的な OpenTelemetry ツール`;
+      case "ko":
+        return `Grafana, Datadog, Langfuse 같은 표준 OpenTelemetry 도구`;
+      case "pt-BR":
+        return `Uma ferramenta padrão de OpenTelemetry, como Grafana, Datadog ou Langfuse`;
+      case "zh-Hans":
+        return `标准的 OpenTelemetry 工具，例如 Grafana、Datadog 或 Langfuse`;
+      case "zh-Hant":
+        return `標準的 OpenTelemetry 工具，例如 Grafana、Datadog 或 Langfuse`;
+      case "en-XA":
+        return `[Å šţáñðáŕð ÖþéñŢéļéɱéţŕý ţööļ, šûçĥ áš Ĝŕáƒáñá, Ðáţáðöĝ öŕ Ļáñĝƒûšé ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A standard OpenTelemetry tool, such as Grafana, Datadog or Langfuse‬`;
+    }
+    return `A standard OpenTelemetry tool, such as Grafana, Datadog or Langfuse`;
+  }
+  function settingsUsageConnectionRemove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة`;
+      case "de":
+        return `Entfernen`;
+      case "es":
+        return `Quitar`;
+      case "fr":
+        return `Retirer`;
+      case "ja":
+        return `削除`;
+      case "ko":
+        return `제거`;
+      case "pt-BR":
+        return `Remover`;
+      case "zh-Hans":
+        return `移除`;
+      case "zh-Hant":
+        return `移除`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ~~]`;
+      case "ar-XB":
+        return `‮Remove‬`;
+    }
+    return `Remove`;
+  }
+  function settingsUsageConnectionRemoveConfirm() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة الاتصال`;
+      case "de":
+        return `Verbindung entfernen`;
+      case "es":
+        return `Quitar conexión`;
+      case "fr":
+        return `Retirer la connexion`;
+      case "ja":
+        return `接続を削除`;
+      case "ko":
+        return `연결 제거`;
+      case "pt-BR":
+        return `Remover conexão`;
+      case "zh-Hans":
+        return `移除连接`;
+      case "zh-Hant":
+        return `移除連線`;
+      case "en-XA":
+        return `[Ŕéɱöṽé çöññéçţîöñ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Remove connection‬`;
+    }
+    return `Remove connection`;
+  }
+  function settingsUsageConnectionRemoveHeader() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة الترويسة`;
+      case "de":
+        return `Header entfernen`;
+      case "es":
+        return `Quitar encabezado`;
+      case "fr":
+        return `Retirer l’en-tête`;
+      case "ja":
+        return `ヘッダーを削除`;
+      case "ko":
+        return `헤더 제거`;
+      case "pt-BR":
+        return `Remover cabeçalho`;
+      case "zh-Hans":
+        return `移除请求头`;
+      case "zh-Hant":
+        return `移除標頭`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ĥéáðéŕ ~~~~~]`;
+      case "ar-XB":
+        return `‮Remove header‬`;
+    }
+    return `Remove header`;
+  }
+  function settingsUsageConnectionRemoveWarning() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يتوقف Infinitary عن إرسال التقارير إلى هناك وينسى ترويسات الاتصال.`;
+      case "de":
+        return `Infinitary meldet dann nichts mehr dorthin und vergisst die Header der Verbindung.`;
+      case "es":
+        return `Infinitary deja de informar allí y olvida los encabezados de la conexión.`;
+      case "fr":
+        return `Infinitary cesse d’y envoyer des rapports et oublie les en-têtes de la connexion.`;
+      case "ja":
+        return `Infinitary はそこへの報告をやめ、接続のヘッダーを消去します。`;
+      case "ko":
+        return `Infinitary가 그곳으로 보고하지 않고 연결의 헤더를 지웁니다.`;
+      case "pt-BR":
+        return `O Infinitary para de informar lá e esquece os cabeçalhos da conexão.`;
+      case "zh-Hans":
+        return `Infinitary 将不再向那里报告，并删除这个连接的请求头。`;
+      case "zh-Hant":
+        return `Infinitary 會停止回報到那裡，並刪除這個連線的標頭。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý šţöþš ŕéþöŕţîñĝ ţĥéŕé áñð ƒöŕĝéţš ţĥé çöññéçţîöñ’š ĥéáðéŕš. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary stops reporting there and forgets the connection’s headers.‬`;
+    }
+    return `Infinitary stops reporting there and forgets the connection’s headers.`;
+  }
+  function settingsUsageConnectionSave() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حفظ`;
+      case "de":
+        return `Speichern`;
+      case "es":
+        return `Guardar`;
+      case "fr":
+        return `Enregistrer`;
+      case "ja":
+        return `保存`;
+      case "ko":
+        return `저장`;
+      case "pt-BR":
+        return `Salvar`;
+      case "zh-Hans":
+        return `保存`;
+      case "zh-Hant":
+        return `儲存`;
+      case "en-XA":
+        return `[Šáṽé ~~]`;
+      case "ar-XB":
+        return `‮Save‬`;
+    }
+    return `Save`;
+  }
+  function settingsUsageConnectionSaveLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عند الحفظ يبدأ Infinitary بإرسال استخدام طاقمك إلى هذا العنوان.`;
+      case "de":
+        return `Mit Speichern beginnt Infinitary, die Nutzung deiner Crew an diese Adresse zu senden.`;
+      case "es":
+        return `Al guardar, Infinitary empieza a enviar el uso de tu tripulación a esta dirección.`;
+      case "fr":
+        return `Enregistrer lance l’envoi de l’utilisation de votre équipage à cette adresse.`;
+      case "ja":
+        return `保存すると、乗組員の使用量をこのアドレスに送り始めます。`;
+      case "ko":
+        return `저장하면 선원들의 사용량을 이 주소로 보내기 시작합니다.`;
+      case "pt-BR":
+        return `Ao salvar, o Infinitary começa a enviar o uso da sua tripulação para este endereço.`;
+      case "zh-Hans":
+        return `保存后，船员的用量会开始发送到这个地址。`;
+      case "zh-Hant":
+        return `儲存後，船員的用量會開始傳送到這個位址。`;
+      case "en-XA":
+        return `[Šáṽé šţáŕţš šéñðîñĝ ýöûŕ çŕéŵ’š ûšáĝé ţö ţĥîš áððŕéšš. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Save starts sending your crew’s usage to this address.‬`;
+    }
+    return `Save starts sending your crew’s usage to this address.`;
+  }
+  function settingsUsageConnectionSecretLabel(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تقارير الاستخدام: ${name}`;
+      case "de":
+        return `Nutzungsberichte: ${name}`;
+      case "es":
+        return `Informes de uso: ${name}`;
+      case "fr":
+        return `Rapports d’utilisation : ${name}`;
+      case "ja":
+        return `使用状況のレポート: ${name}`;
+      case "ko":
+        return `사용량 보고: ${name}`;
+      case "pt-BR":
+        return `Relatórios de uso: ${name}`;
+      case "zh-Hans":
+        return `用量报告：${name}`;
+      case "zh-Hant":
+        return `用量報告：${name}`;
+      case "en-XA":
+        return `[Ûšáĝé ŕéþöŕţîñĝ: ${name} ~~~~~~]`;
+      case "ar-XB":
+        return `‮Usage reporting: ‬${name}`;
+    }
+    return `Usage reporting: ${name}`;
+  }
+  function settingsUsageConnectionStandard(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل استخدام طاقمك إلى ${host} بتنسيق OpenTelemetry القياسي: الأوقات والنماذج والرموز والتكلفة التقديرية، ولا يرسل المطالبات أو الردود أبدًا.`;
+      case "de":
+        return `Sendet die Nutzung deiner Crew an ${host} im Standardformat von OpenTelemetry: Zeiten, Modelle, Tokens und geschätzte Kosten, nie Prompts oder Antworten.`;
+      case "es":
+        return `Envía el uso de tu tripulación a ${host} en el formato estándar de OpenTelemetry: tiempos, modelos, tokens y costo estimado, nunca prompts ni respuestas.`;
+      case "fr":
+        return `Envoie l’utilisation de votre équipage à ${host} au format standard d’OpenTelemetry : durées, modèles, tokens et coût estimé, jamais de prompts ni de réponses.`;
+      case "ja":
+        return `乗組員の使用量を OpenTelemetry の標準形式で ${host} に送ります。時間、モデル、トークン、推定コストだけで、プロンプトや返答は送りません。`;
+      case "ko":
+        return `선원들의 사용량을 OpenTelemetry 표준 형식으로 ${host}에 보냅니다. 시간, 모델, 토큰, 예상 비용만 보내며 프롬프트나 답변은 보내지 않습니다.`;
+      case "pt-BR":
+        return `Envia o uso da sua tripulação para ${host} no formato padrão do OpenTelemetry: tempos, modelos, tokens e custo estimado, nunca prompts ou respostas.`;
+      case "zh-Hans":
+        return `以 OpenTelemetry 标准格式把船员的用量发送到 ${host}：时间、模型、token 和预估费用，从不包含提示或回复。`;
+      case "zh-Hant":
+        return `以 OpenTelemetry 標準格式把船員的用量傳送到 ${host}：時間、模型、token 和預估費用，絕不包含提示或回覆。`;
+      case "en-XA":
+        return `[Šéñðš ýöûŕ çŕéŵ’š ûšáĝé ţö ${host} îñ ţĥé šţáñðáŕð ÖþéñŢéļéɱéţŕý ƒöŕɱáţ: ţîɱîñĝ, ɱöðéļš, ţöķéñš áñð éšţîɱáţéð çöšţ, ñéṽéŕ þŕöɱþţš öŕ ŕéþļîéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sends your crew’s usage to ‬${host}‮ in the standard OpenTelemetry format: timing, models, tokens and estimated cost, never prompts or replies.‬`;
+    }
+    return `Sends your crew’s usage to ${host} in the standard OpenTelemetry format: timing, models, tokens and estimated cost, never prompts or replies.`;
+  }
+  function settingsUsageConnectionTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تقارير الاستخدام`;
+      case "de":
+        return `Nutzungsberichte`;
+      case "es":
+        return `Informes de uso`;
+      case "fr":
+        return `Rapports d’utilisation`;
+      case "ja":
+        return `使用量の報告`;
+      case "ko":
+        return `사용량 보고`;
+      case "pt-BR":
+        return `Relatórios de uso`;
+      case "zh-Hans":
+        return `用量报告`;
+      case "zh-Hant":
+        return `用量回報`;
+      case "en-XA":
+        return `[Ûšáĝé ŕéþöŕţîñĝ ~~~~~]`;
+      case "ar-XB":
+        return `‮Usage reporting‬`;
+    }
+    return `Usage reporting`;
+  }
+  function settingsUsageConnectionUseOperation(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إرسال استخدام الطاقم إلى ${host}`;
+      case "de":
+        return `Die Nutzung der Crew an ${host} senden`;
+      case "es":
+        return `Enviar el uso de la tripulación a ${host}`;
+      case "fr":
+        return `Envoyer l’utilisation de l’équipage à ${host}`;
+      case "ja":
+        return `クルーの使用状況を ${host} に送信`;
+      case "ko":
+        return `크루의 사용량을 ${host}(으)로 보내기`;
+      case "pt-BR":
+        return `Enviar o uso da tripulação para ${host}`;
+      case "zh-Hans":
+        return `将船员的用量发送到 ${host}`;
+      case "zh-Hant":
+        return `將船員的用量傳送到 ${host}`;
+      case "en-XA":
+        return `[Šéñð ţĥé çŕéŵ’š ûšáĝé ţö ${host} ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Send the crew’s usage to ‬${host}`;
+    }
+    return `Send the crew’s usage to ${host}`;
+  }
+  function settingsUsageConnectionUseReason(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل Infinitary استخدام طاقمك إلى ${host}، كما يطلب اتصال التقارير لديك.`;
+      case "de":
+        return `Infinitary sendet die Nutzung deiner Crew an ${host}, wie es deine Berichtsverbindung vorsieht.`;
+      case "es":
+        return `Infinitary envía el uso de tu tripulación a ${host}, como pide tu conexión de informes.`;
+      case "fr":
+        return `Infinitary envoie l’utilisation de ton équipage à ${host}, comme le demande ta connexion de rapports.`;
+      case "ja":
+        return `レポート接続の設定に従い、Infinitary はクルーの使用状況を ${host} に送信します。`;
+      case "ko":
+        return `보고 연결에 따라 Infinitary가 크루의 사용량을 ${host}(으)로 보냅니다.`;
+      case "pt-BR":
+        return `O Infinitary envia o uso da sua tripulação para ${host}, como pede sua conexão de relatórios.`;
+      case "zh-Hans":
+        return `Infinitary 按你的报告连接，将船员的用量发送到 ${host}。`;
+      case "zh-Hant":
+        return `Infinitary 依你的報告連線，將船員的用量傳送到 ${host}。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý šéñðš ýöûŕ çŕéŵ’š ûšáĝé ţö ${host}, áš ýöûŕ ŕéþöŕţîñĝ çöññéçţîöñ ášķš. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary sends your crew’s usage to ‬${host}‮, as your reporting connection asks.‬`;
+    }
+    return `Infinitary sends your crew’s usage to ${host}, as your reporting connection asks.`;
+  }
+  function settingsUsageConnectionUseResult() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `رد الأداة على كل دفعة`;
+      case "de":
+        return `Die Antwort des Werkzeugs auf jeden Stapel`;
+      case "es":
+        return `La respuesta de la herramienta a cada lote`;
+      case "fr":
+        return `La réponse de l’outil à chaque lot`;
+      case "ja":
+        return `各バッチに対するツールの応答`;
+      case "ko":
+        return `각 묶음에 대한 도구의 응답`;
+      case "pt-BR":
+        return `A resposta da ferramenta a cada lote`;
+      case "zh-Hans":
+        return `工具对每批数据的回应`;
+      case "zh-Hant":
+        return `工具對每批資料的回應`;
+      case "en-XA":
+        return `[Ţĥé ţööļ’š áñšŵéŕ ţö éáçĥ ƀáţçĥ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The tool’s answer to each batch‬`;
+    }
+    return `The tool’s answer to each batch`;
+  }
   function settingsUsageCostAllKinds() {
     switch (currentLanguage()) {
       case "ar":
@@ -98290,6 +99321,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Claude work on your first mate’s computer is also reported to ‬${host}‮, as its Claude Code settings ask. Other computers follow their own settings.‬`;
     }
     return `Claude work on your first mate’s computer is also reported to ${host}, as its Claude Code settings ask. Other computers follow their own settings.`;
+  }
+  function settingsUsageReportsConnectionTo(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُبلَّغ عن استخدام طاقمك أيضًا إلى ${host}، كما يطلب اتصال التقارير في الإعدادات ← الذكاء.`;
+      case "de":
+        return `Die Nutzung deiner Crew wird außerdem an ${host} gemeldet, wie es deine Berichtsverbindung in Einstellungen → Intelligenz verlangt.`;
+      case "es":
+        return `El uso de tu tripulación también se informa a ${host}, como pide tu conexión de informes en Configuración → Inteligencia.`;
+      case "fr":
+        return `L’utilisation de votre équipage est aussi signalée à ${host}, comme le demande votre connexion de rapports dans Réglages → Intelligence.`;
+      case "ja":
+        return `設定 → インテリジェンスの報告用の接続に従い、乗組員の使用量は ${host} にも報告されます。`;
+      case "ko":
+        return `설정 → 지능의 보고 연결에 따라 선원들의 사용량은 ${host}에도 보고됩니다.`;
+      case "pt-BR":
+        return `O uso da sua tripulação também é informado a ${host}, como pede sua conexão de relatórios em Ajustes → Inteligência.`;
+      case "zh-Hans":
+        return `按照你在设置 → 智能中的报告连接，船员的用量也会报告给 ${host}。`;
+      case "zh-Hant":
+        return `依照你在設定 → 智慧等級中的回報連線，船員的用量也會回報給 ${host}。`;
+      case "en-XA":
+        return `[Ýöûŕ çŕéŵ’š ûšáĝé îš áļšö ŕéþöŕţéð ţö ${host}, áš ýöûŕ ŕéþöŕţîñĝ çöññéçţîöñ îñ Šéţţîñĝš → Îñţéļļîĝéñçé ášķš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your crew’s usage is also reported to ‬${host}‮, as your reporting connection in Settings → Intelligence asks.‬`;
+    }
+    return `Your crew’s usage is also reported to ${host}, as your reporting connection in Settings → Intelligence asks.`;
   }
   function settingsUsageReportsTo(input2) {
     const host = input2.host;
@@ -113851,6 +114910,44 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsUsageAttributionServed,
     settingsUsageBarsPriced,
     settingsUsageCloseDetails,
+    settingsUsageConnectionAdd,
+    settingsUsageConnectionAddHeader,
+    settingsUsageConnectionAddress,
+    settingsUsageConnectionAddressHint,
+    settingsUsageConnectionCancel,
+    settingsUsageConnectionClaudeCode,
+    settingsUsageConnectionEdit,
+    settingsUsageConnectionFailed,
+    settingsUsageConnectionHeaderKept,
+    settingsUsageConnectionHeaderName,
+    settingsUsageConnectionHeaderValue,
+    settingsUsageConnectionHeaders,
+    settingsUsageConnectionHeadersHint,
+    settingsUsageConnectionKeep,
+    settingsUsageConnectionNone,
+    settingsUsageConnectionProblemAddress,
+    settingsUsageConnectionProblemDestination,
+    settingsUsageConnectionProblemHeader,
+    settingsUsageConnectionProblemHeaderValue,
+    settingsUsageConnectionProblemNoSecrets,
+    settingsUsageConnectionProblemNotFound,
+    settingsUsageConnectionProblemPlainHttp,
+    settingsUsageConnectionProblemSecretsLocked,
+    settingsUsageConnectionReads,
+    settingsUsageConnectionReadsClaudeCode,
+    settingsUsageConnectionReadsStandard,
+    settingsUsageConnectionRemove,
+    settingsUsageConnectionRemoveConfirm,
+    settingsUsageConnectionRemoveHeader,
+    settingsUsageConnectionRemoveWarning,
+    settingsUsageConnectionSave,
+    settingsUsageConnectionSaveLine,
+    settingsUsageConnectionSecretLabel,
+    settingsUsageConnectionStandard,
+    settingsUsageConnectionTitle,
+    settingsUsageConnectionUseOperation,
+    settingsUsageConnectionUseReason,
+    settingsUsageConnectionUseResult,
     settingsUsageCostAllKinds,
     settingsUsageCostAllProjects,
     settingsUsageCostChange,
@@ -113980,6 +115077,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsUsageReportingSecure,
     settingsUsageReportingUnreachable,
     settingsUsageReportsClaudeTo,
+    settingsUsageReportsConnectionTo,
     settingsUsageReportsTo,
     settingsUsageScopeAll,
     settingsUsageScopeFirstmate,
@@ -117400,6 +118498,44 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsUsageAttributionServed": [],
     "settingsUsageBarsPriced": [],
     "settingsUsageCloseDetails": [],
+    "settingsUsageConnectionAdd": [],
+    "settingsUsageConnectionAddHeader": [],
+    "settingsUsageConnectionAddress": [],
+    "settingsUsageConnectionAddressHint": [],
+    "settingsUsageConnectionCancel": [],
+    "settingsUsageConnectionClaudeCode": ["host"],
+    "settingsUsageConnectionEdit": [],
+    "settingsUsageConnectionFailed": [],
+    "settingsUsageConnectionHeaderKept": [],
+    "settingsUsageConnectionHeaderName": [],
+    "settingsUsageConnectionHeaderValue": [],
+    "settingsUsageConnectionHeaders": [],
+    "settingsUsageConnectionHeadersHint": [],
+    "settingsUsageConnectionKeep": [],
+    "settingsUsageConnectionNone": [],
+    "settingsUsageConnectionProblemAddress": [],
+    "settingsUsageConnectionProblemDestination": [],
+    "settingsUsageConnectionProblemHeader": [],
+    "settingsUsageConnectionProblemHeaderValue": [],
+    "settingsUsageConnectionProblemNoSecrets": [],
+    "settingsUsageConnectionProblemNotFound": [],
+    "settingsUsageConnectionProblemPlainHttp": [],
+    "settingsUsageConnectionProblemSecretsLocked": [],
+    "settingsUsageConnectionReads": [],
+    "settingsUsageConnectionReadsClaudeCode": [],
+    "settingsUsageConnectionReadsStandard": [],
+    "settingsUsageConnectionRemove": [],
+    "settingsUsageConnectionRemoveConfirm": [],
+    "settingsUsageConnectionRemoveHeader": [],
+    "settingsUsageConnectionRemoveWarning": [],
+    "settingsUsageConnectionSave": [],
+    "settingsUsageConnectionSaveLine": [],
+    "settingsUsageConnectionSecretLabel": ["name"],
+    "settingsUsageConnectionStandard": ["host"],
+    "settingsUsageConnectionTitle": [],
+    "settingsUsageConnectionUseOperation": ["host"],
+    "settingsUsageConnectionUseReason": ["host"],
+    "settingsUsageConnectionUseResult": [],
     "settingsUsageCostAllKinds": [],
     "settingsUsageCostAllProjects": [],
     "settingsUsageCostChange": [],
@@ -117529,6 +118665,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsUsageReportingSecure": ["host"],
     "settingsUsageReportingUnreachable": ["host"],
     "settingsUsageReportsClaudeTo": ["host"],
+    "settingsUsageReportsConnectionTo": ["host"],
     "settingsUsageReportsTo": ["host"],
     "settingsUsageScopeAll": [],
     "settingsUsageScopeFirstmate": [],
@@ -132183,7 +133320,9 @@ ${FRAME_KEYBOARD_SCRIPT}
   object({
     host: string().nullable(),
     claudeOnly: literal(true).optional(),
-    refusal: object({ host: string(), reason: usageReportingRefusalReasonSchema }).optional()
+    refusal: object({ host: string(), reason: usageReportingRefusalReasonSchema }).optional(),
+    /** The host of the reporting connection the person added, which gets every model's work. */
+    connection: string().optional()
   });
   const USAGE_TASKS_MAX = 5e3;
   const usageTasksQuerySchema = strictObject({
@@ -132398,7 +133537,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       toRequest: () => [],
       invalidate: { pollMs: 6e4 },
       // i18n-exempt: served only to the first mate, as the read's description (src/core/pi/appReads.ts).
-      description: "The host the usage report sends every model's work to, from a company's Claude Code reporting setup; claudeOnly when only Claude's own records go there, such as a setup over gRPC; null when no host is known, which includes Claude's own client reporting straight to a company setup this app cannot read."
+      description: "The host the usage report sends every model's work to, from a company's Claude Code reporting setup; claudeOnly when only Claude's own records go there, such as a setup over gRPC; null when no host is known, which includes Claude's own client reporting straight to a company setup this app cannot read; connection is the host of the reporting connection the person added in Settings → Intelligence, which gets the same work too."
     }),
     "usage.tasks": entry({
       channel: "inf:usage:tasks",

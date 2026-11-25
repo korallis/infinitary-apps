@@ -21,6 +21,11 @@ import { settingsShowSchema } from "../showActions";
 import { tagCheckChangeSchema, tagCheckReadSchema, tagCheckViewSchema } from "../tagCheck";
 import { projectTagChangeResultSchema, projectTagChangeSchema } from "../tags";
 import { projectViewSchema } from "../tasks";
+import {
+  usageConnectionSavedSchema,
+  usageConnectionSaveSchema,
+  usageConnectionViewSchema,
+} from "../usageConnection";
 import { type ChannelDeclaration, okSchema } from "./common";
 
 /** Projects and the window's settings: look, layout, panels, sharing, dictation, runbooks and notifications. */
@@ -253,6 +258,28 @@ export const settingsChannels = {
     reach: "views",
     request: z.tuple([costLimitSchema]),
     response: appCostLimitViewSchema,
+  },
+  // The reporting connection the person adds, beside custom API connections (docs/usage-report.md, "The person's reporting connection").
+  "inf:settings:usage-connection:get": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: usageConnectionViewSchema,
+  },
+  "inf:settings:usage-connection:save": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([usageConnectionSaveSchema]),
+    response: usageConnectionSavedSchema,
+  },
+  "inf:settings:usage-connection:remove": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: usageConnectionViewSchema,
   },
   // A view of this Mac follows the switch for its own notifications (docs/view.md).
   "inf:settings:notifications:get": {

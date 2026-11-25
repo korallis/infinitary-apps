@@ -125,15 +125,18 @@ const CLAUDE_CODE_TOKEN_TYPES = [
  * Claude Code's format: every provider but Claude's own client, under the
  * names Claude Code reports (claude_code.cost.usage, claude_code.token.usage
  * by type, the api_request event), each with a provider attribute so a
- * panel that checks spend against Anthropic's bill can filter.
+ * panel that checks spend against Anthropic's bill can filter. With
+ * `withClaude`, Claude's own client's rows too, for a destination Claude's
+ * client never reports to.
  */
 export function claudeCodeBodies(
   rows: readonly ReportedRow[],
   destination: Record<string, string>,
   since: number,
   person: Record<string, string> = {},
+  withClaude = false,
 ): OtlpBodies {
-  const reported = rows.filter((row) => !isClaudeClientRow(row));
+  const reported = withClaude ? [...rows] : rows.filter((row) => !isClaudeClientRow(row));
   if (reported.length === 0) return {};
   const labels = (row: ReportedRow) => ({
     ...person,

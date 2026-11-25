@@ -6,7 +6,7 @@ It also provides native custody and fresh system authentication for macOS, Linux
 The app supplies that custody and confirmation as its Secrets host capability on the person's own data folder on macOS, Linux and Windows ("In the app"), so the core builds the protected owner, Settings → Secrets and the task command.
 A run on an isolated or chosen data folder, and every other platform, gets no capability and offers no Secrets.
 The explicit host seam lets disposable checks exercise the real controller, trusted cards, secure entry and sealed files without opening a native credential store.
-The Google integration's sign-in and the keys and sign-ins of MCP servers a person adds in Integrations are the consumers migrated so far ("App services"); every other consumer in the register keeps its own store.
+The Google integration's sign-in, the keys and sign-ins of MCP servers a person adds in Integrations and the headers of the reporting connection are the consumers migrated so far ("App services"); every other consumer in the register keeps its own store.
 
 ## Threat model and the accepted boundary
 
@@ -380,7 +380,7 @@ With `forProgram` it marks a key the service hands a program it starts ("Program
 It forgets one only after reading every saved setting whole: a damaged file, or one a newer build wrote, names nothing the service can see, so it forgets nothing.
 `forgetHidden` forgets only a hidden entry.
 `use` runs through the service's own registered broker and waits for the use to end with the broker's private result.
-The Google integration's sign-in, MCP servers' keys and the sign-ins of MCP servers at an address are such services today ([Integrations](integrations.md#keys)).
+The Google integration's sign-in, MCP servers' keys, the sign-ins of MCP servers at an address ([Integrations](integrations.md#keys)) and the reporting connection's headers ([The usage report](usage-report.md#the-persons-reporting-connection)) are such services today.
 
 ### App sign-ins
 
@@ -391,6 +391,7 @@ Anything else is evaluated as before: an undeclared broker, a declaring broker t
 Signing out where the sign-in was made withdraws the consent: the service forgets its hidden entry.
 A saved decision naming a sign-in's hidden entry no longer applies and is not listed, and the next decision the captain confirms leaves it out of the record (`withoutKept` in `settings.ts`), since every authority write needs a fresh confirmation and none is made silently.
 Settings → Secrets keeps listing a sign-in's hidden entry, with no Replace, Forget or decisions: it is replaced by signing in again and removed by signing out, in Settings → Integrations.
+A header the person saves on the reporting connection is the same consent: its `usage-report` broker declares `signIn`, sends only to the saved address, and the connection's Remove forgets the entry.
 
 ### Programs that keep running
 
@@ -594,7 +595,7 @@ Copy value is the only way a value comes back out ("Copying a value"): there is 
 
 ## Consumer register
 
-Every row but Google's sign-in, MCP server sign-ins and connected programs remains unmigrated; this is the maintained source-to-owner contract, not an assertion that direct readers are retired.
+Every row but Google's sign-in, MCP server sign-ins, connected programs and the reporting connection remains unmigrated; this is the maintained source-to-owner contract, not an assertion that direct readers are retired.
 A migration includes writers, every reader, replacement/renewal, interruption, rollback and old-app compatibility, without permanent dual writes or plaintext backups.
 The current owner retains protocol and lifecycle decisions; Secrets supplies custody, scoped use and atomic versioned replacement.
 Public certificates, host pins, fingerprints, token counts and non-secret metadata do not become vault values.
@@ -604,6 +605,7 @@ Public certificates, host pins, fingerprints, token counts and non-secret metada
 | Google sign-in (migrated) | `src/core/integrations/secrets.ts`; `providers/google/{googleIntegration,movedKeys,store}.ts` | The lasting key is a hidden entry used through the `google-sign-in` broker ("App services"); the access key stays in memory, one renewer at a time replaces the entry in place, and an earlier version's key file moves once and is removed. A person's own Google client keeps its secret as a second hidden entry, labelled Google client, which the same broker adds to the sign-in's code exchange, each renewal and the renewal to revoke; removing the connection forgets both. |
 | MCP server sign-ins (migrated) | `src/core/integrations/providers/mcp/{signIn,store,mcpIntegration}.ts` | The lasting key, and any key the sign-in gave the app, are hidden entries used through the `mcp-sign-in` broker ("App sign-ins") to renew and revoke; the access key stays in memory, one renewer per server replaces the lasting key in place, and removal forgets both. |
 | Connected programs (migrated) | `src/core/integrations/providers/mcp/{runs,store,mcpIntegration}.ts`; `src/core/secrets/programBroker.ts` | Each `NAME=value` on a server's Runs line but `PATH` is a hidden `forProgram` entry the line names as `NAME={secret:REF}`, handed to the server's program at each start, with no question, through the `mcp-server-keys` broker ("Programs that keep running"); an earlier version's line moves once at launch, and a computer without Secrets keeps the values on the line as before. |
+| Reporting connection (migrated) | `src/core/usageReport/usageConnection.ts` | Each header value is a hidden entry the saved file names by reference, sent with each minute's batch through the `usage-report` broker ("App sign-ins"); Remove and a replaced header forget theirs, and a computer without Secrets saves no headers. |
 | Pi accounts | `src/core/pi/{accountVault,piAccountBackend,piAuth,modelRuntime}.ts` | Inject a Secrets-backed CredentialStore for account and base auth stores; retain serialized refresh and account lifecycle. |
 | Usage, Copilot and models | `src/core/quota/{auth,fetchQuota,http}.ts`; `src/core/pi/copilotMeter.ts`; model/account readers | Use the same account adapter; remove direct-file routes without confusing unavailable with signed out or adding renewal. |
 | Custom APIs | `src/core/pi/{customApiAccounts,customApiTransport,customApiPi}.ts` | Keys and secret headers in custody; credential-free Pi configuration and existing destination policy; Settings-approved Custom connection shell token commands retain their renewal and output isolation, outside the protected-recipient boundary. |

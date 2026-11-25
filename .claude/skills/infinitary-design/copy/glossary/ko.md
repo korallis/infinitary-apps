@@ -70,7 +70,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | font (Settings → Appearance) | 글꼴 | |
 | forget (a computer, on the phone) | 지우기 | As iOS forgets a network; kept apart from 제거 and 나가기. |
 | gate | 관문 | What work passes before it merges; kept apart from 검사 |
-| header (a request header) | 헤더 | Only in the custom API form, where the person types header names |
+| header (a request header) | 헤더 | Only in the custom API form and the usage reporting form, where the person types header names |
 | held (a batch that stopped) | 보류 | 보류됨, 보류 중; 일시 정지 stays for what a person pauses |
 | hold (on a task) | 보류 | "once its hold ends" is 보류가 풀리면 |
 | How to get it (an ask for a secret) | 받는 방법 | The heading over the steps a crewmate lays out for making or finding a secret. |

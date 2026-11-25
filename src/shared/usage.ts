@@ -203,7 +203,8 @@ export type UsageReportingRefusalReason = z.infer<typeof usageReportingRefusalRe
 
 /**
  * Where usage is also reported, when a company's Claude Code setup names a
- * collector: its host, or null (docs/usage-report.md, "Destinations").
+ * collector: its host, or null (docs/usage-report.md, "Destinations"); and
+ * the host of the person's own reporting connection.
  * `claudeOnly` when only Claude's own records go there, as for a setup the
  * report cannot send every other model's work to.
  * `refusal` names the collector of the person's own setup whose failures have
@@ -214,6 +215,8 @@ export const usageReportingSchema = z.object({
   host: z.string().nullable(),
   claudeOnly: z.literal(true).optional(),
   refusal: z.object({ host: z.string(), reason: usageReportingRefusalReasonSchema }).optional(),
+  /** The host of the reporting connection the person added, which gets every model's work. */
+  connection: z.string().optional(),
 });
 export type UsageReporting = z.infer<typeof usageReportingSchema>;
 

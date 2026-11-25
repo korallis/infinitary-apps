@@ -49,6 +49,7 @@ import {
   PERSONAL_RESOURCES_WORDS,
   SUBSCRIPTIONS_WORDS,
 } from "./subscriptionsWords";
+import { UsageConnectionRow } from "./UsageConnectionRow";
 import { useSettingSave } from "./useSettingSave";
 import "./subscriptions.css";
 import { useFirstMatePlace, useHereAs } from "../devices/useFirstMatePlace";
@@ -1452,6 +1453,7 @@ export function SubscriptionsTab() {
         additionalSettings={
           <>
             <CostLimitRow />
+            <UsageConnectionRow />
             <SettingRow
               id="personal-resources"
               error={personalSave.error}

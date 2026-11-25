@@ -18083,7 +18083,9 @@ ${events}` : prompt;
   object({
     host: string().nullable(),
     claudeOnly: literal(true).optional(),
-    refusal: object({ host: string(), reason: usageReportingRefusalReasonSchema }).optional()
+    refusal: object({ host: string(), reason: usageReportingRefusalReasonSchema }).optional(),
+    /** The host of the reporting connection the person added, which gets every model's work. */
+    connection: string().optional()
   });
   const USAGE_TASKS_MAX = 5e3;
   const usageTasksQuerySchema = strictObject({

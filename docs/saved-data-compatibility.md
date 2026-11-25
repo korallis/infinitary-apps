@@ -270,6 +270,14 @@ An older build reads a sign-in holding either field as unreadable, because its s
 Such a sign-in could not renew in an older build anyway, since only this build adds the client's secret.
 No database migration or saved-data format revision is needed.
 
+## The reporting connection
+
+The reporting connection saves `<userData>/usage-connection.json` (`docs/usage-report.md`, "The person's reporting connection"): the address, its network class, the format and each header's name and Secrets reference, never a value.
+An older build never reads the file, so it sends nothing there and Settings shows no connection; going back to a newer build sends again.
+Each header's value is a hidden vault record with no new field, so an older build lists it as a kept sign-in and its recovery archive carries it.
+A damaged file reads as no connection and forgets no header; a field a newer build adds is ignored.
+The format revision therefore stays at 1.
+
 ## An ask's how-to in waiting asks
 
 A waiting ask in `<userData>/secret-asks.json` may carry `how`, the how-to its card draws, already checked and drawn again (`docs/secrets.md`, "How to get it").

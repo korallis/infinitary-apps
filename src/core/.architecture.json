@@ -1899,6 +1899,21 @@
     },
     {
       "from": "usageReport",
+      "to": "secrets",
+      "why": "keeps the reporting connection's header values and sends each batch through its broker"
+    },
+    {
+      "from": "usageReport",
+      "to": "integrations",
+      "why": "reaches the reporting connection's address through an MCP server's guarded fetch"
+    },
+    {
+      "from": "usageReport",
+      "to": "pi",
+      "why": "checks the reporting connection's address and headers by a custom API's rules"
+    },
+    {
+      "from": "usageReport",
       "to": "usage collectors",
       "why": "sends usage in each one's format"
     }

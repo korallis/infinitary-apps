@@ -164,6 +164,11 @@ export function UsageTab() {
         </div>
       </div>
       {reporting && <ReportingLine reporting={reporting} />}
+      {reporting?.connection && (
+        <p className="fm-usage-muted" data-usage-reporting-connection="">
+          {m.settingsUsageReportsConnectionTo({ host: reporting.connection })}
+        </p>
+      )}
       <SettingError error={unitError} surface="usage-unit" />
       <div className="fm-usage-filters">
         <label>

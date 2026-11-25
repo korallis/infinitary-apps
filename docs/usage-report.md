@@ -7,6 +7,7 @@ Each destination gets one format, and nothing is ever sent in two formats.
 | --- | --- |
 | The destination shape and the sender | `UsageReportDestination`, `UsageReporter` (`src/core/usageReport/usageReporter.ts`) |
 | The company's Claude Code setup as a destination | `companyDestination`, `companyUsageDestinations` (`src/core/usageReport/companyDestination.ts`) |
+| The person's reporting connection, and both destinations together | `usageConnection`, `usageReportRoutes` (`src/core/usageReport/usageConnection.ts`); its row, `UsageConnectionRow` (`src/renderer/src/settings/UsageConnectionRow.tsx`) |
 | The two formats, from ledger rows and heard turns | `claudeCodeBodies`, `standardBodies`, `callSpan` (`src/core/usageReport/usageReportFormats.ts`) |
 | The rows it reads | what `UsageStore.record` answers it wrote (`docs/usage.md`, "What the ledger records") |
 | Where it is built and hears turns | `homeUsage` (`src/core/storage/homeUsage.ts`), `EventSeam.attachUsageReport` (`src/core/eventSeam.ts`) |
@@ -16,6 +17,7 @@ Each destination gets one format, and nothing is ever sent in two formats.
 
 A destination is one place the report goes, with exactly one format, the full OTLP/HTTP address of each signal it takes, the headers it asks for per batch, and its own resource attributes (who and which team, as the company set them).
 Its source owns where it comes from and which format it was saved with: a company's Claude Code reporting setup defaults to Claude Code's format, a connection the person adds to the standard one.
+A destination may send its own way (`post`), as the person's connection does through Secrets.
 With no destination, the reporter keeps nothing and sends nothing.
 
 The company's Claude Code reporting setup (`docs/usage.md`, "A company's Claude Code setup") is one destination in Claude Code's format.
@@ -24,6 +26,23 @@ An administrator's managed setup comes first (`readManagedReporting`): Claude's 
 Otherwise the person's own setup is the destination only where the receiver passes Claude's records on to it.
 The setup is read again at most once a minute, when the reporter asks.
 Settings → Usage names this destination's host as where the crew's usage goes; where the setup leaves it none, as over gRPC or with certificate files, its line names the setup's host for Claude work only, which Claude's own client or the receiver still reports there (`reporting`).
+
+## The person's reporting connection
+
+A person adds one reporting connection beside the cost limit in Settings → Intelligence: an OTLP/HTTP address, the headers the tool asks for, and which tool reads it, the standard format by default or Claude Code's.
+Save is the consent to send there, so reporting starts once saved and nothing asks again; Remove stops it, drops what waits and forgets the headers.
+The address is reached the way an MCP server's is (`docs/integrations.md`): its network class is read from every DNS answer on Save (`classifyCustomApiAddresses`) and held on every send (`guardedMcpFetch`), plain http only reaches a tool on this computer, and a signal's own address, such as `…/v1/traces`, saves as the base it sits under.
+Header names and values follow a custom API's rules (`assertCustomHeaders`).
+Each header value is a hidden Secrets entry (`docs/secrets.md`, "App sign-ins"), and `userData/usage-connection.json` keeps only the address, its network class, the format and each header's name and reference.
+An edit at the same address keeps a header whose value is left blank; a new address takes every value again.
+A computer without Secrets saves a connection only without headers.
+
+The connection batches for a minute rather than five seconds, merging the reporter's batches into one request per signal, because every send with headers is one brokered use, and each use writes a line to Secrets' history, which is kept until the person deletes it.
+Its broker (`usage-report`) declares `signIn`, binds the saved address and each signal's body by digest, applies the headers inside Secrets and answers each signal's HTTP status; a body never reaches the journal.
+A connection without headers sends through the same guarded fetch with no use.
+A connection in Claude Code's format also carries Claude's own work, from the ledger rather than Claude's records (`claudeFromLedger`), since nothing passes Claude's records on to it; those rows have no line or commit counts.
+Prompts and outputs are not sent.
+Settings → Usage adds a line naming the connection's host (`reporting`'s `connection`).
 
 ## The two formats
 

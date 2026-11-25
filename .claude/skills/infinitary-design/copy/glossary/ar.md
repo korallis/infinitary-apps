@@ -77,7 +77,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | gate (the checks work passes before it merges) | بوابة | As in "بوابة الجودة", the usual Arabic for a quality gate. |
 | Got it (a note's button) | «فهمت» | |
 | graph | المخطط | |
-| header (a request header) | ترويسة | Plural "ترويسات"; only in the custom API form. |
+| header (a request header) | ترويسة | Plural "ترويسات"; only in the custom API form and the usage reporting form. |
 | held (a batch that stopped) | معلّقة | "إيقاف مؤقت" stays for what a person pauses. |
 | hold (on a task) | تعليق | "بعد رفع تعليقها" for once its hold ends. |
 | How to get it (an ask for a secret) | كيف تحصل عليه | The heading over the steps a crewmate lays out for making or finding a secret. |

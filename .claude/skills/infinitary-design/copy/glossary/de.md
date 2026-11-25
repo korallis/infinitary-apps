@@ -76,7 +76,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | font (Settings → Appearance) | Schrift | |
 | forget (a computer, on the phone) | vergessen | Pairs with "Verlassen" for Leave. |
 | gate (what work passes before it merges) | Kontrolle | Kept apart from "Überprüfungen" and "Review". |
-| header (a request header) | Header | Masculine, plural "Header"; only in the custom API form. |
+| header (a request header) | Header | Masculine, plural "Header"; only in the custom API form and the usage reporting form. |
 | held (a batch that stopped) | angehalten | "Bündel angehalten", "Seit {since} angehalten"; "pausiert" stays for what a person pauses. |
 | hold (on a task) | zurückhalten | "sobald sie nicht mehr zurückgehalten wird" instead of a noun |
 | How to get it (an ask for a secret) | So bekommst du es | The heading over the steps a crewmate lays out for making or finding a secret. |

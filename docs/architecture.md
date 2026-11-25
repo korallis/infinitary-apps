@@ -33,6 +33,7 @@ Releases are **properly signed and notarized**, never ad-hoc signed (captain-dir
   An UNPACKAGED dev checkout may additionally point the first mate seat at a local OpenAI-compatible endpoint the developer names in the environment (`docs/local-orchestrator.md`, roadmap 1.7); a packaged build cannot enable it, by contract test.
 - **Usage report destinations** (INF-6587's approved plan, `docs/usage-report.md`): Infinitary's own usage report reaches only the OTLP/HTTP addresses its destinations name - a company's Claude Code reporting setup, or a reporting connection the person adds - from the computer that keeps the ledger, with each destination's own headers, redirects refused, and counts, models, cost estimates, the role, the saved kind of work, tool names and call ids, and in Claude Code's format the email of the person's own Claude Code login, where Claude's records carry it; never words, titles or project names.
   With no destination nothing is sent.
+  The person's connection is held to the network class read when it was saved, plain http only on this computer, with its headers applied inside Secrets.
 - **Approved custom API destinations (FI3-337).**
   Custom API from Intelligence and first setup is a connection-specific outbound exception for public HTTPS, explicitly approved private/VPN HTTPS and explicit loopback HTTP/HTTPS, only through the guarded transport behind the Pi/account/runtime/session boundaries.
   No redirects, ambient credential/proxy fallback, global trust edits or arbitrary endpoints.

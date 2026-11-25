@@ -4,11 +4,12 @@ import type { CoreServices } from "./coreServices";
  * Settings' channels that only hand their arguments to one service and emit
  * nothing: the runbook switches (docs/runbooks.md), the personal-resource
  * switch, which sends the home's set to its computers when it turns on, and
- * the app's cost limit (docs/usage.md, "The cost limit"). The dispatcher
+ * the app's cost limit (docs/usage.md, "The cost limit") and the reporting
+ * connection (docs/usage-report.md). The dispatcher
  * spreads them into its table, so it stays under the size check's ceiling.
  */
 export function plainSettingsChannels(
-  services: Pick<CoreServices, "runbooks" | "costLimit" | "settings"> &
+  services: Pick<CoreServices, "runbooks" | "costLimit" | "settings" | "usage"> &
     Partial<Pick<CoreServices, "placed">>,
 ) {
   return {
@@ -27,5 +28,10 @@ export function plainSettingsChannels(
     "inf:settings:cost-limit:get": () => services.costLimit.view(),
     "inf:settings:cost-limit:set": (limit: Parameters<CoreServices["costLimit"]["set"]>[0]) =>
       services.costLimit.set(limit),
+    "inf:settings:usage-connection:get": () => services.usage.connection.view(),
+    "inf:settings:usage-connection:save": (
+      input: Parameters<CoreServices["usage"]["connection"]["save"]>[0],
+    ) => services.usage.connection.save(input),
+    "inf:settings:usage-connection:remove": () => services.usage.connection.remove(),
   };
 }

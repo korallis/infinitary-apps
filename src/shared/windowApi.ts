@@ -184,6 +184,11 @@ import type {
   TaskDetail,
 } from "./tasks";
 import type { PresenceSettings, UpdateChannel, UpdateInstallResult, UpdateStatus } from "./update";
+import type {
+  UsageConnectionSave,
+  UsageConnectionSaved,
+  UsageConnectionView,
+} from "./usageConnection";
 import type { MicAccess, RecognizerPlace, VoiceDownloadProgress, VoiceStatus } from "./voice";
 
 /** The one frozen API surface the preload exposes as `window.infinitary`. */
@@ -873,6 +878,10 @@ export type FirstmateApi = {
     /** The app's own cost limit for each task (docs/usage.md, "The cost limit"). */
     getCostLimit: () => Promise<AppCostLimitView>;
     setCostLimit: (limit: CostLimit) => Promise<AppCostLimitView>;
+    /** The reporting connection the person adds (docs/usage-report.md). */
+    getUsageConnection: () => Promise<UsageConnectionView>;
+    saveUsageConnection: (input: UsageConnectionSave) => Promise<UsageConnectionSaved>;
+    removeUsageConnection: () => Promise<UsageConnectionView>;
     getNotifications: () => Promise<boolean>;
     setNotifications: (enabled: boolean) => Promise<boolean>;
     getAppearance: () => Promise<Appearance>;

@@ -4074,6 +4074,44 @@ public enum PhoneMessages {
     public static func `settingsUsageAttributionServed`() -> String { PhoneWords.format("settingsUsageAttributionServed", []) }
     public static func `settingsUsageBarsPriced`() -> String { PhoneWords.format("settingsUsageBarsPriced", []) }
     public static func `settingsUsageCloseDetails`() -> String { PhoneWords.format("settingsUsageCloseDetails", []) }
+    public static func `settingsUsageConnectionAdd`() -> String { PhoneWords.format("settingsUsageConnectionAdd", []) }
+    public static func `settingsUsageConnectionAddHeader`() -> String { PhoneWords.format("settingsUsageConnectionAddHeader", []) }
+    public static func `settingsUsageConnectionAddress`() -> String { PhoneWords.format("settingsUsageConnectionAddress", []) }
+    public static func `settingsUsageConnectionAddressHint`() -> String { PhoneWords.format("settingsUsageConnectionAddressHint", []) }
+    public static func `settingsUsageConnectionCancel`() -> String { PhoneWords.format("settingsUsageConnectionCancel", []) }
+    public static func `settingsUsageConnectionClaudeCode`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionClaudeCode", [`host`]) }
+    public static func `settingsUsageConnectionEdit`() -> String { PhoneWords.format("settingsUsageConnectionEdit", []) }
+    public static func `settingsUsageConnectionFailed`() -> String { PhoneWords.format("settingsUsageConnectionFailed", []) }
+    public static func `settingsUsageConnectionHeaderKept`() -> String { PhoneWords.format("settingsUsageConnectionHeaderKept", []) }
+    public static func `settingsUsageConnectionHeaderName`() -> String { PhoneWords.format("settingsUsageConnectionHeaderName", []) }
+    public static func `settingsUsageConnectionHeaderValue`() -> String { PhoneWords.format("settingsUsageConnectionHeaderValue", []) }
+    public static func `settingsUsageConnectionHeaders`() -> String { PhoneWords.format("settingsUsageConnectionHeaders", []) }
+    public static func `settingsUsageConnectionHeadersHint`() -> String { PhoneWords.format("settingsUsageConnectionHeadersHint", []) }
+    public static func `settingsUsageConnectionKeep`() -> String { PhoneWords.format("settingsUsageConnectionKeep", []) }
+    public static func `settingsUsageConnectionNone`() -> String { PhoneWords.format("settingsUsageConnectionNone", []) }
+    public static func `settingsUsageConnectionProblemAddress`() -> String { PhoneWords.format("settingsUsageConnectionProblemAddress", []) }
+    public static func `settingsUsageConnectionProblemDestination`() -> String { PhoneWords.format("settingsUsageConnectionProblemDestination", []) }
+    public static func `settingsUsageConnectionProblemHeader`() -> String { PhoneWords.format("settingsUsageConnectionProblemHeader", []) }
+    public static func `settingsUsageConnectionProblemHeaderValue`() -> String { PhoneWords.format("settingsUsageConnectionProblemHeaderValue", []) }
+    public static func `settingsUsageConnectionProblemNoSecrets`() -> String { PhoneWords.format("settingsUsageConnectionProblemNoSecrets", []) }
+    public static func `settingsUsageConnectionProblemNotFound`() -> String { PhoneWords.format("settingsUsageConnectionProblemNotFound", []) }
+    public static func `settingsUsageConnectionProblemPlainHttp`() -> String { PhoneWords.format("settingsUsageConnectionProblemPlainHttp", []) }
+    public static func `settingsUsageConnectionProblemSecretsLocked`() -> String { PhoneWords.format("settingsUsageConnectionProblemSecretsLocked", []) }
+    public static func `settingsUsageConnectionReads`() -> String { PhoneWords.format("settingsUsageConnectionReads", []) }
+    public static func `settingsUsageConnectionReadsClaudeCode`() -> String { PhoneWords.format("settingsUsageConnectionReadsClaudeCode", []) }
+    public static func `settingsUsageConnectionReadsStandard`() -> String { PhoneWords.format("settingsUsageConnectionReadsStandard", []) }
+    public static func `settingsUsageConnectionRemove`() -> String { PhoneWords.format("settingsUsageConnectionRemove", []) }
+    public static func `settingsUsageConnectionRemoveConfirm`() -> String { PhoneWords.format("settingsUsageConnectionRemoveConfirm", []) }
+    public static func `settingsUsageConnectionRemoveHeader`() -> String { PhoneWords.format("settingsUsageConnectionRemoveHeader", []) }
+    public static func `settingsUsageConnectionRemoveWarning`() -> String { PhoneWords.format("settingsUsageConnectionRemoveWarning", []) }
+    public static func `settingsUsageConnectionSave`() -> String { PhoneWords.format("settingsUsageConnectionSave", []) }
+    public static func `settingsUsageConnectionSaveLine`() -> String { PhoneWords.format("settingsUsageConnectionSaveLine", []) }
+    public static func `settingsUsageConnectionSecretLabel`(`name`: String) -> String { PhoneWords.format("settingsUsageConnectionSecretLabel", [`name`]) }
+    public static func `settingsUsageConnectionStandard`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionStandard", [`host`]) }
+    public static func `settingsUsageConnectionTitle`() -> String { PhoneWords.format("settingsUsageConnectionTitle", []) }
+    public static func `settingsUsageConnectionUseOperation`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionUseOperation", [`host`]) }
+    public static func `settingsUsageConnectionUseReason`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionUseReason", [`host`]) }
+    public static func `settingsUsageConnectionUseResult`() -> String { PhoneWords.format("settingsUsageConnectionUseResult", []) }
     public static func `settingsUsageCostAllKinds`() -> String { PhoneWords.format("settingsUsageCostAllKinds", []) }
     public static func `settingsUsageCostAllProjects`() -> String { PhoneWords.format("settingsUsageCostAllProjects", []) }
     public static func `settingsUsageCostChange`() -> String { PhoneWords.format("settingsUsageCostChange", []) }
@@ -4203,6 +4241,7 @@ public enum PhoneMessages {
     public static func `settingsUsageReportingSecure`(`host`: String) -> String { PhoneWords.format("settingsUsageReportingSecure", [`host`]) }
     public static func `settingsUsageReportingUnreachable`(`host`: String) -> String { PhoneWords.format("settingsUsageReportingUnreachable", [`host`]) }
     public static func `settingsUsageReportsClaudeTo`(`host`: String) -> String { PhoneWords.format("settingsUsageReportsClaudeTo", [`host`]) }
+    public static func `settingsUsageReportsConnectionTo`(`host`: String) -> String { PhoneWords.format("settingsUsageReportsConnectionTo", [`host`]) }
     public static func `settingsUsageReportsTo`(`host`: String) -> String { PhoneWords.format("settingsUsageReportsTo", [`host`]) }
     public static func `settingsUsageScopeAll`() -> String { PhoneWords.format("settingsUsageScopeAll", []) }
     public static func `settingsUsageScopeFirstmate`() -> String { PhoneWords.format("settingsUsageScopeFirstmate", []) }
@@ -8716,6 +8755,44 @@ extension PhoneWords {
         "settingsUsageAttributionServed": [],
         "settingsUsageBarsPriced": [],
         "settingsUsageCloseDetails": [],
+        "settingsUsageConnectionAdd": [],
+        "settingsUsageConnectionAddHeader": [],
+        "settingsUsageConnectionAddress": [],
+        "settingsUsageConnectionAddressHint": [],
+        "settingsUsageConnectionCancel": [],
+        "settingsUsageConnectionClaudeCode": ["host"],
+        "settingsUsageConnectionEdit": [],
+        "settingsUsageConnectionFailed": [],
+        "settingsUsageConnectionHeaderKept": [],
+        "settingsUsageConnectionHeaderName": [],
+        "settingsUsageConnectionHeaderValue": [],
+        "settingsUsageConnectionHeaders": [],
+        "settingsUsageConnectionHeadersHint": [],
+        "settingsUsageConnectionKeep": [],
+        "settingsUsageConnectionNone": [],
+        "settingsUsageConnectionProblemAddress": [],
+        "settingsUsageConnectionProblemDestination": [],
+        "settingsUsageConnectionProblemHeader": [],
+        "settingsUsageConnectionProblemHeaderValue": [],
+        "settingsUsageConnectionProblemNoSecrets": [],
+        "settingsUsageConnectionProblemNotFound": [],
+        "settingsUsageConnectionProblemPlainHttp": [],
+        "settingsUsageConnectionProblemSecretsLocked": [],
+        "settingsUsageConnectionReads": [],
+        "settingsUsageConnectionReadsClaudeCode": [],
+        "settingsUsageConnectionReadsStandard": [],
+        "settingsUsageConnectionRemove": [],
+        "settingsUsageConnectionRemoveConfirm": [],
+        "settingsUsageConnectionRemoveHeader": [],
+        "settingsUsageConnectionRemoveWarning": [],
+        "settingsUsageConnectionSave": [],
+        "settingsUsageConnectionSaveLine": [],
+        "settingsUsageConnectionSecretLabel": ["name"],
+        "settingsUsageConnectionStandard": ["host"],
+        "settingsUsageConnectionTitle": [],
+        "settingsUsageConnectionUseOperation": ["host"],
+        "settingsUsageConnectionUseReason": ["host"],
+        "settingsUsageConnectionUseResult": [],
         "settingsUsageCostAllKinds": [],
         "settingsUsageCostAllProjects": [],
         "settingsUsageCostChange": [],
@@ -8845,6 +8922,7 @@ extension PhoneWords {
         "settingsUsageReportingSecure": ["host"],
         "settingsUsageReportingUnreachable": ["host"],
         "settingsUsageReportsClaudeTo": ["host"],
+        "settingsUsageReportsConnectionTo": ["host"],
         "settingsUsageReportsTo": ["host"],
         "settingsUsageScopeAll": [],
         "settingsUsageScopeFirstmate": [],

@@ -160,7 +160,7 @@ import { WorkPresentation } from "./tasks/workPresentation";
 import { createAppTelemetry } from "./telemetry";
 import { DEV_STARTER_SETTING, readStarterSession } from "./update/devStarter";
 import { createInstalledUpdateChecker } from "./update/updateChecker";
-import { companyUsageDestinations } from "./usageReport/companyDestination";
+import { usageReportRoutes } from "./usageReport/usageConnection";
 import { WindowsInFront } from "./windowsInFront";
 import { adoptBundledGit } from "./workspace/bundledGit";
 import { ProjectContributions } from "./workspace/projectContributions";
@@ -749,13 +749,13 @@ export async function createServices(
     runtimeFor: (accountId) => vault.runtimeFor(accountId),
     baseRuntime: auth.modelRuntime,
   });
-  const companyUsage = companyUsageDestinations();
+  const usageRoutes = usageReportRoutes(paths.userData);
   const { usageStore, costLimitStore, appCostLimitView, recordUsage, ...usage } = homeUsage(db, {
     appLimit: () => settings.getTaskCostLimit(),
     projectLimit: (repoId) => repos.get(repoId)?.costLimit,
     isTask: (taskId) => tasks.get(taskId) !== undefined,
     hearEvents: (hear) => eventSeam.attachUsageReport(hear),
-    reportDestinations: companyUsage.destinations,
+    reportDestinations: usageRoutes.destinations,
   });
   taskCostOf = usage.taskCostOf;
   // Card-worthy moments reach Notification Center, and each paired phone
@@ -899,11 +899,11 @@ export async function createServices(
   const axiBinDir = host.app.packaged
     ? join(host.app.resourcesDir, "axi-bin")
     : join(host.app.appDir, "resources", "axi-bin");
-  // Secrets is built after the crew it raises cards through; a sign-in's
-  // key reaches it through this, only once a binding uses one.
+  // Secrets is built after the crew it raises cards through; a sign-in's key
+  // and the reporting connection's headers reach it through these keys.
   let integrationSecrets: SecretsSettings | undefined;
   const integrationBrokers: SecretBroker[] = [];
-  const integrationKeys: IntegrationKeys = {
+  const integrationKeys: IntegrationKeys = usageRoutes.keys({
     shown: () => host.secrets !== undefined,
     reference: async (label) => integrationSecrets?.reference(label),
     keepHidden: async (input) => integrationSecrets?.keepHidden(input),
@@ -915,7 +915,7 @@ export async function createServices(
     },
     use: async (input) =>
       (await integrationSecrets?.use(input)) ?? { state: "unavailable" as const },
-  };
+  });
   // Integrations (docs/integrations.md): every binding, the inbox and the asks.
   const {
     integrations,
@@ -1773,7 +1773,7 @@ export async function createServices(
       clearInterval(livenessInterval);
       // The daily read of each phone's box of letters (docs/phone-push.md, "Letters").
       notifier.stop();
-      void usage.usageReporter.stop();
+      void usage.usageReporter.stop().then(usageRoutes.stop);
     },
     stopWorkPresentation: () => workPresentation.dispose(),
     supervisor,
@@ -1785,7 +1785,7 @@ export async function createServices(
     observe,
     crewLive,
     // The words General's model picker uses for a custom API.
-    usage: { ...usageReads(usageStore, slots, "Custom API"), reporting: companyUsage.reporting },
+    usage: { ...usageReads(usageStore, slots, "Custom API"), ...usageRoutes.reads },
     costLimit: {
       view: () => appCostLimitView(),
       set: (limit) => {
