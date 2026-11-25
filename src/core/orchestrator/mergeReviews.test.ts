@@ -1,4 +1,5 @@
 import type { ChangePresentationDraft } from "@shared/changePresentation";
+import { DEFAULT_CONTRIBUTOR_DISCLOSURE } from "@shared/contributorDisclosure";
 import { fixedHoldWords } from "@shared/holds";
 import { type MergeReview, mergeRuleWords } from "@shared/mergeReview";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
@@ -322,7 +323,7 @@ describe("reviewed contributor changes", () => {
         worktree: at.paths,
         dir: at.paths,
       });
-      const storyForge = forkStoryForge(at.forge, review, at.task.id);
+      const storyForge = forkStoryForge(at.forge, review, at.task.id, undefined);
       if (contribution) {
         // A selected fork's comment is not publication of the task's own contribution.
         expect(await at.service.publication.preparePresentation(at.task.id, staged)).toContain(
@@ -371,6 +372,114 @@ describe("reviewed contributor changes", () => {
       expect(dispatched[0]?.squashMessage).toContain(draft.whatChanged[0]);
       expect(at.host.pull.title).toBe("Fix typo");
       expect(writes).toEqual([`POST /repos/x/y/issues/${review.number}/comments`]);
+    },
+  );
+  // The captain's words: "when we reply to outside contributors, we should
+  // always disclose this is made by an infinitary crewmate". A merge that
+  // finds the pull request past its published story republishes the comment,
+  // and that rebuilt comment still opens with the project's line.
+  it.each(["ordinary", "numbered"] as const)(
+    "the %s merge that republishes a moved review story keeps the project's disclosure line",
+    async (route) => {
+      const at = await onGitHub();
+      at.host.pull = openPull({ title: "Fix typo", headRepo: "contributor/y", headRepoId: 912 });
+      const review = await at.prepare();
+      let comment: { id: number; body: string } | undefined;
+      const writes: string[] = [];
+      const api: ForgeApi = {
+        place: "GitHub",
+        defaultPerPage: 100,
+        route: (method, path) => parseApiRequest(method, path, { owner: "x", name: "y" }),
+        nextPath: () => null,
+        call: async (method, path, body) => {
+          if (method !== "GET") {
+            writes.push(`${method} ${path}`);
+            comment = { id: 41, body: JSON.parse(body ?? "{}").body };
+          }
+          return {
+            status: 200,
+            requestId: null,
+            rateLimit: null,
+            retryAfterSeconds: null,
+            link: null,
+            body: JSON.stringify(method === "GET" ? (comment ? [comment] : []) : comment),
+          };
+        },
+      };
+      Object.assign(at.forge, {
+        api,
+        attachments: {
+          destination: async () => ({
+            host: review.host,
+            projectId: 1,
+            fullName: `${review.owner}/${review.name}`,
+            visibility: "public",
+          }),
+          upload: async () => {
+            throw new Error("The text-only review story has no media to upload.");
+          },
+        },
+      });
+      at.forge.change = null;
+      at.readHead.mockResolvedValue(review.headSha);
+      const draft: ChangePresentationDraft = {
+        title: "fix: correct the typo",
+        base: review.headSha,
+        head: review.headSha,
+        publishable: true,
+        why: ["A word was misspelled."],
+        whatChanged: ["The word is spelled correctly."],
+        before: ["The page showed the typo."],
+        after: ["The page shows the word spelled correctly."],
+        views: [],
+        noPicture: "The change corrects one word.",
+        checked: [{ check: "Source review", result: "The selected version's checks passed." }],
+        verification: [],
+        risk: Object.fromEntries(
+          RISK_DIMENSIONS.map((dimension) => [
+            dimension,
+            { level: "low", why: "This fixture corrects one word." },
+          ]),
+        ) as RiskDeclaration,
+        requiredActions: [],
+        unfinished: [],
+      };
+      const staged = await stageChangePresentation(draft, {
+        taskId: at.task.id,
+        worktree: at.paths,
+        dir: at.paths,
+      });
+      expect(await at.service.publication.preparePresentation(at.task.id, staged)).toContain(
+        "Prepared presentation",
+      );
+      const revision = at.tasks.delivery.changePresentation(at.task.id)?.revisions.at(-1)?.revision;
+      if (revision === undefined) throw new Error("The fork story was not prepared");
+      expect(
+        await at.service.publication.open(at.task.id, {
+          title: draft.title,
+          presentation: revision,
+        }),
+      ).toContain("Published the crew's story in a comment");
+      expect(comment?.body).toContain(DEFAULT_CONTRIBUTOR_DISCLOSURE);
+      // The contributor pushes past the published story, and the crew reviews
+      // that version: the merge finds the story behind it.
+      const MOVED = "c3f7e1d05b9a8f7e6d5c4b3a2918f7e6d5c4b3a2";
+      at.host.pull = { ...at.host.pull, headSha: MOVED };
+      at.readHead.mockResolvedValue(MOVED);
+      await at.prepare();
+      const reviewed = at.reviews().find((item) => item.headSha === MOVED);
+      if (!reviewed) throw new Error("The moved version was not reviewed");
+      at.forge.putIn = async () => undefined;
+      const result =
+        route === "ordinary"
+          ? await at.service.merges.merge(at.task.id)
+          : await at.service.reviews.mergeReview(at.task.id, reviewed.id);
+      expect(result, result.text).toMatchObject({ ok: true });
+      expect(writes).toEqual([
+        `POST /repos/x/y/issues/${review.number}/comments`,
+        "PATCH /repos/x/y/issues/comments/41",
+      ]);
+      expect(comment?.body).toContain(DEFAULT_CONTRIBUTOR_DISCLOSURE);
     },
   );
   // Accepted naming boundary: fork merge paths add no conventional-title wording rule.

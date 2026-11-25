@@ -1,6 +1,7 @@
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { checkSnapshotSummary } from "@shared/checkSnapshot";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
+import { contributorDisclosureLine } from "@shared/contributorDisclosure";
 import { changeNumberLabel, forgeOf, hasChangeRequests } from "@shared/forge";
 import { changePageUrl } from "@shared/forgeKinds";
 import { fixedHoldWords, overridePasses } from "@shared/holds";
@@ -862,8 +863,14 @@ export class MergeReviews {
         change.branch,
         change.number,
       );
+      // A moved story is republished here, so the region it rebuilds keeps
+      // the project's disclosure line (docs/forge.md, "Disclosing AI assistance").
+      const located = this.context.locate(taskId, "check", review);
+      const disclosure = contributorDisclosureLine("said" in located ? undefined : located.repo);
       const storyForge =
-        isForkReview(review) && hasStory ? forkStoryForge(forge, candidate, taskId) : forge;
+        isForkReview(review) && hasStory
+          ? forkStoryForge(forge, candidate, taskId, disclosure)
+          : forge;
       const storied = await this.merges.withPublishedStory(taskId, storyForge, change, guard);
       if ("held" in storied) return { ok: false, stop: "guidance", text: storied.held };
       change = storied.change;

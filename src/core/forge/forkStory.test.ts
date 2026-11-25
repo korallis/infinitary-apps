@@ -105,7 +105,7 @@ describe("fork story comment paging", () => {
       };
       const provider: Forge =
         kind === "github" ? new GitHubForge(location, options) : new GitLabForge(location, options);
-      const story = await forkStoryForge(provider, review, "thread-review").changeFor(
+      const story = await forkStoryForge(provider, review, "thread-review", undefined).changeFor(
         review.branch,
       );
       expect(story).toMatchObject({

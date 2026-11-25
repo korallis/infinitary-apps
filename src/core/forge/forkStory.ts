@@ -57,7 +57,7 @@ export function forkStoryForge(
   forge: Forge,
   review: MergeReview,
   taskId: string,
-  disclosure?: string,
+  disclosure: string | undefined,
 ): Forge {
   if (!isForkReview(review)) return forge;
   const api = forge.api;

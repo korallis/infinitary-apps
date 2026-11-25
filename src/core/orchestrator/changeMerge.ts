@@ -1,4 +1,5 @@
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
+import { contributorDisclosureLine } from "@shared/contributorDisclosure";
 import { forgeOf, hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { englishOf, type Said, said } from "@shared/i18n/said";
@@ -518,7 +519,9 @@ export class ChangeMerge {
       // A saved-story card names no review: its ordinary merge still reads
       // the selected fork by number and uses the crew's title, not the
       // contributor's title or a same-named project branch.
-      const storyForge = fork ? forkStoryForge(forge, fork, taskId) : forge;
+      const storyForge = fork
+        ? forkStoryForge(forge, fork, taskId, contributorDisclosureLine(repo))
+        : forge;
       const storied = await this.withPublishedStory(taskId, storyForge, change, guard);
       if ("held" in storied)
         return { ok: false, text: `Cannot merge yet: ${storied.held}.`, stop: "guidance" };
