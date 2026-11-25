@@ -12,12 +12,14 @@ import {
 } from "../../../tests/helpers/claudeLogins";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { scriptedClaudeQuery } from "../../../tests/helpers/scriptedClaudeQuery";
 import { ClaudeAuthBackend } from "../claude/claudeAuth";
 import { claudeEnvFor } from "../claude/claudeCli";
 import { claudeAvailableModels } from "../claude/claudeModels";
+import { CLAUDE_MODEL_PROVIDER } from "../claude/claudeQueryCore";
 import { readClaudeStore } from "../claude/claudeQuota";
 import { acquireSessionLease, resetStoreLeasesForTest } from "../claude/claudeStoreLease";
-import { claudeLoginDirs } from "../claude/session";
+import { claudeLoginDirs, createClaudeSessionFactory } from "../claude/session";
 import { absentKeychain } from "../host";
 import { createAccountStore } from "../models/accountStore";
 import { claudeListReader } from "../models/clientLists";
@@ -26,6 +28,7 @@ import { appPathsFor } from "../paths";
 import { AccountVault } from "../pi/accountVault";
 import type { AuthInteractionBridge } from "../pi/piAuth";
 import { startHomeQuota } from "../quota/homeQuota";
+import { questionSessionSpec } from "../session/questionSession";
 import { SettingsStore } from "../storage/settingsStore";
 import { claudeLoginFolder } from "./accountBackend";
 
@@ -342,6 +345,63 @@ describe("further Claude logins", () => {
     expect(dirs.ownConfigDir?.(second.id)).toBe(folder);
     await run.vault.remove(second.id);
     expect(() => dirs.ownConfigDir?.(second.id)).toThrow(/Unknown account/);
+  });
+
+  // Plan items 5 and 9 on the real factory with the vault's own wiring: the
+  // question's one-shot client is started as its account's login.
+  it("starts a question's client in a further login's folder without the person's gateway settings, and refuses a removed login's", async () => {
+    const run = boot(home);
+    const first = await run.add();
+    const second = await run.add();
+    const folder = run.folderOf(second.id);
+    const scripted = scriptedClaudeQuery({
+      onInput: (_message, emit) =>
+        emit({ type: "result", subtype: "success", is_error: false, result: "left" }),
+    });
+    const settingsAsks: string[] = [];
+    let asking = "";
+    const factory = createClaudeSessionFactory({
+      ...claudeLoginDirs(run.vault),
+      env: () => ({
+        PATH: "/usr/bin",
+        HOME: home,
+        ANTHROPIC_CUSTOM_HEADERS: "x-team-id: inherited",
+      }),
+      checkClient: async () => ({ state: "ready", executable: "/usr/local/bin/claude" }),
+      resolveWorkSettings: async () => ({ effective: {}, provenance: {}, sources: [] }),
+      accessSettings: async () => {
+        settingsAsks.push(asking);
+        return { env: { ANTHROPIC_CUSTOM_HEADERS: "x-team-id: settings" } };
+      },
+      query: scripted.factory,
+    });
+    const ask = async (accountId: string) => {
+      asking = accountId;
+      const session = await factory.open(
+        questionSessionSpec({
+          homeDir: home,
+          binding: { backend: "claude", accountId },
+          model: { provider: CLAUDE_MODEL_PROVIDER, id: "claude-haiku-4-5" },
+          instruction: "Answer with exactly one of: left, right.",
+        }),
+      );
+      await session.prompt("Which way?");
+      session.dispose();
+      return scripted.harness().options.env ?? {};
+    };
+
+    const further = await ask(second.id);
+    expect(further.CLAUDE_CONFIG_DIR).toBe(folder);
+    expect(further.ANTHROPIC_CUSTOM_HEADERS).toBe(undefined);
+    expect(settingsAsks, "the person's gateway settings were not read for it").toEqual([]);
+
+    const firstEnv = await ask(first.id);
+    expect(firstEnv.CLAUDE_CONFIG_DIR).toBe(undefined);
+    expect(settingsAsks).toEqual([first.id]);
+
+    await run.vault.remove(second.id);
+    await expect(ask(second.id)).rejects.toThrow(/Unknown account/);
+    expect(scripted.attachments, "no client was started for the removed login").toHaveLength(2);
   });
 
   // Plan item 9: the person's gateway headers are their default login's.
