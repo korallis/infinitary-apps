@@ -103,9 +103,11 @@ describe("createProxyAppReader", () => {
   // uses; two files naming its port with different keys leave that unknown.
   describe("with settings both beside the proxy program and in the folder above", () => {
     const CORE = "C:\\Tools\\EasyCLIProxyAPI\\cpa-core\\cli-proxy-api.exe";
-    const readerWith = (beside: string, above: string) =>
+    const readerWith = (beside: string, above: string, ports = [8317]) =>
       createProxyAppReader(
-        async () => [{ program: CORE, endpoints: [{ address: "127.0.0.1", port: 8317 }] }],
+        async () => [
+          { program: CORE, endpoints: ports.map((port) => ({ address: "127.0.0.1", port })) },
+        ],
         async (path) => (path.includes("cpa-core") ? beside : above),
       );
 
@@ -113,6 +115,12 @@ describe("createProxyAppReader", () => {
       const stale = SETTINGS.replace("Mk7q2Vz9Lp4X", "Old4Key9Left");
       expect(await readerWith(stale, SETTINGS)()).toBe(undefined);
       expect(await readerWith(SETTINGS, stale)()).toBe(undefined);
+    });
+
+    it("reads nothing when both hold the same keys for two ports the proxy listens on", async () => {
+      const other = SETTINGS.replace("port = 8317", "port = 8400");
+      expect(await readerWith(other, SETTINGS, [8317, 8400])()).toBe(undefined);
+      expect(await readerWith(SETTINGS, other, [8317, 8400])()).toBe(undefined);
     });
 
     it("reads the one that names the port the proxy listens on", async () => {

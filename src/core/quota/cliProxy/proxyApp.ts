@@ -298,8 +298,8 @@ function listenersOf(entries: ({ program: string } & ListenEndpoint)[]): ProxyLi
  * The proxy app's settings, read on each call from the running proxy
  * program's folder and the app's folder above it, while that program listens
  * on the port they name. When both files name a port it listens on, they
- * must hold the same keys: which one the running proxy uses is not known,
- * so differing keys are read as no settings at all. Its keys go only to a
+ * must name the same port and hold the same keys: which one the running
+ * proxy uses is not known, so differing files are read as no settings. Its keys go only to a
  * loopback address where that program itself listens on that port now
  * (`loopbackOriginOf`), IPv4 first: a settings file left by a proxy that
  * exited, or a port another program took, is not read. While no proxy runs,
@@ -323,7 +323,10 @@ export function createProxyAppReader(
           found.push(settings);
       }
       const app = found.every(
-        (other) => other.key === found[0]?.key && other.clientKey === found[0]?.clientKey,
+        (other) =>
+          other.port === found[0]?.port &&
+          other.key === found[0]?.key &&
+          other.clientKey === found[0]?.clientKey,
       )
         ? found[0]
         : undefined;
