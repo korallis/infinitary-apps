@@ -427,7 +427,7 @@ describe("mergeStaleProviders", () => {
     };
     const answered: ProxyReading = {
       status: "ok",
-      port: 8317,
+      origins: ["http://127.0.0.1:8317"],
       atMs: 1000,
       modelPools: new Map([
         ["claude-opus-5-5", "claude"],
@@ -448,7 +448,7 @@ describe("mergeStaleProviders", () => {
     };
     const silent: ProxyReading = {
       status: "unavailable",
-      port: 8317,
+      origins: ["http://127.0.0.1:8317"],
       reason: "connection_refused",
       atMs: 2000,
     };

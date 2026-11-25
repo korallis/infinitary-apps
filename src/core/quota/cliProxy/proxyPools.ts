@@ -86,7 +86,8 @@ function apiCallAllowed(body: Uint8Array | undefined): boolean {
 export type ProxyReading =
   | {
       status: "ok";
-      port: number;
+      /** Where the proxy listens on this computer (`ProxyApp.origins`). */
+      origins: readonly string[];
       logins: ProxyLogin[];
       /**
        * Each model the proxy lists, by the pool its owner names; absent when
@@ -101,7 +102,7 @@ export type ProxyReading =
   | {
       /** The proxy app runs, but did not answer, or refused its own key. */
       status: "unavailable";
-      port: number;
+      origins: readonly string[];
       reason: string;
       atMs: number;
     };
@@ -117,8 +118,8 @@ type Asked = {
 };
 
 /**
- * What the app uses of the proxy at a port: whether Claude Code sends its
- * requests there, and the models of the custom connections pointed there.
+ * What the app uses of the proxy at its origins: whether Claude Code sends
+ * its requests there, and the models of the custom connections pointed there.
  */
 export type ProxyUse = { claude: boolean; modelIds: readonly string[] };
 
@@ -139,7 +140,7 @@ const POOL_OF_OWNER: Record<string, QuotaPoolKind> = {
 export function createProxyPoolReader(options: {
   app: () => Promise<ProxyApp | undefined>;
   http: QuotaHttp;
-  uses: (port: number) => Promise<ProxyUse> | ProxyUse;
+  uses: (origins: readonly string[]) => Promise<ProxyUse> | ProxyUse;
   ask?: boolean;
   now?: () => number;
 }): () => Promise<ProxyReading | undefined> {
@@ -150,7 +151,7 @@ export function createProxyPoolReader(options: {
     const app = await options.app();
     if (!app) return undefined;
     // A proxy nothing in the app sends requests to is not read at all.
-    const use = await options.uses(app.port);
+    const use = await options.uses(app.origins);
     if (!use.claude && use.modelIds.length === 0) return undefined;
     const http = guardedProxyHttp(options.http, app, { ask });
     const management = { Authorization: bearer(app.key), Accept: "application/json" };
@@ -162,7 +163,7 @@ export function createProxyPoolReader(options: {
     if (answer.status !== 200 || !answer.json) {
       return {
         status: "unavailable",
-        port: app.port,
+        origins: app.origins,
         reason:
           answer.status === 401 ? "proxy_key_refused" : (answer.failure ?? `http_${answer.status}`),
         atMs,
@@ -181,7 +182,7 @@ export function createProxyPoolReader(options: {
     );
     return {
       status: "ok",
-      port: app.port,
+      origins: app.origins,
       logins: filled,
       ...("pools" in models ? { modelPools: models.pools } : { modelsFailure: models.failure }),
       atMs,

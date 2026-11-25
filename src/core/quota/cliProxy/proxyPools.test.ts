@@ -16,6 +16,7 @@ import {
 // proxy's pooled logins").
 const APP: ProxyApp = {
   origin: "http://127.0.0.1:8317",
+  origins: ["http://127.0.0.1:8317"],
   port: 8317,
   key: "Mk7q2Vz9Lp4X",
   clientKey: "sk-client-one",

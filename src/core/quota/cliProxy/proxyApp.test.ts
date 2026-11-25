@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { addressIsProxy, createProxyAppReader, lsofEndpoint, readProxySettings } from "./proxyApp";
+import {
+  addressIsProxy,
+  createProxyAppReader,
+  lsofEndpoint,
+  lsofListening,
+  readProxySettings,
+} from "./proxyApp";
 
 // The captain's choice: Infinitary reads the proxy's key from the proxy
 // app's own settings file (docs/quota.md, "A proxy's pooled logins"). The
@@ -21,6 +27,7 @@ describe("readProxySettings", () => {
   it("reads the port, the management key and the first client key, before any table", () => {
     expect(readProxySettings(SETTINGS)).toEqual({
       origin: "http://127.0.0.1:8317",
+      origins: ["http://127.0.0.1:8317"],
       port: 8317,
       key: "Mk7q2Vz9Lp4X",
       clientKey: "sk-client-one",
@@ -40,21 +47,57 @@ describe("readProxySettings", () => {
   });
 });
 
+// The review's finding: an address is the proxy's only at a loopback
+// origin the proxy itself listens on, so another service on the same port
+// of the other loopback family never takes the proxy's reads or meters.
 describe("addressIsProxy", () => {
+  const IPV4 = ["http://127.0.0.1:8317"];
+  const BOTH = ["http://127.0.0.1:8317", "http://[::1]:8317"];
   it.each([
-    ["http://127.0.0.1:8317", true],
-    ["http://localhost:8317/v1", true],
-    ["https://127.0.0.1:8317", false],
-    ["http://127.0.0.1:8318", false],
-    ["http://proxy.example.com:8317", false],
-    ["not an address", false],
-  ])("%s goes to the proxy on port 8317: %s", (address, expected) => {
-    expect(addressIsProxy(address, 8317)).toBe(expected);
+    ["http://127.0.0.1:8317", IPV4, true],
+    ["http://127.0.0.1:8317/v1", BOTH, true],
+    ["http://[::1]:8317", IPV4, false],
+    ["http://[::1]:8317/v1", BOTH, true],
+    ["http://localhost:8317/v1", IPV4, false],
+    ["http://localhost:8317/v1", BOTH, true],
+    ["https://127.0.0.1:8317", IPV4, false],
+    ["http://127.0.0.1:8318", IPV4, false],
+    ["http://proxy.example.com:8317", IPV4, false],
+    ["not an address", IPV4, false],
+  ])("%s goes to a proxy listening at %j: %s", (address, origins, expected) => {
+    expect(addressIsProxy(address, origins)).toBe(expected);
   });
 });
 
 describe("createProxyAppReader", () => {
-  const PROGRAM = "C:\\Tools\\EasyCLIProxyAPI\\EasyCLIProxyAPI.exe";
+  const PROGRAM = "C:\\Tools\\EasyCLIProxyAPI\\cli-proxy-api.exe";
+
+  // EasyCLIProxyAPI keeps its settings in its own folder and runs the proxy
+  // program from `cpa-core` inside it, as its Windows download lays them out.
+  it("reads the app's settings from the folder above the proxy program", async () => {
+    const reads: string[] = [];
+    const reader = createProxyAppReader(
+      async () => [
+        {
+          program: "C:\\Tools\\EasyCLIProxyAPI\\cpa-core\\cli-proxy-api.exe",
+          endpoints: [{ address: "127.0.0.1", port: 8317 }],
+        },
+      ],
+      async (path) => {
+        reads.push(path.replaceAll("\\", "/"));
+        if (path.includes("cpa-core")) throw new Error("ENOENT");
+        return SETTINGS;
+      },
+    );
+    expect(await reader()).toMatchObject({
+      origin: "http://127.0.0.1:8317",
+      origins: ["http://127.0.0.1:8317"],
+    });
+    expect(reads).toEqual([
+      "C:/Tools/EasyCLIProxyAPI/cpa-core/config.toml",
+      "C:/Tools/EasyCLIProxyAPI/config.toml",
+    ]);
+  });
 
   it("reads the settings beside the running proxy, asking the system again on each read", async () => {
     let finds = 0;
@@ -116,7 +159,10 @@ describe("createProxyAppReader", () => {
       ],
       async () => SETTINGS,
     );
-    expect((await reader())?.origin).toBe("http://127.0.0.1:8317");
+    expect(await reader()).toMatchObject({
+      origin: "http://127.0.0.1:8317",
+      origins: ["http://127.0.0.1:8317", "http://[::1]:8317"],
+    });
   });
 
   it("reads nothing once the proxy has exited, though its settings file is still there", async () => {
@@ -163,5 +209,22 @@ describe("lsofEndpoint", () => {
     ["*:8317", "IPv6", { address: "::", port: 8317 }],
   ])("%s on %s", (name, family, endpoint) => {
     expect(lsofEndpoint(name, family)).toEqual(endpoint);
+  });
+
+  // The review's finding: where a wildcard answers is not guessed.
+  it.each([undefined, "unix", "sock"])(
+    "names no endpoint for a wildcard of family %s",
+    (family) => {
+      expect(lsofEndpoint("*:8317", family)).toBe(undefined);
+    },
+  );
+});
+
+describe("lsofListening", () => {
+  // The review's finding: a file's family never carries over to the next
+  // file or process.
+  it("reads each file's wildcard by its own family alone", () => {
+    const lines = ["p100", "f5", "tIPv6", "n*:8317", "f6", "n*:8318", "p200", "f3", "n*:8319"];
+    expect([...lsofListening(lines)]).toEqual([["100", [{ address: "::", port: 8317 }]]]);
   });
 });

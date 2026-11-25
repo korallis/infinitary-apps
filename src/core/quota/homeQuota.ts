@@ -40,19 +40,13 @@ import {
   readProxySettings,
 } from "./cliProxy/proxyApp";
 import { createProxyPoolReader, type ProxyReading } from "./cliProxy/proxyPools";
-import {
-  type PooledConnection,
-  poolOutcome,
-  proxyCatalogModels,
-  proxyConnectionRows,
-  rowOfOutcome,
-} from "./cliProxy/proxyQuota";
+import { type PooledConnection, projectProxyRows, proxyCatalogModels } from "./cliProxy/proxyQuota";
 import { CreditsWatch, stampSnapshot, stampSwitch } from "./creditsSwitch";
 import { createQuotaFetcher } from "./fetchQuota";
 import { createFixtureRefresh } from "./fixture";
 import { createQuotaHttp } from "./http";
 import { needsReauthTargets } from "./needsReauth";
-import { CLAUDE_ACCESS_REASON, claudeAccessOutcome, type ProviderOutcome } from "./outcome";
+import { claudeAccessOutcome, type ProviderOutcome } from "./outcome";
 import {
   PushedQuotaStore,
   type PushedWindow,
@@ -215,10 +209,11 @@ export function startHomeQuota(options: {
     ? createProxyPoolReader({
         app: proxyApp,
         http: createQuotaHttp(),
-        uses: (port) => ({
-          claude: claudeAccess?.address !== undefined && addressIsProxy(claudeAccess.address, port),
+        uses: (origins) => ({
+          claude:
+            claudeAccess?.address !== undefined && addressIsProxy(claudeAccess.address, origins),
           modelIds: pooledConnections()
-            .filter((connection) => addressIsProxy(connection.baseUrl, port))
+            .filter((connection) => addressIsProxy(connection.baseUrl, origins))
             .flatMap((connection) => connection.modelIds),
         }),
       })
@@ -238,29 +233,18 @@ export function startHomeQuota(options: {
       proxy = undefined;
     }
   };
-  // The proxy's one projection over a snapshot, the only place its rows are
-  // made: the Claude access row read through it, and each connection's pool
-  // rows made again, all at the reading's own moment. The quota service lays
-  // it over each refresh and each reading, and publishes it when it changes.
-  // Without a proxy reading, a row read through it goes back to what the
-  // access says, and the connection rows go.
-  const claudeQuotaId = quotaRowProviderOf(CLAUDE_PROVIDER_ID);
-  const withProxyRows = (snapshot: QuotaSnapshotView): QuotaSnapshotView => {
-    const at = proxy?.atMs ?? Date.now();
-    const providers = snapshot.providers.flatMap((row) => {
-      if (isCustomApiProvider(row.provider) && row.fromProxy) return [];
-      if (row.provider !== claudeQuotaId) return [row];
-      if (!row.fromProxy && row.reason !== CLAUDE_ACCESS_REASON) return [row];
-      const outcome =
-        poolOutcome(proxy, "claude", claudeAccess?.address) ??
-        (claudeAccess ? claudeAccessOutcome(claudeAccess.source) : undefined);
-      return [outcome ? rowOfOutcome(row, outcome, at) : row];
+  // The quota service lays the proxy's one projection over each refresh and
+  // each reading, and publishes it when it changes.
+  const claudeRowId = quotaRowProviderOf(CLAUDE_PROVIDER_ID);
+  const withProxyRows = (snapshot: QuotaSnapshotView): QuotaSnapshotView =>
+    projectProxyRows(snapshot, {
+      reading: proxy,
+      claudeAccess,
+      claudeRowId,
+      connections: pooledConnections(),
+      refusalsOf: (accountId) => pushedQuota.windowsFor(accountId),
+      nowMs: Date.now(),
     });
-    return {
-      ...snapshot,
-      providers: [...providers, ...proxyConnectionRows(proxy, pooledConnections())],
-    };
-  };
   const catalogModels = () => [
     ...auth.catalogModels(vault.piModelRuntimes()),
     ...servedCatalogModels(CLAUDE_PROVIDER_ID, CLAUDE_MODELS),

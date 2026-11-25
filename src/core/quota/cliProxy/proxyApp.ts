@@ -1,21 +1,29 @@
 import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, readlink } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { hostEnv } from "../../hostEnv";
 import { encodedCommand, windowsPowerShell } from "../../storage/ownerOnly";
 
 /**
  * The CLI proxy app on this computer (docs/quota.md, "A proxy's pooled
- * logins"): EasyCLIProxyAPI keeps its settings in `config.toml` beside its
- * own program, with the port it listens on, the management key that reads
- * its logins and the client keys that list its models. Infinitary finds the
- * running program, reads that file, and sends the keys only to the loopback
- * address where that program listens on the port the same file names. The
- * keys stay in memory: they are never logged, stored or shown.
+ * logins"): EasyCLIProxyAPI keeps its settings in `config.toml` in its own
+ * folder, with the port its proxy program listens on, the management key
+ * that reads its logins and the client keys that list its models; the proxy
+ * program itself (`cli-proxy-api`) runs from a folder inside it. Infinitary
+ * finds the running proxy program, reads that file, and sends the keys only
+ * to a loopback address where that program listens on the port the same
+ * file names. The keys stay in memory: they are never logged, stored or
+ * shown.
  */
 export type ProxyApp = {
-  /** `http://127.0.0.1:<port>` or `http://[::1]:<port>`: where the proxy listens on this computer. */
+  /** `http://127.0.0.1:<port>` or `http://[::1]:<port>`: where the keys are sent. */
   origin: string;
+  /**
+   * Every loopback origin the proxy program itself listens on at its port,
+   * `origin` first: an address in the app is the proxy's only when it names
+   * one of these (`addressIsProxy`).
+   */
+  origins: readonly string[];
   port: number;
   /** The management key. Never logged, stored or put in a message. */
   key: string;
@@ -23,8 +31,11 @@ export type ProxyApp = {
   clientKey?: string;
 };
 
-/** The program whose folder holds the settings file. */
-const PROXY_PROGRAM = "EasyCLIProxyAPI";
+/**
+ * The proxy program EasyCLIProxyAPI starts, from a folder of its own
+ * (`cpa-core`) inside the app's folder that holds the settings file.
+ */
+const PROXY_PROGRAM = "cli-proxy-api";
 const SETTINGS_FILE = "config.toml";
 const FIND_TIMEOUT_MS = 10_000;
 
@@ -62,6 +73,7 @@ export function readProxySettings(text: string): ProxyApp | undefined {
       : undefined;
   return {
     origin: `http://127.0.0.1:${port}`,
+    origins: [`http://127.0.0.1:${port}`],
     port,
     key,
     ...(clientKey ? { clientKey } : {}),
@@ -106,12 +118,21 @@ function tomlString(text: string): string | undefined {
 }
 
 /**
- * Whether an address goes to the proxy at `port` on this computer: plain
- * HTTP to a loopback name with that port. The Claude Code address and a
- * custom connection's base address are both matched this way.
+ * Whether an address goes to the proxy on this computer: plain HTTP to a
+ * loopback origin the proxy listens on (`ProxyApp.origins`). IPv4 and IPv6
+ * loopback are told apart, since another program can hold the same port on
+ * the other; `localhost`, which a client may reach on either, is the proxy
+ * only when the proxy listens on both. The Claude Code address and a custom
+ * connection's base address are both matched this way.
  */
-export function addressIsProxy(address: string, port: number): boolean {
-  return loopbackPortOf(address) === port;
+export function addressIsProxy(address: string, origins: readonly string[]): boolean {
+  const port = loopbackPortOf(address);
+  if (port === undefined) return false;
+  const ipv4 = `http://127.0.0.1:${port}`;
+  const ipv6 = `http://[::1]:${port}`;
+  const host = new URL(address).hostname.toLowerCase();
+  if (host === "localhost") return origins.includes(ipv4) && origins.includes(ipv6);
+  return origins.includes(host === "[::1]" ? ipv6 : ipv4);
 }
 
 /**
@@ -161,40 +182,64 @@ export const findProxyListeners: FindProxyListeners = async () => {
       }),
     );
   }
-  const listening = await run("lsof", ["-nP", "-a", "-iTCP", "-sTCP:LISTEN", "-Fptn"]);
+  const endpointsOf = lsofListening(
+    await run("lsof", ["-nP", "-a", "-iTCP", "-sTCP:LISTEN", "-Fptn"]),
+  );
+  if (endpointsOf.size === 0) return [];
+  const programs = await run("ps", ["-axww", "-o", "pid=,comm="]);
+  const entries = await Promise.all(
+    programs.map(async (line) => {
+      const match = /^(\d+)\s+(.+)$/.exec(line);
+      const [, pid, name] = match ?? [];
+      if (!pid || !name || basename(name) !== PROXY_PROGRAM) return [];
+      // `ps` names a program by its path on a Mac and by its name alone on
+      // Linux, where the process's own link gives the path.
+      const program = name.includes("/")
+        ? name
+        : await readlink(`/proc/${pid}/exe`).catch(() => undefined);
+      if (!program) return [];
+      return (endpointsOf.get(pid) ?? []).map((endpoint) => ({ program, ...endpoint }));
+    }),
+  );
+  return listenersOf(entries.flat());
+};
+
+/**
+ * Each process's listening endpoints in `lsof -Fptn` output: a `p` line per
+ * process, then per open file an `f` line, its family (`t`) and its name
+ * (`n`). A file's family never carries over to the next file or process.
+ */
+export function lsofListening(lines: readonly string[]): Map<string, ListenEndpoint[]> {
   const endpointsOf = new Map<string, ListenEndpoint[]>();
   let pid: string | undefined;
   let family: string | undefined;
-  for (const line of listening) {
-    if (line.startsWith("p")) pid = line.slice(1);
+  for (const line of lines) {
+    if (line.startsWith("p")) {
+      pid = line.slice(1);
+      family = undefined;
+    } else if (line.startsWith("f")) family = undefined;
     else if (line.startsWith("t")) family = line.slice(1);
     else if (line.startsWith("n") && pid) {
       const endpoint = lsofEndpoint(line.slice(1), family);
       if (endpoint) endpointsOf.set(pid, [...(endpointsOf.get(pid) ?? []), endpoint]);
     }
   }
-  if (endpointsOf.size === 0) return [];
-  const programs = await run("ps", ["-axww", "-o", "pid=,comm="]);
-  return listenersOf(
-    programs.flatMap((line) => {
-      const match = /^(\d+)\s+(.+)$/.exec(line);
-      const [, pid, program] = match ?? [];
-      if (!pid || !program || basename(program) !== PROXY_PROGRAM) return [];
-      return (endpointsOf.get(pid) ?? []).map((endpoint) => ({ program, ...endpoint }));
-    }),
-  );
-};
+  return endpointsOf;
+}
 
 /**
  * An `lsof` name field (`127.0.0.1:8317`, `[::1]:8317`, `*:8317`) as an
- * endpoint; `*` is the wildcard of the file's address family.
+ * endpoint; `*` is the wildcard of the file's address family, and with no
+ * family `lsof` named, a wildcard is no endpoint: where it answers is not
+ * guessed.
  */
 export function lsofEndpoint(name: string, family: string | undefined): ListenEndpoint | undefined {
   const match = /^(.*):(\d+)$/.exec(name);
   if (!match?.[1] || !match[2]) return undefined;
   const host = match[1].replace(/^\[|\]$/g, "");
-  const address = host === "*" ? (family === "IPv6" ? "::" : "0.0.0.0") : host;
-  return { address, port: Number(match[2]) };
+  const wildcard = family === "IPv4" ? "0.0.0.0" : family === "IPv6" ? "::" : undefined;
+  const address = host === "*" ? wildcard : host;
+  return address ? { address, port: Number(match[2]) } : undefined;
 }
 
 /**
@@ -240,13 +285,13 @@ function listenersOf(entries: ({ program: string } & ListenEndpoint)[]): ProxyLi
 }
 
 /**
- * The proxy app's settings, read on each call from beside the running
- * program that listens on the port they name. Its keys go only to the
+ * The proxy app's settings, read on each call from the running proxy
+ * program's folder or the app's folder above it, whichever holds them, while
+ * that program listens on the port they name. Its keys go only to a
  * loopback address where that program itself listens on that port now
- * (`loopbackOriginOf`), which becomes the app's origin: a settings file
- * left by a proxy that exited, or a port another program took, is not
- * read. While no proxy runs, the system is asked at most once every
- * `lookAgainMs`.
+ * (`loopbackOriginOf`), IPv4 first: a settings file left by a proxy that
+ * exited, or a port another program took, is not read. While no proxy runs,
+ * the system is asked at most once every `lookAgainMs`.
  */
 export function createProxyAppReader(
   find: FindProxyListeners = findProxyListeners,
@@ -258,17 +303,24 @@ export function createProxyAppReader(
   return async () => {
     if (missedAt !== undefined && now() - missedAt < lookAgainMs) return undefined;
     for (const listener of await find()) {
-      const app = await readAt(join(dirname(listener.program), SETTINGS_FILE), read);
-      const origin = app
-        ? listener.endpoints
-            .filter((endpoint) => endpoint.port === app.port)
-            .map(loopbackOriginOf)
-            .sort()
-            .find((entry) => entry !== undefined)
-        : undefined;
+      const folder = dirname(listener.program);
+      const app =
+        (await readAt(join(folder, SETTINGS_FILE), read)) ??
+        (await readAt(join(dirname(folder), SETTINGS_FILE), read));
+      // "http://127..." sorts before "http://[::1]...": IPv4 comes first.
+      const origins = app
+        ? [
+            ...new Set(
+              listener.endpoints
+                .filter((endpoint) => endpoint.port === app.port)
+                .flatMap((endpoint) => loopbackOriginOf(endpoint) ?? []),
+            ),
+          ].sort()
+        : [];
+      const origin = origins[0];
       if (app && origin) {
         missedAt = undefined;
-        return { ...app, origin };
+        return { ...app, origin, origins };
       }
     }
     missedAt = now();

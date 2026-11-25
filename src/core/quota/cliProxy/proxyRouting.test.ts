@@ -33,7 +33,7 @@ const CONNECTION: PooledConnection = {
 };
 const reading: ProxyReading = {
   status: "ok",
-  port: 8317,
+  origins: ["http://127.0.0.1:8317"],
   atMs: NOW,
   modelPools: new Map([
     [CLAUDE.id, "claude"],

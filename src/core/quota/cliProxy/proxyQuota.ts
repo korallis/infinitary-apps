@@ -4,11 +4,14 @@ import {
   QUOTA_POOL_NAMES,
   type QuotaPoolKind,
   type QuotaProviderView,
+  type QuotaSnapshotView,
   type QuotaWindowView,
 } from "@shared/quota";
 import { poolReading } from "@shared/quotaSignals";
+import type { ClaudeAccess } from "../../claude/claudeAccess";
 import type { QuotaCatalogModel } from "../auth";
-import type { ProviderOutcome } from "../outcome";
+import { claudeAccessOutcome, type ProviderOutcome } from "../outcome";
+import { type PushedWindow, withRejectedReadings } from "../pushedQuota";
 import { addressIsProxy } from "./proxyApp";
 import type { ProxyReading } from "./proxyPools";
 
@@ -61,7 +64,7 @@ export function poolOutcome(
   kind: QuotaPoolKind,
   address: string | undefined,
 ): ProviderOutcome | undefined {
-  if (!reading || !address || !addressIsProxy(address, reading.port)) return undefined;
+  if (!reading || !address || !addressIsProxy(address, reading.origins)) return undefined;
   if (reading.status === "unavailable")
     return { status: "unavailable", windows: [], reason: reading.reason, fromProxy: true };
   return pooledOutcomes(reading).get(kind);
@@ -121,7 +124,8 @@ function connectionModelPools(
   connection: PooledConnection,
 ): Map<QuotaPoolKind, string[]> {
   const byPool = new Map<QuotaPoolKind, string[]>();
-  if (reading.status !== "ok" || !addressIsProxy(connection.baseUrl, reading.port)) return byPool;
+  if (reading.status !== "ok" || !addressIsProxy(connection.baseUrl, reading.origins))
+    return byPool;
   for (const id of connection.modelIds) {
     const kind = reading.modelPools?.get(id);
     if (!kind || !reading.logins.some((login) => login.kind === kind)) continue;
@@ -141,7 +145,7 @@ export function proxyConnectionRows(
 ): QuotaProviderView[] {
   if (!reading) return [];
   return connections.flatMap((connection): QuotaProviderView[] => {
-    if (!addressIsProxy(connection.baseUrl, reading.port)) return [];
+    if (!addressIsProxy(connection.baseUrl, reading.origins)) return [];
     const base: QuotaProviderView = {
       provider: connection.providerId,
       label: connection.accountLabel,
@@ -177,6 +181,58 @@ export function proxyConnectionRows(
       return [{ ...row, pool: { ...outcome.pool, models } }];
     });
   });
+}
+
+/** What the proxy's projection reads beside the snapshot it is laid over. */
+export type ProxyProjection = {
+  reading: ProxyReading | undefined;
+  /** Claude Code's access, while one is set up; undefined once it is gone. */
+  claudeAccess: Pick<ClaudeAccess, "address" | "source"> | undefined;
+  /** The quota id of a Claude account's row. */
+  claudeRowId: string | undefined;
+  connections: readonly PooledConnection[];
+  /** An account's sessions' readings, whose current refusals still hold. */
+  refusalsOf: (accountId: string) => PushedWindow[];
+  nowMs: number;
+};
+
+/**
+ * The proxy's one projection over a snapshot, the only place its rows are
+ * made, all at the reading's own moment (docs/quota.md, "A proxy's pooled
+ * logins"). A Claude row is Claude Code's access's while that access is set
+ * up, whatever an earlier overlay made of it: the proxy's Claude pool when
+ * the access sends its requests to the proxy, else what the access says,
+ * with the sessions' current refusals laid over it as on any sensed row
+ * (`withRejectedReadings`) and no session's usage or credits. Once the
+ * access is gone, a row the proxy made is the pool's no longer: it is
+ * unread until the account's own reading comes. Each connection's pool rows
+ * are made again.
+ */
+export function projectProxyRows(
+  snapshot: QuotaSnapshotView,
+  projection: ProxyProjection,
+): QuotaSnapshotView {
+  const { reading, claudeAccess } = projection;
+  const at = reading?.atMs ?? projection.nowMs;
+  const providers = snapshot.providers.flatMap((row) => {
+    if (row.fromProxy && row.provider !== projection.claudeRowId) return [];
+    if (row.provider !== projection.claudeRowId) return [row];
+    if (!claudeAccess && !row.fromProxy) return [row];
+    const outcome: ProviderOutcome = claudeAccess
+      ? (poolOutcome(reading, "claude", claudeAccess.address) ??
+        claudeAccessOutcome(claudeAccess.source))
+      : { status: "unavailable", windows: [] };
+    const projected = rowOfOutcome(row, outcome, at);
+    return [
+      row.accountId
+        ? withRejectedReadings(projected, projection.refusalsOf(row.accountId), projection.nowMs)
+        : projected,
+    ];
+  });
+  return {
+    ...snapshot,
+    providers: [...providers, ...proxyConnectionRows(reading, projection.connections)],
+  };
 }
 
 /**
