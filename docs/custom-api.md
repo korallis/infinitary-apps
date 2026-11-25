@@ -278,7 +278,7 @@ A server overflow is recognized from the error reply and raised as the context r
 Custom rolling sessions budget compaction at each prompt boundary in that same count, against the current model's window, bounded output, instructions and tool schemas.
 Kept turns are a quarter of the remaining history room, and never more than Pi's default of 20,000.
 The reserve is sized so the summary is that quarter, and never more than Pi's default of 16,384.
-A model whose window is larger still summarizes at the app's 300,000-token limit, or below the first price step of the catalog entry whose prices it takes; price steps written in the file are not read (`docs/firstmate-runaway-hardening.md`, "Conversation length").
+A model whose window is larger still summarizes at the summary point chosen in Settings, by default the app's 300,000-token limit or below the first price step of the catalog entry whose prices it takes; price steps written in the file are not read (`docs/firstmate-runaway-hardening.md`, "Conversation length").
 The refusal is worded as a context overflow Pi recognizes, so a rolling session compacts and retries the refused turn once instead of failing it, and the refused attempt never reaches the captain as a failed turn.
 Only a request the server still refuses after that compaction, or a trimmed reply whose retry fails the same way, is shown.
 Pictures stay in every request until Pi's normal compaction removes their messages; a new read does not change earlier picture or text content.

@@ -3895,6 +3895,17 @@
 "settingsSubscriptionsSignedOutHoldLabel" = "en suspens";
 "settingsSubscriptionsSignedOutHoldText" = "Le travail est en pause jusqu’à ce que vous vous reconnectiez.";
 "settingsSubscriptionsStale" = "pas à jour";
+"settingsSummaryPointAutomatic" = "Automatique";
+"settingsSummaryPointDescriptionAutomatic" = "Votre second et l’équipage résument une conversation à %1$@ jetons, ou plus tôt quand un modèle facture davantage au-delà d’un seuil plus bas.";
+"settingsSummaryPointDescriptionModelLimit" = "Votre second et l’équipage ne résument une conversation que près de la limite propre de chaque modèle, qui peut atteindre un million de jetons.";
+"settingsSummaryPointDescriptionTokens" = "Votre second et l’équipage résument une conversation à %1$@ jetons, ou à la limite propre du modèle si elle est plus petite.";
+"settingsSummaryPointDescriptionUnread" = "Votre second et l’équipage résument les longues conversations pour qu’elles coûtent moins et tiennent dans le modèle.";
+"settingsSummaryPointModelLimit" = "La limite de chaque modèle";
+"settingsSummaryPointSaveFailed" = "L’endroit où les longues conversations sont résumées n’a pas pu être enregistré. Réessayez.";
+"settingsSummaryPointStep" = "%1$@ au-delà de %2$@";
+"settingsSummaryPointSteps" = "Les requêtes coûtent plus cher sur %1$@.";
+"settingsSummaryPointTitle" = "Résumer les longues conversations à";
+"settingsSummaryPointTokens" = "%1$@ jetons";
 "settingsTakeOverAfter" = "Si %1$@ revient, il s’arrête et garde une copie à la place.";
 "settingsTakeOverAsk" = "Devenir l’ordinateur de votre second ? Votre second démarre ici à partir de cette copie, après Touch ID ou votre mot de passe.";
 "settingsTakeOverAskWindows" = "Devenir l’ordinateur de votre second ? Votre second démarre ici à partir de cette copie, après Windows Hello ou votre mot de passe Windows.";

@@ -16,6 +16,7 @@ import { crewmateHandoverDir, crewmateSessionsDir, crewmateTempDir } from "../pa
 import { NeedsNewConversation, NothingOpenedThere } from "../placed/crewMachines";
 import { sameModel } from "../placed/placedSpecs";
 import { crewRunbookText } from "../runbooks/runbooks";
+import { summaryCompaction } from "../session/compaction";
 import { OpenReads } from "../session/openReads";
 import { LOCAL_MACHINE_ID, type ModelSession, type SessionSpec } from "../session/session";
 import { INBOX_ATTEMPT_MAX, type InboxRow } from "../storage/inboxStore";
@@ -175,6 +176,8 @@ export class CrewSessions {
     // outside it would be offered and then refused.
     spec.personalResources =
       !spec.fenced && this.core.options.personalResourcesEnabled?.() === true;
+    const summaryPoint = this.core.options.summaryPoint;
+    if (summaryPoint) spec.compaction = () => summaryCompaction(summaryPoint());
     if (runbookSkills && !spec.fenced) spec.runbookSkills = runbookSkills;
     if (this.core.disposed()) throw new Error("This computer is stopping.");
     const session = await factory.open(spec);

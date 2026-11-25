@@ -114,6 +114,19 @@ describe("the core, driven with no Electron in the process", () => {
     detach();
   });
 
+  // INF-6693's plan: Settings saves where long conversations summarize, and
+  // the core refuses a point Settings does not offer.
+  it("saves the summary point through validated dispatch and refuses one Settings does not offer", async () => {
+    expect((await core.dispatch("inf:settings:summary-point:get", [])).point).toBe("automatic");
+    expect((await core.dispatch("inf:settings:summary-point:set", [200_000])).point).toBe(200_000);
+    expect((await core.dispatch("inf:settings:summary-point:get", [])).point).toBe(200_000);
+    await expect(core.dispatch("inf:settings:summary-point:set", [250_000])).rejects.toThrow(
+      "malformed request",
+    );
+    expect((await core.dispatch("inf:settings:summary-point:set", ["model"])).point).toBe("model");
+    await core.dispatch("inf:settings:summary-point:set", ["automatic"]);
+  });
+
   // INF-5326's approved piece 4: a panel reads the settings the action
   // catalog gives a panel value, cut to that value, and no other line.
   it("answers a panel's settings read with each line's panel value, refusing a line without one", async () => {

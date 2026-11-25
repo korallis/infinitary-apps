@@ -1131,6 +1131,28 @@ describe("a conversation held on a computer that runs work", () => {
     expect(open.mock.calls.map(([spec]) => spec.compaction)).toEqual([SESSION_COMPACTION]);
   });
 
+  // INF-6693's plan: the home's summary point travels with the open, and an
+  // older home that sends none leaves the computer on the app's own rule.
+  it("opens a crewmate's conversation with the summary point the home sends", async () => {
+    const at = await placed();
+    const factory = (
+      at.host() as unknown as {
+        options: { factories: { pi: { open: (spec: SessionSpec) => Promise<unknown> } } };
+      }
+    ).options.factories.pi;
+    const open = vi.spyOn(factory, "open");
+    await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:1`,
+        task: TASK,
+        spec: { ...at.spec, compaction: { maxContextTokens: 500_000 } },
+      },
+    ]);
+    expect(open.mock.calls.map(([spec]) => spec.compaction)).toEqual([
+      { maxContextTokens: 500_000 },
+    ]);
+  });
+
   it("refuses an order it does not know, a malformed one, and one for a task it never opened", async () => {
     const at = await placed();
     await expect(at.order("inf:session:launch" as WorkOrderChannel, [])).rejects.toThrow(

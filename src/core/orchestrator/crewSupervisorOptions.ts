@@ -280,6 +280,8 @@ export type CrewSupervisorOptions = {
   bind: (accountId: string | undefined, providerId?: string) => Promise<SessionBinding>;
   /** The home's opt-in; a computer that runs work reads the home's set it keeps. */
   personalResourcesEnabled?: () => boolean;
+  /** Where long conversations summarize (Settings → Intelligence), read as each prompt goes. */
+  summaryPoint?: () => import("@shared/summaryPoint").SummaryPoint;
   /**
    * The version of the home's personal set a conversation on this Mac reads
    * (docs/personal-resources.md): its timeline names it, and the Info tab.

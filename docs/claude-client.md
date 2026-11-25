@@ -308,7 +308,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 ## App-owned automatic compaction
 
 Every Claude session enables auto-compaction through the app's flag settings, including one reopened from a saved conversation.
-`CLAUDE_COMPACTION_SETTINGS` sets `autoCompactEnabled: true` and `autoCompactWindow: 321192`: the app's 300,000-token summary point (`SESSION_COMPACTION_TOKENS`) plus the first mate's 8,192-token answer allowance and the client's 13,000-token compaction buffer.
+`claudeCompactionSettings` sets `autoCompactEnabled: true` and `autoCompactWindow`: the summary point plus the first mate's 8,192-token answer allowance and the client's 13,000-token compaction buffer, 321,192 at the app's own 300,000-token point (`SESSION_COMPACTION_TOKENS`).
+A rolling session reads the point the person chose in Settings → Intelligence when it attaches (`docs/firstmate-runaway-hardening.md`, "Conversation length"); "Each model's limit" sets no window, so the client's own applies, and price steps are Pi's alone to read.
 The client clamps that window to the model's own context window, so a smaller model compacts earlier without a second catalog in the app.
 The session environment removes `DISABLE_AUTO_COMPACT`, `DISABLE_COMPACT`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` and `CLAUDE_CODE_BLOCKING_LIMIT_OVERRIDE`, so a person's shell cannot disable or enlarge this app-owned budget.
 The person's Claude configuration stays untouched.

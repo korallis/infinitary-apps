@@ -520,6 +520,7 @@ export function startPlacedHome(options: {
     : undefined;
   const supervisor = new CrewSupervisor({
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
+    summaryPoint: () => settings.getSummaryPoint(),
     ...(homePersonalSet
       ? { personalVersion: async () => (await homePersonalSet.current()).version }
       : {}),

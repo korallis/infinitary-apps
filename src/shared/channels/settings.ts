@@ -18,6 +18,7 @@ import {
   sharingViewSchema,
 } from "../sharing";
 import { settingsShowSchema } from "../showActions";
+import { summaryPointSchema, summaryPointViewSchema } from "../summaryPoint";
 import { tagCheckChangeSchema, tagCheckReadSchema, tagCheckViewSchema } from "../tagCheck";
 import { projectTagChangeResultSchema, projectTagChangeSchema } from "../tags";
 import { projectViewSchema } from "../tasks";
@@ -224,6 +225,20 @@ export const settingsChannels = {
     reach: "views",
     request: z.tuple([z.string(), z.boolean()]),
     response: z.array(runbookViewSchema),
+  },
+  "inf:settings:summary-point:get": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: summaryPointViewSchema,
+  },
+  "inf:settings:summary-point:set": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([summaryPointSchema]),
+    response: summaryPointViewSchema,
   },
   "inf:settings:personal-resources:get": {
     effect: "read",

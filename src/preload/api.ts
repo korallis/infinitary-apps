@@ -549,6 +549,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         readableRequest("inf:settings:personal-resources:set", () =>
           invoke("inf:settings:personal-resources:set", enabled),
         ),
+      getSummaryPoint: () => invoke("inf:settings:summary-point:get"),
+      setSummaryPoint: (point) => invoke("inf:settings:summary-point:set", point),
       getCostLimit: () => invoke("inf:settings:cost-limit:get"),
       setCostLimit: (limit) =>
         readableRequest("inf:settings:cost-limit:set", () =>

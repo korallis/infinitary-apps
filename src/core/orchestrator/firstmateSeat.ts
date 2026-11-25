@@ -10,6 +10,7 @@ import { clockTime, type QuotaSnapshotView } from "@shared/quota";
 import type { ServedSequences } from "../personal/sequencesSkill";
 import { firstmatePromptSha, toolsFingerprint } from "../pi/piResources";
 import { createPiSessionFactory } from "../pi/sessionFactory";
+import { summaryCompaction } from "../session/compaction";
 import type {
   ModelSession,
   SessionEvent,
@@ -348,6 +349,7 @@ export class FirstmateSeat {
         tools,
         instructions: { text: sequences.text, sha: sequences.sha },
         ...(resume ? { resume } : {}),
+        compaction: () => summaryCompaction(this.options.settings.getSummaryPoint()),
       }),
     );
     if (this.disposed) {

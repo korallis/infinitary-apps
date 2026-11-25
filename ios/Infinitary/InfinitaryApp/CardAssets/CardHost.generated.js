@@ -93527,6 +93527,309 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `stale`;
   }
+  function settingsSummaryPointAutomatic() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تلقائي`;
+      case "de":
+        return `Automatisch`;
+      case "es":
+        return `Automático`;
+      case "fr":
+        return `Automatique`;
+      case "ja":
+        return `自動`;
+      case "ko":
+        return `자동`;
+      case "pt-BR":
+        return `Automático`;
+      case "zh-Hans":
+        return `自动`;
+      case "zh-Hant":
+        return `自動`;
+      case "en-XA":
+        return `[Åûţöɱáţîç ~~~]`;
+      case "ar-XB":
+        return `‮Automatic‬`;
+    }
+    return `Automatic`;
+  }
+  function settingsSummaryPointDescriptionAutomatic(input2) {
+    const tokens = input2.tokens;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يلخّص نائب القبطان والطاقم المحادثة عند ${tokens} من الرموز، أو قبل ذلك حين يرفع النموذج سعره بعد نقطة أدنى.`;
+      case "de":
+        return `Dein erster Offizier und die Crew fassen eine Unterhaltung bei ${tokens} Tokens zusammen, oder früher, wo ein Modell schon ab einem niedrigeren Punkt mehr berechnet.`;
+      case "es":
+        return `Tu primer oficial y la tripulación resumen una conversación a los ${tokens} tokens, o antes si un modelo cobra más a partir de un punto más bajo.`;
+      case "fr":
+        return `Votre second et l’équipage résument une conversation à ${tokens} jetons, ou plus tôt quand un modèle facture davantage au-delà d’un seuil plus bas.`;
+      case "ja":
+        return `一等航海士と乗組員は会話が ${tokens} トークンに達すると要約します。それより手前で料金が上がるモデルでは、その前に要約します。`;
+      case "ko":
+        return `일등항해사와 선원들은 대화가 ${tokens}토큰에 이르면 요약해요. 더 낮은 지점부터 요금이 오르는 모델에서는 그 전에 요약해요.`;
+      case "pt-BR":
+        return `Seu imediato e a tripulação resumem uma conversa em ${tokens} tokens, ou antes quando um modelo cobra mais a partir de um ponto mais baixo.`;
+      case "zh-Hans":
+        return `你的大副和船员在对话达到 ${tokens} 个 token 时总结；若模型在更低的位置开始加价，则提前总结。`;
+      case "zh-Hant":
+        return `你的大副和船員會在對話達到 ${tokens} 個 token 時摘要；若模型在更低的位置開始加價，就提早摘要。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ šûɱɱáŕîžé á çöñṽéŕšáţîöñ áţ ${tokens} ţöķéñš, öŕ šööñéŕ ŵĥéŕé á ɱöðéļ çĥáŕĝéš ɱöŕé þášţ á ļöŵéŕ þöîñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate and crew summarize a conversation at ‬${tokens}‮ tokens, or sooner where a model charges more past a lower point.‬`;
+    }
+    return `Your first mate and crew summarize a conversation at ${tokens} tokens, or sooner where a model charges more past a lower point.`;
+  }
+  function settingsSummaryPointDescriptionModelLimit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يلخّص نائب القبطان والطاقم المحادثة فقط قرب حدّ كل نموذج، وقد يبلغ مليون رمز.`;
+      case "de":
+        return `Dein erster Offizier und die Crew fassen eine Unterhaltung erst nahe der eigenen Grenze des jeweiligen Modells zusammen, die bei einer Million Tokens liegen kann.`;
+      case "es":
+        return `Tu primer oficial y la tripulación resumen una conversación solo cerca del límite propio de cada modelo, que puede ser un millón de tokens.`;
+      case "fr":
+        return `Votre second et l’équipage ne résument une conversation que près de la limite propre de chaque modèle, qui peut atteindre un million de jetons.`;
+      case "ja":
+        return `一等航海士と乗組員は各モデルの上限の近くでだけ会話を要約します。上限は 100 万トークンになることもあります。`;
+      case "ko":
+        return `일등항해사와 선원들은 각 모델 자체 한도 가까이에서만 대화를 요약해요. 한도는 100만 토큰에 이를 수 있어요.`;
+      case "pt-BR":
+        return `Seu imediato e a tripulação só resumem uma conversa perto do limite de cada modelo, que pode chegar a um milhão de tokens.`;
+      case "zh-Hans":
+        return `你的大副和船员只在接近各模型自身的上限时才总结对话，这可能多达一百万个 token。`;
+      case "zh-Hant":
+        return `你的大副和船員只在接近各模型本身的上限時才摘要對話，可能多達一百萬個 token。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ šûɱɱáŕîžé á çöñṽéŕšáţîöñ öñļý ñéáŕ éáçĥ ɱöðéļ'š öŵñ ļîɱîţ, ŵĥîçĥ çáñ ƀé á ɱîļļîöñ ţöķéñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate and crew summarize a conversation only near each model's own limit, which can be a million tokens.‬`;
+    }
+    return `Your first mate and crew summarize a conversation only near each model's own limit, which can be a million tokens.`;
+  }
+  function settingsSummaryPointDescriptionTokens(input2) {
+    const tokens = input2.tokens;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يلخّص نائب القبطان والطاقم المحادثة عند ${tokens} من الرموز، أو عند حدّ النموذج نفسه إن كان أصغر.`;
+      case "de":
+        return `Dein erster Offizier und die Crew fassen eine Unterhaltung bei ${tokens} Tokens zusammen, oder an der eigenen Grenze des Modells, wenn sie kleiner ist.`;
+      case "es":
+        return `Tu primer oficial y la tripulación resumen una conversación a los ${tokens} tokens, o en el límite propio del modelo si es menor.`;
+      case "fr":
+        return `Votre second et l’équipage résument une conversation à ${tokens} jetons, ou à la limite propre du modèle si elle est plus petite.`;
+      case "ja":
+        return `一等航海士と乗組員は会話が ${tokens} トークンに達すると要約します。モデルの上限のほうが小さい場合は、その上限で要約します。`;
+      case "ko":
+        return `일등항해사와 선원들은 대화가 ${tokens}토큰에 이르면 요약해요. 모델 자체 한도가 더 작으면 그 한도에서 요약해요.`;
+      case "pt-BR":
+        return `Seu imediato e a tripulação resumem uma conversa em ${tokens} tokens, ou no limite do próprio modelo quando ele é menor.`;
+      case "zh-Hans":
+        return `你的大副和船员在对话达到 ${tokens} 个 token 时总结；若模型自身的上限更小，则在其上限处总结。`;
+      case "zh-Hant":
+        return `你的大副和船員會在對話達到 ${tokens} 個 token 時摘要；若模型本身的上限更小，就在其上限處摘要。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ šûɱɱáŕîžé á çöñṽéŕšáţîöñ áţ ${tokens} ţöķéñš, öŕ áţ á ɱöðéļ'š öŵñ ļîɱîţ ŵĥéñ îţ îš šɱáļļéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate and crew summarize a conversation at ‬${tokens}‮ tokens, or at a model's own limit when it is smaller.‬`;
+    }
+    return `Your first mate and crew summarize a conversation at ${tokens} tokens, or at a model's own limit when it is smaller.`;
+  }
+  function settingsSummaryPointDescriptionUnread() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يلخّص نائب القبطان والطاقم المحادثات الطويلة لتقلّ كلفتها وتتسع في النموذج.`;
+      case "de":
+        return `Dein erster Offizier und die Crew fassen lange Unterhaltungen zusammen, damit sie weniger kosten und ins Modell passen.`;
+      case "es":
+        return `Tu primer oficial y la tripulación resumen las conversaciones largas para que cuesten menos y quepan en el modelo.`;
+      case "fr":
+        return `Votre second et l’équipage résument les longues conversations pour qu’elles coûtent moins et tiennent dans le modèle.`;
+      case "ja":
+        return `一等航海士と乗組員は長い会話を要約し、費用を抑えてモデルに収めます。`;
+      case "ko":
+        return `일등항해사와 선원들은 긴 대화를 요약해 비용을 줄이고 모델에 맞춰요.`;
+      case "pt-BR":
+        return `Seu imediato e a tripulação resumem conversas longas para que custem menos e caibam no modelo.`;
+      case "zh-Hans":
+        return `你的大副和船员会总结长对话，让花费更少、并能放进模型。`;
+      case "zh-Hant":
+        return `你的大副和船員會摘要長對話，讓花費更少、也放得進模型。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ šûɱɱáŕîžé ļöñĝ çöñṽéŕšáţîöñš šö ţĥéý çöšţ ļéšš áñð ƒîţ ţĥé ɱöðéļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate and crew summarize long conversations so they cost less and fit the model.‬`;
+    }
+    return `Your first mate and crew summarize long conversations so they cost less and fit the model.`;
+  }
+  function settingsSummaryPointModelLimit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حدّ كل نموذج`;
+      case "de":
+        return `Grenze des jeweiligen Modells`;
+      case "es":
+        return `El límite de cada modelo`;
+      case "fr":
+        return `La limite de chaque modèle`;
+      case "ja":
+        return `各モデルの上限`;
+      case "ko":
+        return `각 모델의 한도`;
+      case "pt-BR":
+        return `O limite de cada modelo`;
+      case "zh-Hans":
+        return `各模型自身的上限`;
+      case "zh-Hant":
+        return `各模型本身的上限`;
+      case "en-XA":
+        return `[Éáçĥ ɱöðéļ'š ļîɱîţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Each model's limit‬`;
+    }
+    return `Each model's limit`;
+  }
+  function settingsSummaryPointSaveFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر حفظ موضع تلخيص المحادثات الطويلة. أعِد المحاولة.`;
+      case "de":
+        return `Wo lange Unterhaltungen zusammengefasst werden, konnte nicht gespeichert werden. Versuch es noch einmal.`;
+      case "es":
+        return `No se pudo guardar dónde se resumen las conversaciones largas. Inténtalo de nuevo.`;
+      case "fr":
+        return `L’endroit où les longues conversations sont résumées n’a pas pu être enregistré. Réessayez.`;
+      case "ja":
+        return `長い会話を要約する位置を保存できませんでした。もう一度お試しください。`;
+      case "ko":
+        return `긴 대화를 요약하는 지점을 저장할 수 없었어요. 다시 시도하세요.`;
+      case "pt-BR":
+        return `Não foi possível salvar onde as conversas longas são resumidas. Tente de novo.`;
+      case "zh-Hans":
+        return `无法保存长对话的总结位置。请重试。`;
+      case "zh-Hant":
+        return `無法儲存長對話的摘要位置。請再試一次。`;
+      case "en-XA":
+        return `[Ŵĥéŕé ļöñĝ çöñṽéŕšáţîöñš šûɱɱáŕîžé çöûļð ñöţ ƀé šáṽéð. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Where long conversations summarize could not be saved. Try again.‬`;
+    }
+    return `Where long conversations summarize could not be saved. Try again.`;
+  }
+  function settingsSummaryPointStep(input2) {
+    const name = input2.name;
+    const tokens = input2.tokens;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${name} بعد ${tokens}`;
+      case "de":
+        return `${name} ab ${tokens}`;
+      case "es":
+        return `${name} pasados ${tokens}`;
+      case "fr":
+        return `${name} au-delà de ${tokens}`;
+      case "ja":
+        return `${name} で ${tokens} を超えたとき`;
+      case "ko":
+        return `${name}에서 ${tokens} 초과`;
+      case "pt-BR":
+        return `${name} acima de ${tokens}`;
+      case "zh-Hans":
+        return `${name} 超过 ${tokens}`;
+      case "zh-Hant":
+        return `${name} 超過 ${tokens}`;
+      case "en-XA":
+        return `[${name} þášţ ${tokens} ~~]`;
+      case "ar-XB":
+        return `${name}‮ past ‬${tokens}`;
+    }
+    return `${name} past ${tokens}`;
+  }
+  function settingsSummaryPointSteps(input2) {
+    const models = input2.models;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تكلّف الطلبات أكثر على ${models}.`;
+      case "de":
+        return `Anfragen kosten mehr bei ${models}.`;
+      case "es":
+        return `Las solicitudes cuestan más en ${models}.`;
+      case "fr":
+        return `Les requêtes coûtent plus cher sur ${models}.`;
+      case "ja":
+        return `次の場合、リクエストごとの料金が上がります：${models}。`;
+      case "ko":
+        return `다음 경우 요청마다 요금이 더 들어요: ${models}.`;
+      case "pt-BR":
+        return `As solicitações custam mais em ${models}.`;
+      case "zh-Hans":
+        return `以下情况每次请求更贵：${models}。`;
+      case "zh-Hant":
+        return `以下情況每次請求更貴：${models}。`;
+      case "en-XA":
+        return `[Ŕéǫûéšţš çöšţ ɱöŕé öñ ${models}. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Requests cost more on ‬${models}‮.‬`;
+    }
+    return `Requests cost more on ${models}.`;
+  }
+  function settingsSummaryPointTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تلخيص المحادثات الطويلة عند`;
+      case "de":
+        return `Lange Unterhaltungen zusammenfassen bei`;
+      case "es":
+        return `Resumir conversaciones largas a los`;
+      case "fr":
+        return `Résumer les longues conversations à`;
+      case "ja":
+        return `長い会話を要約する位置`;
+      case "ko":
+        return `긴 대화를 요약하는 지점`;
+      case "pt-BR":
+        return `Resumir conversas longas em`;
+      case "zh-Hans":
+        return `长对话在此处总结`;
+      case "zh-Hant":
+        return `長對話在此處摘要`;
+      case "en-XA":
+        return `[Šûɱɱáŕîžé ļöñĝ çöñṽéŕšáţîöñš áţ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Summarize long conversations at‬`;
+    }
+    return `Summarize long conversations at`;
+  }
+  function settingsSummaryPointTokens(input2) {
+    const tokens = input2.tokens;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${tokens} من الرموز`;
+      case "de":
+        return `${tokens} Tokens`;
+      case "es":
+        return `${tokens} tokens`;
+      case "fr":
+        return `${tokens} jetons`;
+      case "ja":
+        return `${tokens} トークン`;
+      case "ko":
+        return `${tokens}토큰`;
+      case "pt-BR":
+        return `${tokens} tokens`;
+      case "zh-Hans":
+        return `${tokens} 个 token`;
+      case "zh-Hant":
+        return `${tokens} 個 token`;
+      case "en-XA":
+        return `[${tokens} ţöķéñš ~~~]`;
+      case "ar-XB":
+        return `${tokens}‮ tokens‬`;
+    }
+    return `${tokens} tokens`;
+  }
   function settingsTakeOverAfter(input2) {
     const name = input2.name;
     switch (currentLanguage()) {
@@ -113627,6 +113930,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsSignedOutHoldLabel,
     settingsSubscriptionsSignedOutHoldText,
     settingsSubscriptionsStale,
+    settingsSummaryPointAutomatic,
+    settingsSummaryPointDescriptionAutomatic,
+    settingsSummaryPointDescriptionModelLimit,
+    settingsSummaryPointDescriptionTokens,
+    settingsSummaryPointDescriptionUnread,
+    settingsSummaryPointModelLimit,
+    settingsSummaryPointSaveFailed,
+    settingsSummaryPointStep,
+    settingsSummaryPointSteps,
+    settingsSummaryPointTitle,
+    settingsSummaryPointTokens,
     settingsTakeOverAfter,
     settingsTakeOverAsk,
     settingsTakeOverAskWindows,
@@ -117176,6 +117490,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsSignedOutHoldLabel": [],
     "settingsSubscriptionsSignedOutHoldText": [],
     "settingsSubscriptionsStale": [],
+    "settingsSummaryPointAutomatic": [],
+    "settingsSummaryPointDescriptionAutomatic": ["tokens"],
+    "settingsSummaryPointDescriptionModelLimit": [],
+    "settingsSummaryPointDescriptionTokens": ["tokens"],
+    "settingsSummaryPointDescriptionUnread": [],
+    "settingsSummaryPointModelLimit": [],
+    "settingsSummaryPointSaveFailed": [],
+    "settingsSummaryPointStep": ["name", "tokens"],
+    "settingsSummaryPointSteps": ["models"],
+    "settingsSummaryPointTitle": [],
+    "settingsSummaryPointTokens": ["tokens"],
     "settingsTakeOverAfter": ["name"],
     "settingsTakeOverAsk": [],
     "settingsTakeOverAskWindows": [],

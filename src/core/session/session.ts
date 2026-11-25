@@ -184,6 +184,13 @@ export type SessionBounds = {
 /** Variables, and folders to put first on the search path, that a session's shell carries. */
 export type TaskShell = { env: Readonly<Record<string, string>>; path: readonly string[] };
 
+/**
+ * `maxContextTokens` is a ceiling; `belowPriceStep` summarizes before a
+ * request crosses the model's first price step; the lower of the two wins.
+ * Neither leaves the backend's own trigger (`summaryCompaction`).
+ */
+export type SessionCompaction = { maxContextTokens?: number; belowPriceStep?: true };
+
 export type SessionSpec = {
   homeSource?: SourceIdentity;
   /**
@@ -228,12 +235,10 @@ export type SessionSpec = {
   shape: SessionShape;
   bounds?: SessionBounds;
   /**
-   * App-owned automatic compaction; smaller model budgets still win.
-   * `maxContextTokens` is a ceiling; `belowPriceStep` summarizes before a
-   * request crosses the model's first price step; the lower of the two wins.
-   * The first mate and the crew carry both (`SESSION_COMPACTION`).
+   * App-owned automatic compaction, or a reader of the current rule
+   * (`compactionNow`); smaller model budgets still win.
    */
-  compaction?: { maxContextTokens?: number; belowPriceStep?: true };
+  compaction?: SessionCompaction | (() => SessionCompaction);
   needs?: Partial<Pick<ControlProfile, "steer">>;
   /**
    * What the session's shell carries beyond the host's environment: a

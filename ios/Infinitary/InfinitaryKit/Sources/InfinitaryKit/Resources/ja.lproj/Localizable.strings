@@ -3895,6 +3895,17 @@
 "settingsSubscriptionsSignedOutHoldLabel" = "保留中";
 "settingsSubscriptionsSignedOutHoldText" = "もう一度サインインするまで作業は一時停止します。";
 "settingsSubscriptionsStale" = "古い情報";
+"settingsSummaryPointAutomatic" = "自動";
+"settingsSummaryPointDescriptionAutomatic" = "一等航海士と乗組員は会話が %1$@ トークンに達すると要約します。それより手前で料金が上がるモデルでは、その前に要約します。";
+"settingsSummaryPointDescriptionModelLimit" = "一等航海士と乗組員は各モデルの上限の近くでだけ会話を要約します。上限は 100 万トークンになることもあります。";
+"settingsSummaryPointDescriptionTokens" = "一等航海士と乗組員は会話が %1$@ トークンに達すると要約します。モデルの上限のほうが小さい場合は、その上限で要約します。";
+"settingsSummaryPointDescriptionUnread" = "一等航海士と乗組員は長い会話を要約し、費用を抑えてモデルに収めます。";
+"settingsSummaryPointModelLimit" = "各モデルの上限";
+"settingsSummaryPointSaveFailed" = "長い会話を要約する位置を保存できませんでした。もう一度お試しください。";
+"settingsSummaryPointStep" = "%1$@ で %2$@ を超えたとき";
+"settingsSummaryPointSteps" = "次の場合、リクエストごとの料金が上がります：%1$@。";
+"settingsSummaryPointTitle" = "長い会話を要約する位置";
+"settingsSummaryPointTokens" = "%1$@ トークン";
 "settingsTakeOverAfter" = "%1$@ が戻ってきたら、そちらは止まり、代わりにコピーを置きます。";
 "settingsTakeOverAsk" = "一等航海士のコンピューターとして引き継ぎますか？Touch ID またはパスワードのあと、一等航海士はこのコピーからここで始まります。";
 "settingsTakeOverAskWindows" = "一等航海士のコンピューターとして引き継ぎますか？Windows Hello または Windows のパスワードのあと、一等航海士はこのコピーからここで始まります。";

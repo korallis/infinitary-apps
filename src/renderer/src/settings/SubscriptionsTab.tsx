@@ -42,6 +42,7 @@ import { CostLimitRow } from "./CostLimitRow";
 import { DeviceSignInGroups } from "./DeviceSignIns";
 import { FIRSTMATE_SELECT_STYLE, FirstmateModelRow, SettingRow } from "./GeneralTab";
 import { ModelsSection } from "./ModelsSection";
+import { SummaryPointRow } from "./SummaryPointRow";
 import { ROW_GAP, SECTION_GAP, SettingError } from "./settingRows";
 import {
   CREDITS_SITE,
@@ -1452,6 +1453,7 @@ export function SubscriptionsTab() {
         additionalSettings={
           <>
             <CostLimitRow />
+            <SummaryPointRow />
             <SettingRow
               id="personal-resources"
               error={personalSave.error}

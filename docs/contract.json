@@ -69776,6 +69776,175 @@
         }
       }
     },
+    "inf:settings:summary-point:get": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "items": false,
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "point": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "automatic"
+              },
+              {
+                "type": "string",
+                "const": "model"
+              },
+              {
+                "type": "number",
+                "const": 150000
+              },
+              {
+                "type": "number",
+                "const": 200000
+              },
+              {
+                "type": "number",
+                "const": 300000
+              },
+              {
+                "type": "number",
+                "const": 500000
+              }
+            ]
+          },
+          "steps": {
+            "maxItems": 256,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "tokens": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "name",
+                "tokens"
+              ]
+            }
+          }
+        },
+        "required": [
+          "point",
+          "steps"
+        ]
+      }
+    },
+    "inf:settings:summary-point:set": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "automatic"
+              },
+              {
+                "type": "string",
+                "const": "model"
+              },
+              {
+                "type": "number",
+                "const": 150000
+              },
+              {
+                "type": "number",
+                "const": 200000
+              },
+              {
+                "type": "number",
+                "const": 300000
+              },
+              {
+                "type": "number",
+                "const": 500000
+              }
+            ]
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "point": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "automatic"
+              },
+              {
+                "type": "string",
+                "const": "model"
+              },
+              {
+                "type": "number",
+                "const": 150000
+              },
+              {
+                "type": "number",
+                "const": 200000
+              },
+              {
+                "type": "number",
+                "const": 300000
+              },
+              {
+                "type": "number",
+                "const": 500000
+              }
+            ]
+          },
+          "steps": {
+            "maxItems": 256,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "tokens": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "name",
+                "tokens"
+              ]
+            }
+          }
+        },
+        "required": [
+          "point",
+          "steps"
+        ]
+      }
+    },
     "inf:settings:personal-resources:get": {
       "effect": "read",
       "reach": "views",
@@ -113400,6 +113569,20 @@
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 16
+                    },
+                    "compaction": {
+                      "type": "object",
+                      "properties": {
+                        "maxContextTokens": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 100000000
+                        },
+                        "belowPriceStep": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      }
                     },
                     "browser": {
                       "type": "boolean"

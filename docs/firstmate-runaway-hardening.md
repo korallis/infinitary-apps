@@ -89,14 +89,18 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 ## Conversation length
 
-Every Pi conversation of the first mate and the crew, at home and on a computer that runs work, carries one app-owned automatic summary rule, `SESSION_COMPACTION`, not a setting the captain can change.
-It summarizes at 300,000 tokens (`SESSION_COMPACTION_TOKENS`), or before the context reaches a price step in the model's listed prices (`inputTokensAbove`), where every input token costs more, when that comes sooner.
+Every Pi conversation of the first mate and the crew, at home and on a computer that runs work, carries one automatic summary rule, which the person sets in Settings → Intelligence under "Summarize long conversations at" (`SummaryPointRow`, the `summary-point` setting).
+Automatic, the default, is the app's own rule, `SESSION_COMPACTION`: it summarizes at 300,000 tokens (`SESSION_COMPACTION_TOKENS`), or before the context reaches a price step in the model's listed prices (`inputTokensAbove`), where every input token costs more, when that comes sooner.
+A number (150,000, 200,000, 300,000 or 500,000) is a ceiling that wins over price steps (the captain's answer on INF-6693's plan), and the row names the models on the person's accounts that charge more past it (`priceSteps`, Copilot's left out); "Each model's limit" states no rule, so Pi's own trigger applies (`summaryCompaction`).
+The first mate's seat and a crewmate at home read the setting at every prompt, so a changed point reaches a conversation already open at its next message; a Claude session takes it when it next attaches.
+A crewmate's open on a computer that runs work carries the rule as it stands (`compaction`, `summary-point.md`), and a computer or home without that change keeps the app's own rule.
+The row is a native select, one Tab stop whose arrows and first letters pick a point; it is chosen now and then, so it adds no command (`docs/keyboard.md`, "A new feature"), and the phone shows no such row.
 Pi recomputes its reserve at every prompt boundary: the larger of its existing model budget and `contextWindow` less the lower of the two limits.
 A smaller model keeps its earlier trigger, including the custom connection and local model budgets.
 Pi's own compactor observes usage after a response and compacts when that count exceeds its trigger; this is not a hard per-request input cap.
 Claude uses the app's flag settings and its own smaller-model clamp (`docs/claude-client.md`, "App-owned automatic compaction").
 Below a price step, Pi's trigger sits at that step less Pi's own reserve, which leaves room for the incoming prompt and the error in Pi's estimate; Pi counts a turn's tool results before its next request.
-The rule takes the lowest step whose trigger sits a reserve above what a summary keeps (the instructions, tool schemas and Pi's kept turns); with none, or on Copilot, whose plan counts premium requests, only the 300,000 limit applies.
+Automatic takes the lowest step whose trigger sits a reserve above what a summary keeps (the instructions, tool schemas and Pi's kept turns); with none, or on Copilot, whose plan counts premium requests, only the 300,000 limit applies.
 Pi's check before a prompt's first request leaves the new prompt out of its count, so one prompt larger than the reserve can still reach past the step once.
 A large new message or tool result can still exceed a model's window, so both backends retain their own overflow compaction and retry first.
 

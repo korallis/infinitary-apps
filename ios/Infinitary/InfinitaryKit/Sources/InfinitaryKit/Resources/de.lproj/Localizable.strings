@@ -3895,6 +3895,17 @@
 "settingsSubscriptionsSignedOutHoldLabel" = "angehalten";
 "settingsSubscriptionsSignedOutHoldText" = "Die Arbeit ist pausiert, bis du dich erneut anmeldest.";
 "settingsSubscriptionsStale" = "veraltet";
+"settingsSummaryPointAutomatic" = "Automatisch";
+"settingsSummaryPointDescriptionAutomatic" = "Dein erster Offizier und die Crew fassen eine Unterhaltung bei %1$@ Tokens zusammen, oder früher, wo ein Modell schon ab einem niedrigeren Punkt mehr berechnet.";
+"settingsSummaryPointDescriptionModelLimit" = "Dein erster Offizier und die Crew fassen eine Unterhaltung erst nahe der eigenen Grenze des jeweiligen Modells zusammen, die bei einer Million Tokens liegen kann.";
+"settingsSummaryPointDescriptionTokens" = "Dein erster Offizier und die Crew fassen eine Unterhaltung bei %1$@ Tokens zusammen, oder an der eigenen Grenze des Modells, wenn sie kleiner ist.";
+"settingsSummaryPointDescriptionUnread" = "Dein erster Offizier und die Crew fassen lange Unterhaltungen zusammen, damit sie weniger kosten und ins Modell passen.";
+"settingsSummaryPointModelLimit" = "Grenze des jeweiligen Modells";
+"settingsSummaryPointSaveFailed" = "Wo lange Unterhaltungen zusammengefasst werden, konnte nicht gespeichert werden. Versuch es noch einmal.";
+"settingsSummaryPointStep" = "%1$@ ab %2$@";
+"settingsSummaryPointSteps" = "Anfragen kosten mehr bei %1$@.";
+"settingsSummaryPointTitle" = "Lange Unterhaltungen zusammenfassen bei";
+"settingsSummaryPointTokens" = "%1$@ Tokens";
 "settingsTakeOverAfter" = "Kommt %1$@ zurück, hält er an und behält stattdessen eine Kopie.";
 "settingsTakeOverAsk" = "Als Computer deines ersten Offiziers übernehmen? Dein erster Offizier startet hier aus dieser Kopie, nach Touch ID oder deinem Passwort.";
 "settingsTakeOverAskWindows" = "Als Computer deines ersten Offiziers übernehmen? Dein erster Offizier startet hier aus dieser Kopie, nach Windows Hello oder deinem Windows-Passwort.";

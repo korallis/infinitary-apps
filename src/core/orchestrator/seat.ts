@@ -279,6 +279,8 @@ export type SeatSessionInput = {
   /** The captain-owned instructions served after the prompt (docs/sequences.md); absent serves none. */
   instructions?: ServedInstructions;
   resume?: SessionResume;
+  /** The summary rule, read live (Settings → Intelligence); absent is the app's own. */
+  compaction?: SessionSpec["compaction"];
 };
 
 /**
@@ -327,7 +329,7 @@ export function seatSessionSpec(input: SeatSessionInput): SessionSpec {
         retries: FIRSTMATE_RETRIES,
       },
     },
-    compaction: SESSION_COMPACTION,
+    compaction: input.compaction ?? SESSION_COMPACTION,
     needs: { steer: "native" },
   };
 }

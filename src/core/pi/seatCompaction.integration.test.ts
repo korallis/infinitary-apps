@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { ServerResponse } from "node:http";
 import { join } from "node:path";
+import type { SummaryPoint } from "@shared/summaryPoint";
 import { Type } from "typebox";
 import { afterEach, expect, it } from "vitest";
 import {
@@ -18,6 +19,7 @@ import { PI_CONTRACT_MODEL, piContractModels } from "../../../tests/helpers/piCo
 import { catalogLimits } from "../../../tests/helpers/piStubRuntime";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seatSpec } from "../../../tests/helpers/seatSession";
+import { summaryCompaction } from "../session/compaction";
 import type { ModelSession, SessionEvent } from "../session/session";
 import { boundTool } from "../session/tools";
 import { catalogRefreshesSettled, createModelRuntime } from "./modelRuntime";
@@ -162,6 +164,101 @@ it("a first mate's real Pi seat summarizes below its model's 272,000-token price
   expect(Math.max(...readings.map((reading) => reading.tokens))).toBeLessThan(
     sol.cost.tiers?.[0]?.inputTokensAbove ?? 0,
   );
+});
+
+/**
+ * A real Pi seat on a stand-in for GPT-6.1 Sol (its window and listed
+ * prices, whose input price rises at 272,000 tokens), carrying `point` as
+ * the agent carries the person's Settings choice: read live at each prompt.
+ * Each turn pastes about 10,000 tokens of context; the service reads each
+ * request.
+ */
+async function solSeat(point: () => SummaryPoint) {
+  const sol = catalogLimits("openai-codex", "gpt-6.1-sol");
+  api = await startStubApi(() => true);
+  const readings: { tokens: number; summary: boolean }[] = [];
+  api.answer((request, res) => {
+    const tokens = Math.ceil(JSON.stringify(request.body).length / 4);
+    const summary = !request.body.tools?.length;
+    readings.push({ tokens, summary });
+    reply(
+      res,
+      request,
+      tokens,
+      summary ? "The captain asked about the crew. Continue from the saved task records." : "Aye.",
+    );
+  });
+  const modelsPath = piContractModels(api);
+  const models = JSON.parse(readFileSync(modelsPath, "utf8"));
+  Object.assign(models.providers[PI_CONTRACT_MODEL.provider].models[0], {
+    contextWindow: sol.contextWindow,
+    cost: sol.cost,
+  });
+  writeFileSync(modelsPath, JSON.stringify(models));
+  const runtime = await createModelRuntime({
+    authPath: join(modelsPath, "..", "auth.json"),
+    modelsPath,
+    catalogBaseUrl: api.url,
+  });
+  const root = scratchDir("infinitary-pi-seat-summary-point-");
+  const cwd = join(root, "home");
+  mkdirSync(cwd);
+  session = await createPiSessionFactory({ agentDir: join(root, "pi") }).open(
+    seatSpec({
+      cwd,
+      sessionsDir: join(root, "sessions"),
+      binding: { backend: "pi", runtime },
+      model: PI_CONTRACT_MODEL,
+      tools: await firstmateTools(),
+      compaction: () => summaryCompaction(point()),
+      requestTimeoutMs: 0,
+      turnTimeoutMs: 0,
+    }),
+  );
+  const events: SessionEvent[] = [];
+  session.subscribe((event) => events.push(event));
+  const opened = session;
+  const context = ROW.repeat(Math.ceil(40_000 / ROW.length));
+  return {
+    step: sol.cost.tiers?.[0]?.inputTokensAbove ?? 0,
+    readings,
+    turn: (n: number) => opened.prompt(`[fm-op] context (not the user)\n${context}\nturn ${n}`),
+    summaries: () =>
+      events.filter(
+        (event) => event.type === "tool_end" && event.callId === "firstmate:compaction",
+      ),
+    failed: () => events.filter((event) => event.type === "turn_failed"),
+  };
+}
+
+// INF-6693, the captain's answer on its plan: a number the person picks in
+// Settings wins over the model's price step, so a first mate at 300,000 runs
+// past GPT-6.1 Sol's 272,000 step before it summarizes.
+it("a first mate's real Pi seat at the person's 300,000 runs past the 272,000 price step", async () => {
+  const seat = await solSeat(() => 300_000);
+  for (let n = 0; n < 32; n += 1) await seat.turn(n);
+  expect(seat.summaries()).toHaveLength(1);
+  expect(seat.failed()).toEqual([]);
+  const largest = Math.max(...seat.readings.map((reading) => reading.tokens));
+  expect(largest).toBeGreaterThan(seat.step);
+  expect(largest).toBeLessThan(300_000 + 16_384);
+});
+
+// INF-6693's plan: a changed point reaches a conversation already open at its
+// next prompt. At 500,000 ten turns stay unsummarized; once the person picks
+// 150,000 the very next turn summarizes and the requests after it are smaller.
+it("a first mate's real Pi seat takes a changed summary point at its next prompt", async () => {
+  let point: SummaryPoint = 500_000;
+  const seat = await solSeat(() => point);
+  for (let n = 0; n < 16; n += 1) await seat.turn(n);
+  expect(seat.summaries()).toEqual([]);
+  const before = Math.max(...seat.readings.map((reading) => reading.tokens));
+  expect(before).toBeGreaterThan(150_000);
+  point = 150_000;
+  await seat.turn(16);
+  expect(seat.summaries()).toHaveLength(1);
+  expect(seat.failed()).toEqual([]);
+  expect(seat.readings.at(-1)?.tokens).toBeLessThan(150_000);
 });
 
 /** A request the stand-in service saw: the summary of a fold carries no tools. */

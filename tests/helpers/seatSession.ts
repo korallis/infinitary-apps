@@ -27,6 +27,8 @@ export type SeatTestSpec = {
   tools: readonly BoundTool[];
   instructions?: ServedInstructions;
   resume?: SessionResume;
+  /** The summary rule, as the agent passes the person's Settings choice. */
+  compaction?: SessionSpec["compaction"];
   requestTimeoutMs?: number;
   turnTimeoutMs?: number;
 };
@@ -43,6 +45,7 @@ export function seatSpec(input: SeatTestSpec): SessionSpec {
     tools: input.tools,
     ...(input.instructions ? { instructions: input.instructions } : {}),
     ...(input.resume ? { resume: input.resume } : {}),
+    ...(input.compaction ? { compaction: input.compaction } : {}),
   });
   if (input.requestTimeoutMs === undefined && input.turnTimeoutMs === undefined) return spec;
   return {

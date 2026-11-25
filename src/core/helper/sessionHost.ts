@@ -918,7 +918,7 @@ export class SessionHost {
           },
         },
         bounds: { request: { retries: spec.retries ?? RETRIES } },
-        compaction: SESSION_COMPACTION,
+        compaction: spec.compaction ?? SESSION_COMPACTION,
       };
       const session = await factory.open(sessionSpec);
       // An open that fails once its conversation began lets it go, and says

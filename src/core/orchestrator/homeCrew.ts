@@ -231,6 +231,7 @@ export function startHomeCrew({
     crewSpeed: (model) => slots.speed(model),
     modelName: (model) => slots.nameOf(model),
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
+    summaryPoint: () => settings.getSummaryPoint(),
     personalVersion: async () => (await homePersonalSet.current()).version,
     runbooks,
     build: host.app.version,

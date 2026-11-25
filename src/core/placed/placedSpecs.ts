@@ -3,6 +3,7 @@ import { offeringKey } from "@shared/modelSlots";
 import { backendForProvider } from "@shared/providers";
 import { type PlacedSpec, placedSpecSchema } from "@shared/work";
 import type { ContractChangeName } from "../connection/contractChanges";
+import { compactionNow } from "../session/compaction";
 import type { SessionBackend, SessionShape, SessionSpec } from "../session/session";
 import { sameNames } from "../session/workRecovery";
 import { FRESH_OPEN, OPEN_NOT_OPENED, REATTACH_ONLY_OPEN } from "./crewMachines";
@@ -50,6 +51,7 @@ export type OpenThere = {
  */
 export function askedSpec(backend: SessionBackend, spec: HeldSpec, there: OpenThere): PlacedSpec {
   const { deviceId, resume, speed: supportsSpeed, roster, takes } = there;
+  const compaction = compactionNow(spec.compaction);
   return placedSpecSchema.parse({
     binding: {
       backend,
@@ -99,6 +101,8 @@ export function askedSpec(backend: SessionBackend, spec: HeldSpec, there: OpenTh
     ...(spec.bounds?.request?.retries !== undefined
       ? { retries: spec.bounds.request.retries }
       : {}),
+    // The rule as it stands when the conversation opens there (`summary-point.md`).
+    ...(compaction ? { compaction } : {}),
   });
 }
 

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "summary-point-setting",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Choose when long conversations get summarized",
+      "body": "Settings → Intelligence has a new choice for when your first mate and crew summarize a long conversation: Automatic, 150,000, 200,000, 300,000 or 500,000 tokens, or each model's own limit. Automatic keeps today's rule. When the number you pick lets a model run past a point where its requests cost more, the row names that model.",
+      "picture": {
+        "dark": "summary-point-setting-dark.webp",
+        "light": "summary-point-setting-light.webp",
+        "alt": "Settings row Summarize long conversations at, set to 300,000 tokens, noting that GPT-6.1 Sol requests cost more past 272,000"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

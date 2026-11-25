@@ -3895,6 +3895,17 @@
 "settingsSubscriptionsSignedOutHoldLabel" = "on hold";
 "settingsSubscriptionsSignedOutHoldText" = "Work is paused until you sign in again.";
 "settingsSubscriptionsStale" = "stale";
+"settingsSummaryPointAutomatic" = "Automatic";
+"settingsSummaryPointDescriptionAutomatic" = "Your first mate and crew summarize a conversation at %1$@ tokens, or sooner where a model charges more past a lower point.";
+"settingsSummaryPointDescriptionModelLimit" = "Your first mate and crew summarize a conversation only near each model's own limit, which can be a million tokens.";
+"settingsSummaryPointDescriptionTokens" = "Your first mate and crew summarize a conversation at %1$@ tokens, or at a model's own limit when it is smaller.";
+"settingsSummaryPointDescriptionUnread" = "Your first mate and crew summarize long conversations so they cost less and fit the model.";
+"settingsSummaryPointModelLimit" = "Each model's limit";
+"settingsSummaryPointSaveFailed" = "Where long conversations summarize could not be saved. Try again.";
+"settingsSummaryPointStep" = "%1$@ past %2$@";
+"settingsSummaryPointSteps" = "Requests cost more on %1$@.";
+"settingsSummaryPointTitle" = "Summarize long conversations at";
+"settingsSummaryPointTokens" = "%1$@ tokens";
 "settingsTakeOverAfter" = "If %1$@ comes back, it stops and keeps a copy instead.";
 "settingsTakeOverAsk" = "Take over as your first mate's computer? Your first mate starts here from this copy, after Touch ID or your password.";
 "settingsTakeOverAskWindows" = "Take over as your first mate's computer? Your first mate starts here from this copy, after Windows Hello or your Windows password.";

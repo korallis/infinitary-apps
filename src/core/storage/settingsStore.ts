@@ -58,6 +58,7 @@ import {
   UNKNOWN_RELEASE_TRACKING,
 } from "@shared/releaseTracking";
 import { DEFAULT_SHARING, type Sharing, sharingSchema } from "@shared/sharing";
+import { DEFAULT_SUMMARY_POINT, type SummaryPoint, summaryPointSchema } from "@shared/summaryPoint";
 import { tagCheckReachSchema } from "@shared/tagCheck";
 import { z } from "zod";
 import { runbookStateSchema } from "../../shared/runbooks";
@@ -587,6 +588,20 @@ export class SettingsStore {
 
   setPersonalResourcesEnabled(enabled: boolean): void {
     this.set("personal-resources", enabled);
+  }
+
+  /**
+   * Where long conversations summarize (Settings → Intelligence; INF-6693),
+   * Automatic until the person picks another point. A value this build does
+   * not offer reads as Automatic.
+   */
+  getSummaryPoint(): SummaryPoint {
+    const parsed = summaryPointSchema.safeParse(this.get("summary-point"));
+    return parsed.success ? parsed.data : DEFAULT_SUMMARY_POINT;
+  }
+
+  setSummaryPoint(point: SummaryPoint): void {
+    this.set("summary-point", summaryPointSchema.parse(point));
   }
 
   /**

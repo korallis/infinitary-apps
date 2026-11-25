@@ -34,6 +34,7 @@ import {
   requestTimeoutErrorMessage,
   turnTimeoutErrorMessage,
 } from "../session/bounds";
+import { summaryCompaction } from "../session/compaction";
 import type { ModelSession, SessionEvent } from "../session/session";
 import { boundTool } from "../session/tools";
 import { CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
@@ -1532,4 +1533,20 @@ describe("the Claude seat's runaway bounds on the host's clock", () => {
     await next;
     session.dispose();
   });
+});
+
+// INF-6693's plan: the person's summary point sets the client's window at the
+// point plus the first mate's 8,192 answer allowance and the client's 13,000
+// buffer; each model's limit leaves the client's own window.
+it.each([
+  [200_000, 221_192],
+  ["model", undefined],
+] as const)("a summary point of %s sets the client's window to %s", async (point, window) => {
+  const s = seat({ onInput: answering() });
+  const session = await s.factory(spec({ compaction: () => summaryCompaction(point) }));
+  await session.prompt("hello");
+  const settings = s.harness().options.settings as Record<string, unknown>;
+  expect(settings.autoCompactEnabled).toBe(true);
+  expect(settings.autoCompactWindow).toBe(window);
+  session.dispose();
 });

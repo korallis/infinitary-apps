@@ -4,8 +4,8 @@ import {
   SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
 } from "@anthropic-ai/claude-agent-sdk";
 import { hostPlatform } from "../platform";
-import { SESSION_COMPACTION_TOKENS } from "../session/compaction";
-import type { SessionSpec } from "../session/session";
+import { compactionNow, SESSION_COMPACTION } from "../session/compaction";
+import type { SessionCompaction, SessionSpec } from "../session/session";
 import type { BoundTool } from "../session/tools";
 import { CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
 import type { ClaudeAccessSettings } from "./claudeAccess";
@@ -84,10 +84,24 @@ export const CLAUDE_CODING_ENV = {
 } as const;
 
 /** Claude clamps this to its model window, then subtracts output room and a 13k buffer. */
-const CLAUDE_COMPACTION_SETTINGS = {
-  autoCompactEnabled: true,
-  autoCompactWindow: SESSION_COMPACTION_TOKENS + 8192 + 13_000,
-} as const;
+const CLAUDE_COMPACTION_SETTINGS = claudeCompactionSettings(SESSION_COMPACTION);
+
+/**
+ * The client's own window for a rule: its point plus the first mate's 8,192
+ * answer allowance and the client's 13,000 buffer. Price steps are Pi's to
+ * read, so only the ceiling crosses; a rule with none (each model's limit)
+ * leaves the client's window at the model's own.
+ */
+export function claudeCompactionSettings(compaction: SessionCompaction | undefined): {
+  autoCompactEnabled: true;
+  autoCompactWindow?: number;
+} {
+  const point = compaction?.maxContextTokens;
+  return {
+    autoCompactEnabled: true,
+    ...(point === undefined ? {} : { autoCompactWindow: point + 8192 + 13_000 }),
+  };
+}
 
 /** A person's client switches must not disable or enlarge the app's compaction budget. */
 function claudeSessionEnv(base?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -332,7 +346,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       // and address, when they set them up for Claude Code, ride along.
       settings: {
         ...input.access,
-        ...CLAUDE_COMPACTION_SETTINGS,
+        ...claudeCompactionSettings(compactionNow(spec.compaction) ?? SESSION_COMPACTION),
         ...(coding ? CLAUDE_CODING_SETTINGS : {}),
         ...(staged ? { disableAllHooks: true } : {}),
       },

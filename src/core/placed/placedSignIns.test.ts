@@ -171,6 +171,25 @@ it("carries only the opt-in to the running computer, which reads its own local f
     .toContain("personal-resources");
   console.info("Placed resources:", system.slice(system.indexOf("Personal instructions from")));
 });
+// INF-6693's plan: the person's summary point reaches the work sent to a
+// computer that runs work, which opens the conversation with it.
+it("sends the home's summary point to the running computer with the crewmate's open", async () => {
+  const at = await world();
+  const sent = vi.spyOn(at.home().devices, "ask");
+  new SettingsStore(at.home().db).setSummaryPoint(150_000);
+  model([
+    { tools: [{ name: "report", args: { text: "Summary point served.", summary: "Served." } }] },
+    { text: "Reported." },
+  ]);
+  await at.start("t-summary-point");
+  await expect
+    .poll(() => at.home().tasks.get("t-summary-point")?.outcome)
+    .toBe("Summary point served.");
+  const open = sent.mock.calls.find((call) => call[1] === "inf:session:open");
+  const [order] = workOrders["inf:session:open"].request.parse(open?.[2]);
+  expect(order?.spec.compaction).toEqual({ maxContextTokens: 150_000 });
+  sent.mockRestore();
+});
 describe("a task that runs on a computer that runs work", () => {
   it("takes its model among the subscriptions that computer is signed in to, on its own account there, never this Mac's", async () => {
     const grok = await piStubRuntime(api.url, { provider: "xai", id: "grok-stub" });

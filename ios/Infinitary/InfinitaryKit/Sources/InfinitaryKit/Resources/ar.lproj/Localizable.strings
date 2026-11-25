@@ -3895,6 +3895,17 @@
 "settingsSubscriptionsSignedOutHoldLabel" = "معلّق";
 "settingsSubscriptionsSignedOutHoldText" = "العمل متوقف مؤقتًا حتى تسجّل الدخول مجددًا.";
 "settingsSubscriptionsStale" = "قديم";
+"settingsSummaryPointAutomatic" = "تلقائي";
+"settingsSummaryPointDescriptionAutomatic" = "يلخّص نائب القبطان والطاقم المحادثة عند %1$@ من الرموز، أو قبل ذلك حين يرفع النموذج سعره بعد نقطة أدنى.";
+"settingsSummaryPointDescriptionModelLimit" = "يلخّص نائب القبطان والطاقم المحادثة فقط قرب حدّ كل نموذج، وقد يبلغ مليون رمز.";
+"settingsSummaryPointDescriptionTokens" = "يلخّص نائب القبطان والطاقم المحادثة عند %1$@ من الرموز، أو عند حدّ النموذج نفسه إن كان أصغر.";
+"settingsSummaryPointDescriptionUnread" = "يلخّص نائب القبطان والطاقم المحادثات الطويلة لتقلّ كلفتها وتتسع في النموذج.";
+"settingsSummaryPointModelLimit" = "حدّ كل نموذج";
+"settingsSummaryPointSaveFailed" = "تعذّر حفظ موضع تلخيص المحادثات الطويلة. أعِد المحاولة.";
+"settingsSummaryPointStep" = "%1$@ بعد %2$@";
+"settingsSummaryPointSteps" = "تكلّف الطلبات أكثر على %1$@.";
+"settingsSummaryPointTitle" = "تلخيص المحادثات الطويلة عند";
+"settingsSummaryPointTokens" = "%1$@ من الرموز";
 "settingsTakeOverAfter" = "إذا عاد %1$@ فإنه يتوقف ويحتفظ بنسخة بدلًا من ذلك.";
 "settingsTakeOverAsk" = "هل تريد التولي ليصبح هذا حاسوب نائب القبطان؟ يبدأ نائب القبطان هنا من هذه النسخة بعد Touch ID أو كلمة المرور.";
 "settingsTakeOverAskWindows" = "هل تريد التولي ليصبح هذا حاسوب نائب القبطان؟ يبدأ نائب القبطان هنا من هذه النسخة بعد Windows Hello أو كلمة مرور Windows.";

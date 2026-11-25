@@ -33,6 +33,7 @@ import type { Reasoning } from "@shared/reasoning";
 import type { BashOutcome } from "../jobs/jobManager";
 import type { ServedInstructions, ServedMessage, ServedState } from "../orchestrator/seat";
 import { modelTurnsErrorMessage } from "../session/bounds";
+import { compactionNow } from "../session/compaction";
 import { personalPluginSource, personalResources } from "../session/personalResources";
 import { projectSkillFolders } from "../session/projectResources";
 import {
@@ -44,6 +45,7 @@ import {
   SAFE_STOP_BLOCKED_TEXT,
   type SafeStopOptions,
   type SafeStopOutcome,
+  type SessionCompaction,
   type SessionEvent,
   type SessionFactory,
   type SessionImage,
@@ -555,7 +557,7 @@ class PiRollingSession implements ModelSession {
     try {
       budgetCustomCompaction(
         this.session,
-        this.options.compaction,
+        compactionNow(this.options.compaction),
         this.options.local ? LOCAL_CONTEXT_RESERVE : DEFAULT_COMPACTION_SETTINGS.reserveTokens,
       );
       if (this.options.local) {
@@ -1117,7 +1119,7 @@ async function openOneShot(
  */
 function budgetCustomCompaction(
   session: AgentSession,
-  compaction: SessionSpec["compaction"],
+  compaction: SessionCompaction | undefined,
   defaultReserve = DEFAULT_COMPACTION_SETTINGS.reserveTokens,
 ): void {
   const model = session.model;
@@ -1175,7 +1177,7 @@ function budgetCustomCompaction(
 function compactionCeiling(
   session: AgentSession,
   model: NonNullable<AgentSession["model"]>,
-  compaction: SessionSpec["compaction"],
+  compaction: SessionCompaction | undefined,
   reserve: number,
 ): number | undefined {
   let steps: number[] = [];
