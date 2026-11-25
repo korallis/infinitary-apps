@@ -3558,6 +3558,10 @@
 "settingsProjectsDeliveryNoBatch" = "يُقدَّم كطلب سحب حيث يُستضاف المشروع، أو يُدمج محليًا دون طلب سحب.";
 "settingsProjectsDeliveryTitle" = "إلى أين تذهب التغييرات";
 "settingsProjectsDetailsLabel" = "التفاصيل";
+"settingsProjectsDisclosure" = "الإفصاح عن أن فرد الطاقم كتبه";
+"settingsProjectsDisclosureLine" = "السطر الذي يذكر أن فرد الطاقم كتبه";
+"settingsProjectsDisclosureOff" = "ما ينشره الطاقم على طلب سحب شخص آخر لا يذكر أن فرد الطاقم كتبه.";
+"settingsProjectsDisclosureOn" = "ما ينشره الطاقم على طلب سحب شخص آخر يبدأ بهذا السطر.";
 "settingsProjectsEmpty" = "لا مشاريع بعد. أضف واحدًا أدناه، أو أخبر نائب القبطان بالمشروع الذي يعمل عليه.";
 "settingsProjectsFolder" = "المجلد";
 "settingsProjectsFolderCancel" = "إلغاء";

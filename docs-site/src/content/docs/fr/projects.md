@@ -1,5 +1,5 @@
 ---
-source: d57581294d6dfbfc
+source: d80bcd26e6bed993
 title: Projets
 description: Comment ajouter un projet à Infinitary, concentrer la fenêtre sur l’un d’eux, choisir comment ses changements sont fusionnés et le retirer.
 ---
@@ -107,6 +107,10 @@ Il est activé pour un nouveau projet, si bien que le travail terminé attend vo
 Désactivez-le, et le travail qui réussit les vérifications peut fusionner sans vous demander.
 
 **Soin** règle le degré de vérification du travail : **Rapide**, **Par défaut** ou **Minutieux**.
+
+**Dire qu’un équipier l’a écrit** est activé pour un projet dont les changements passent par des demandes de tirage.
+Quand un équipier relit la demande de tirage d’une autre personne, le commentaire qu’il publie commence par une ligne qui dit qu’un équipier d’Infinitary l’a écrit.
+Modifiez la ligne et appuyez sur **Enregistrer**, ou désactivez l’interrupteur pour ne pas l’ajouter.
 
 ## Retirer un projet {#remove-a-project}
 

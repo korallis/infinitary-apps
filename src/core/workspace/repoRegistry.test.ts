@@ -13,6 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { contributorDisclosureLine } from "@shared/contributorDisclosure";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import { BATCH_HOST_REFUSAL, BATCHES_OFF_REFUSAL, NO_CHECKS_REFUSAL } from "@shared/repos";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -83,6 +84,26 @@ describe("RepoRegistry.setup initial history", () => {
     expect(registry.get(repo.id)?.scope).toBe(scope);
     registry.configure(repo.id, { scope: null });
     expect(registry.get(repo.id)?.scope).toBeNull();
+  });
+
+  // The captain's ask on the fork-review disclosure: a per-project setting,
+  // on by default, that can be turned off or given another line.
+  it("keeps a project's line saying a crewmate wrote it: default, own line, off, default again", async () => {
+    const { repo } = await registry.setup({ kind: "init", name: "observatory" });
+    const reload = () =>
+      new RepoRegistry(db, scratchDir("infinitary-reloaded-fleet-")).get(repo.id);
+    expect(contributorDisclosureLine(reload())).toBe(
+      "_Written by an Infinitary crewmate, an AI agent working for this project's maintainer._",
+    );
+    registry.configure(repo.id, { contributorDisclosure: "Posted by our club's AI crew." });
+    expect(contributorDisclosureLine(reload())).toBe("Posted by our club's AI crew.");
+    registry.configure(repo.id, { autonomy: true });
+    expect(contributorDisclosureLine(reload())).toBe("Posted by our club's AI crew.");
+    registry.configure(repo.id, { contributorDisclosure: "" });
+    expect(contributorDisclosureLine(reload())).toBeUndefined();
+    registry.configure(repo.id, { contributorDisclosure: null });
+    expect(reload()?.contributorDisclosure).toBeUndefined();
+    expect(contributorDisclosureLine(reload())).toContain("Infinitary crewmate");
   });
 
   it("adopts an unborn repo without committing or changing its staged files", async () => {

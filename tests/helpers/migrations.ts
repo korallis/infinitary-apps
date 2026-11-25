@@ -173,8 +173,11 @@ export const REVERSE_MIGRATION_66 = `
 `;
 /** Migration 65's live attachment, undone: the `cards` column. */
 export const REVERSE_MIGRATION_65 = "ALTER TABLE cards DROP COLUMN attachment_json;\n";
-/** A batched project's batch gap (docs/forge.md, "The batch gap"), the newest project column, undone first. */
-export const REVERSE_PROJECT_BATCH_GAP = "ALTER TABLE repos DROP COLUMN batch_gap_minutes;\n";
+/** A project's line saying a crewmate wrote it (docs/forge.md, "Saying a crewmate wrote it"), the newest project column, undone first. */
+export const REVERSE_PROJECT_CONTRIBUTOR_DISCLOSURE =
+  "ALTER TABLE repos DROP COLUMN contributor_disclosure;\n";
+/** A batched project's batch gap (docs/forge.md, "The batch gap"), undone after the later disclosure line. */
+export const REVERSE_PROJECT_BATCH_GAP = `${REVERSE_PROJECT_CONTRIBUTOR_DISCLOSURE}ALTER TABLE repos DROP COLUMN batch_gap_minutes;\n`;
 /** The no-checks record, undone after the later batch gap. */
 export const REVERSE_PROJECT_NO_CHECKS = `${REVERSE_PROJECT_BATCH_GAP}ALTER TABLE repos DROP COLUMN no_checks_json;\n`;
 /** Which project each repository belongs to (INF-4220), undone after the later no-checks column and before any older project column. */

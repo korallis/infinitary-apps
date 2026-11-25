@@ -1,3 +1,4 @@
+import { DEFAULT_CONTRIBUTOR_DISCLOSURE } from "@shared/contributorDisclosure";
 import type { MergeReview } from "@shared/mergeReview";
 import { describe, expect, it } from "vitest";
 import { arrange, BRANCH, HEAD, TASK } from "../../../tests/helpers/changePresentationsHarness";
@@ -10,7 +11,7 @@ import { presentationMarkdownText, presentationRegionMarkers } from "../forge/pr
 // The fixture uses the existing inspected app photographs and host comment
 // readings; the network itself is a stand-in, not a real external account.
 describe("contributor review stories", () => {
-  async function contributor(kind: "github" | "gitlab") {
+  async function contributor(kind: "github" | "gitlab", disclosure?: string) {
     const at = await arrange();
     const review: MergeReview = {
       id: "mrcontributor",
@@ -77,7 +78,7 @@ describe("contributor review stories", () => {
       },
     });
     seedDelivery(at.tasks, TASK, { checkTarget: review, mergeReviews: [review] });
-    const forge = forkStoryForge(underlying, review, TASK);
+    const forge = forkStoryForge(underlying, review, TASK, disclosure);
     await at.prepare();
     return {
       at,
@@ -97,7 +98,7 @@ describe("contributor review stories", () => {
   it.each(["github", "gitlab"] as const)(
     "publishes and reads back a %s comment, keeping the description and squash summary",
     async (kind) => {
-      const c = await contributor(kind);
+      const c = await contributor(kind, DEFAULT_CONTRIBUTOR_DISCLOSURE);
       const published = await c.publish();
       expect(c.writes).toHaveLength(1);
       expect(c.writes[0]?.method).toBe("POST");
@@ -136,6 +137,26 @@ describe("contributor review stories", () => {
       const afterSelection = await c.at.service.assertPublished(TASK, published, c.forge);
       expect(afterSelection.squashMessage).toBe(verified.squashMessage);
       expect(afterSelection.title).toBe(c.at.draft.title);
+    },
+  );
+  // The captain's follow-up: a project can turn the line off or write its own.
+  it.each([
+    {
+      disclosure: "_Drafted by our project's AI crew._",
+      shown: "_Drafted by our project's AI crew._",
+    },
+    { disclosure: undefined, shown: undefined },
+  ])(
+    "opens the comment with the project's own line or none: $disclosure",
+    async ({ disclosure, shown }) => {
+      const c = await contributor("github", disclosure);
+      await c.publish();
+      const { start } = presentationRegionMarkers(TASK);
+      const title = `# ${presentationMarkdownText(c.at.draft.title)}`;
+      expect(c.comments[0]?.body).toContain(
+        shown ? `${start}\n\n${shown}\n\n${title}` : `${start}\n\n${title}`,
+      );
+      expect(c.comments[0]?.body).not.toContain("Infinitary crewmate");
     },
   );
   it.each(["github", "gitlab"] as const)(

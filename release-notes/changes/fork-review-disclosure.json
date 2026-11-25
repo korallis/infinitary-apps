@@ -2,11 +2,15 @@
   "entries": [
     {
       "id": "fork-review-disclosure",
-      "kind": "improvement",
-      "area": "crewmates",
+      "kind": "feature",
+      "area": "projects",
       "title": "Reviews of outside pull requests say a crewmate wrote them",
-      "body": "When a crewmate reviews someone else's pull request, the story it posts as a comment now opens with a line saying an Infinitary crewmate, an AI agent working for the project's maintainer, wrote it.",
-      "noPicture": "This changes the words of a comment posted where the project lives, not a view in the app.",
+      "body": "When a crewmate reviews someone else's pull request, the story it posts as a comment now opens with a line saying an Infinitary crewmate, an AI agent working for the project's maintainer, wrote it. Each project can turn the line off or write its own in Settings, Projects, Say a crewmate wrote it.",
+      "picture": {
+        "dark": "fork-review-disclosure-dark.webp",
+        "light": "fork-review-disclosure-light.webp",
+        "alt": "A project's settings with Say a crewmate wrote it switched on and the line it posts"
+      },
       "provenance": { "origin": "change" }
     }
   ]

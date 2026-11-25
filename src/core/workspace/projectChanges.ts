@@ -4,9 +4,11 @@ import { isDeepStrictEqual } from "node:util";
 import { ACTIONS, type ActionActor, type ActionName, isProjectChange } from "@shared/actions";
 import { BATCH_GAP_WORDS } from "@shared/batches";
 import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
+import { DEFAULT_CONTRIBUTOR_DISCLOSURE } from "@shared/contributorDisclosure";
 import { type CostLimit, formatUsd } from "@shared/costLimit";
 import type { DeviceView } from "@shared/devices";
 import { deviceRunsWork } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import { cardWordsMark, englishOf, said, saidMark } from "@shared/i18n/said";
 import type { CoreInvokeChannel } from "@shared/ipc";
 import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD, type PlacementRequirements } from "@shared/placement";
@@ -410,6 +412,7 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
     placementRequirements: "Computer requirements",
     requireChecks: "Require pull request checks",
     batchGap: BATCH_GAP_WORDS.title,
+    contributorDisclosure: m.settingsProjectsDisclosure(),
   };
   // Each detail as the project has it now; the project keeps Require pull
   // request checks as its record that it runs none.
@@ -428,6 +431,12 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
     if (key === "origin" && value === null) return "Kept on this computer";
     if (key === "requireChecks") return value ? "On" : "Off";
     if (key === "batchGap") return BATCH_GAP_WORDS.label(value as number | null | undefined);
+    if (key === "contributorDisclosure")
+      return value == null
+        ? DEFAULT_CONTRIBUTOR_DISCLOSURE
+        : value === ""
+          ? m.settingsProjectsDisclosureOff()
+          : String(value);
     if (key === "runsOn")
       return value === AUTOMATIC_COMPUTER
         ? AUTOMATIC_WORD

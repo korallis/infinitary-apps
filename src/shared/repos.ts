@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { batchRecordSchema } from "./batches";
 import { contributionDestinationSchema, contributionRouteSchema } from "./contributions";
+import { contributorDisclosureSchema } from "./contributorDisclosure";
 import { costLimitSchema } from "./costLimit";
 import { HERE, PLACE_SAID } from "./deviceNames";
 import { type ForgeKind, hasChangeRequests } from "./forge";
@@ -339,11 +340,18 @@ export const repoPolicyPatchSchema = z
      * batch's start to the next, or null to start one as soon as a change is approved.
      */
     batchGap: batchGapSchema.nullable().optional(),
+    /**
+     * Settings → Projects' Say a crewmate wrote it (docs/forge.md, "Saying a
+     * crewmate wrote it"): the line that opens what the crew posts to an
+     * outside contributor, an empty string to post none, or null for the
+     * default line.
+     */
+    contributorDisclosure: contributorDisclosureSchema.nullable().optional(),
   })
   .strict()
   .refine((patch) => Object.values(patch).some((value) => value !== undefined), {
     message:
-      "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, batchGap, or several",
+      "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, batchGap, contributorDisclosure, or several",
   });
 export type RepoPolicyPatch = z.infer<typeof repoPolicyPatchSchema>;
 
@@ -431,6 +439,12 @@ export const repoViewSchema = z.object({
    * soon as a change is approved. A held batch's repair never waits for it.
    */
   batchGap: batchGapSchema.optional(),
+  /**
+   * The project's own line opening what the crew posts to an outside
+   * contributor, or an empty string for none (docs/forge.md, "Saying a
+   * crewmate wrote it"); absent, the default line.
+   */
+  contributorDisclosure: contributorDisclosureSchema.optional(),
   /**
    * Whether a runbook that is on at the home offers batched pull requests,
    * so the project may newly choose them (`deliveryChoices`); absent from an

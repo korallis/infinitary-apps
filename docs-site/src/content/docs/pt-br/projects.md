@@ -1,5 +1,5 @@
 ---
-source: d57581294d6dfbfc
+source: d80bcd26e6bed993
 title: Projetos
 description: Como adicionar um projeto ao Infinitary, focar a janela em um deles, escolher como as mudanças dele são mescladas e removê-lo.
 ---
@@ -107,6 +107,10 @@ Ele vem ligado em um projeto novo, então o trabalho terminado espera a sua pala
 Desligue-o, e o trabalho que passa nas verificações pode ser mesclado sem perguntar a você.
 
 **Cuidado** define o quanto o trabalho é verificado: **Rápido**, **Padrão** ou **Cuidadoso**.
+
+**Dizer que um tripulante escreveu** fica ligado em um projeto cujas mudanças passam por solicitações de pull.
+Quando um tripulante revisa a solicitação de pull de outra pessoa, o comentário que ele publica começa com uma linha dizendo que um tripulante do Infinitary o escreveu.
+Mude a linha e pressione **Salvar**, ou desligue a chave para deixá-la de fora.
 
 ## Remover um projeto {#remove-a-project}
 

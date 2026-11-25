@@ -446,6 +446,12 @@ export interface Forge {
   mergeTaskRefused?(number: number, task: string): Promise<boolean>;
   /** The selected contributor change publishes its saved story in a comment. */
   readonly storyInComment?: boolean;
+  /**
+   * The line that opens a contributor change's story comment, from its
+   * project's setting (docs/forge.md, "Saying a crewmate wrote it");
+   * undefined posts none.
+   */
+  readonly storyDisclosure?: string;
   readonly workflows?: ForgeWorkflows;
   /**
    * The host's own words for why it has no runs, logs or release files,

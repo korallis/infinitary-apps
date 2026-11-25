@@ -6,6 +6,11 @@ import {
   SQUASH_ONLY_WORDS,
 } from "@shared/batches";
 import { CONTRIBUTION_WORDS } from "@shared/contributions";
+import {
+  contributorDisclosureLine,
+  DEFAULT_CONTRIBUTOR_DISCLOSURE,
+} from "@shared/contributorDisclosure";
+import { hasChangeRequests } from "@shared/forge";
 import * as m from "@shared/i18n/messages.generated";
 import {
   hostTakesBatches,
@@ -690,6 +695,9 @@ function RepositorySettings({
           )
         }
       />
+      {!personal && repo.host && hasChangeRequests(repo.host.kind) && (
+        <ContributorDisclosure repo={repo} onPatch={onPatch} />
+      )}
       {!personal && repo.delivery === "local-only" && repo.rigor === "reviewed" && (
         <div
           style={{
@@ -1011,6 +1019,64 @@ function BatchGapPicker({
         </option>
       ))}
     </select>
+  );
+}
+
+/**
+ * Say a crewmate wrote it (docs/forge.md, "Saying a crewmate wrote it"): the
+ * switch turns the line off, or back on with the default line; the field
+ * replaces the line with the project's own, saved by its own Save.
+ */
+function ContributorDisclosure({
+  repo,
+  onPatch,
+}: {
+  repo: RepoView;
+  onPatch: (changes: RepoPolicyPatch) => void;
+}) {
+  const line = contributorDisclosureLine(repo);
+  const [draft, setDraft] = useState(line ?? DEFAULT_CONTRIBUTOR_DISCLOSURE);
+  useEffect(() => setDraft(line ?? DEFAULT_CONTRIBUTOR_DISCLOSURE), [line]);
+  const next = draft.trim();
+  const changed = line !== undefined && next !== "" && next !== line;
+  return (
+    <>
+      <PolicyRow
+        title={PROJECT_POLICY_WORDS.disclosureTitle}
+        description={PROJECT_POLICY_WORDS.disclosure(line !== undefined)}
+        wrapsBesideControl
+        control={
+          <Switch
+            checked={line !== undefined}
+            aria-label={PROJECT_POLICY_WORDS.disclosureTitle}
+            onChange={(on) => onPatch({ contributorDisclosure: on ? null : "" })}
+          />
+        }
+      />
+      {line !== undefined && (
+        <form
+          style={{ display: "flex", gap: "var(--space-2)", paddingBottom: "var(--space-2)" }}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (changed)
+              onPatch({
+                contributorDisclosure: next === DEFAULT_CONTRIBUTOR_DISCLOSURE ? null : next,
+              });
+          }}
+        >
+          <Input
+            aria-label={PROJECT_POLICY_WORDS.disclosureLine}
+            value={draft}
+            maxLength={300}
+            onChange={(event) => setDraft(event.target.value)}
+            style={{ flex: 1 }}
+          />
+          <Button type="submit" size="sm" variant="secondary" disabled={!changed}>
+            {m.settingsProjectsFolderSave()}
+          </Button>
+        </form>
+      )}
+    </>
   );
 }
 

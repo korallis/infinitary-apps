@@ -10201,6 +10201,114 @@ ${events}` : prompt;
     }
     return `Where changes go`;
   }
+  function settingsProjectsDisclosure() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الإفصاح عن أن فرد الطاقم كتبه`;
+      case "de":
+        return `Sagen, dass ein Crewmitglied es geschrieben hat`;
+      case "es":
+        return `Decir que lo escribió un tripulante`;
+      case "fr":
+        return `Dire qu’un équipier l’a écrit`;
+      case "ja":
+        return `乗組員が書いたことを示す`;
+      case "ko":
+        return `선원이 작성했다고 밝히기`;
+      case "pt-BR":
+        return `Dizer que um tripulante escreveu`;
+      case "zh-Hans":
+        return `说明由船员撰写`;
+      case "zh-Hant":
+        return `說明由船員撰寫`;
+      case "en-XA":
+        return `[Šáý á çŕéŵɱáţé ŵŕöţé îţ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Say a crewmate wrote it‬`;
+    }
+    return `Say a crewmate wrote it`;
+  }
+  function settingsProjectsDisclosureLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `السطر الذي يذكر أن فرد الطاقم كتبه`;
+      case "de":
+        return `Zeile, die sagt, dass ein Crewmitglied es geschrieben hat`;
+      case "es":
+        return `Línea que dice que lo escribió un tripulante`;
+      case "fr":
+        return `Ligne qui dit qu’un équipier l’a écrit`;
+      case "ja":
+        return `乗組員が書いたことを示す行`;
+      case "ko":
+        return `선원이 작성했다고 밝히는 줄`;
+      case "pt-BR":
+        return `Linha que diz que um tripulante escreveu`;
+      case "zh-Hans":
+        return `说明由船员撰写的那一行`;
+      case "zh-Hant":
+        return `說明由船員撰寫的那一行`;
+      case "en-XA":
+        return `[Ļîñé ţĥáţ šáýš á çŕéŵɱáţé ŵŕöţé îţ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Line that says a crewmate wrote it‬`;
+    }
+    return `Line that says a crewmate wrote it`;
+  }
+  function settingsProjectsDisclosureOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ما ينشره الطاقم على طلب سحب شخص آخر لا يذكر أن فرد الطاقم كتبه.`;
+      case "de":
+        return `Was die Crew zum Pull Request einer anderen Person schreibt, sagt nicht, dass ein Crewmitglied es geschrieben hat.`;
+      case "es":
+        return `Lo que la tripulación publica en la solicitud de incorporación de cambios de otra persona no dice que lo escribió un tripulante.`;
+      case "fr":
+        return `Ce que l’équipage publie sur la demande de tirage d’une autre personne ne dit pas qu’un équipier l’a écrit.`;
+      case "ja":
+        return `ほかの人のプルリクエストに乗組員が投稿する内容には、乗組員が書いたことを示しません。`;
+      case "ko":
+        return `선원들이 다른 사람의 끌어오기 요청에 올리는 글에는 선원이 작성했다는 말이 없어요.`;
+      case "pt-BR":
+        return `O que a tripulação publica na solicitação de pull de outra pessoa não diz que um tripulante escreveu.`;
+      case "zh-Hans":
+        return `船员们在他人的拉取请求上发布的内容不会说明由船员撰写。`;
+      case "zh-Hant":
+        return `船員在他人的 pull request 上發布的內容不會說明由船員撰寫。`;
+      case "en-XA":
+        return `[Ŵĥáţ ţĥé çŕéŵ þöšţš öñ šöɱéöñé éļšé'š þûļļ ŕéǫûéšţ ðöéš ñöţ šáý á çŕéŵɱáţé ŵŕöţé îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮What the crew posts on someone else's pull request does not say a crewmate wrote it.‬`;
+    }
+    return `What the crew posts on someone else's pull request does not say a crewmate wrote it.`;
+  }
+  function settingsProjectsDisclosureOn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ما ينشره الطاقم على طلب سحب شخص آخر يبدأ بهذا السطر.`;
+      case "de":
+        return `Was die Crew zum Pull Request einer anderen Person schreibt, beginnt mit dieser Zeile.`;
+      case "es":
+        return `Lo que la tripulación publica en la solicitud de incorporación de cambios de otra persona empieza con esta línea.`;
+      case "fr":
+        return `Ce que l’équipage publie sur la demande de tirage d’une autre personne commence par cette ligne.`;
+      case "ja":
+        return `ほかの人のプルリクエストに乗組員が投稿する内容は、この行から始まります。`;
+      case "ko":
+        return `선원들이 다른 사람의 끌어오기 요청에 올리는 글은 이 줄로 시작해요.`;
+      case "pt-BR":
+        return `O que a tripulação publica na solicitação de pull de outra pessoa começa com esta linha.`;
+      case "zh-Hans":
+        return `船员们在他人的拉取请求上发布的内容以这一行开头。`;
+      case "zh-Hant":
+        return `船員在他人的 pull request 上發布的內容以這一行開頭。`;
+      case "en-XA":
+        return `[Ŵĥáţ ţĥé çŕéŵ þöšţš öñ šöɱéöñé éļšé'š þûļļ ŕéǫûéšţ öþéñš ŵîţĥ ţĥîš ļîñé. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮What the crew posts on someone else's pull request opens with this line.‬`;
+    }
+    return `What the crew posts on someone else's pull request opens with this line.`;
+  }
   function settingsProjectsLocalCareful() {
     switch (currentLanguage()) {
       case "ar":
@@ -14777,6 +14885,7 @@ ${events}` : prompt;
     state: _enum(["open", "merged", "closed"]),
     updatedAt: string().optional()
   });
+  const contributorDisclosureSchema = string().trim().max(300);
   const appFollowStepSchema = _enum(["getting", "waiting", "restarting", "cannot", "failed"]);
   const appFollowReasonSchema = _enum([
     "package-manager",
@@ -17062,9 +17171,16 @@ ${events}` : prompt;
      * (docs/forge.md, "The batch gap"): the least time in minutes from one
      * batch's start to the next, or null to start one as soon as a change is approved.
      */
-    batchGap: batchGapSchema.nullable().optional()
+    batchGap: batchGapSchema.nullable().optional(),
+    /**
+     * Settings → Projects' Say a crewmate wrote it (docs/forge.md, "Saying a
+     * crewmate wrote it"): the line that opens what the crew posts to an
+     * outside contributor, an empty string to post none, or null for the
+     * default line.
+     */
+    contributorDisclosure: contributorDisclosureSchema.nullable().optional()
   }).strict().refine((patch) => Object.values(patch).some((value) => value !== void 0), {
-    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, batchGap, or several"
+    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, batchGap, contributorDisclosure, or several"
   });
   const noChecksRecordSchema = object({
     at: number(),
@@ -17129,6 +17245,12 @@ ${events}` : prompt;
      * soon as a change is approved. A held batch's repair never waits for it.
      */
     batchGap: batchGapSchema.optional(),
+    /**
+     * The project's own line opening what the crew posts to an outside
+     * contributor, or an empty string for none (docs/forge.md, "Saying a
+     * crewmate wrote it"); absent, the default line.
+     */
+    contributorDisclosure: contributorDisclosureSchema.optional(),
     /**
      * Whether a runbook that is on at the home offers batched pull requests,
      * so the project may newly choose them (`deliveryChoices`); absent from an
@@ -18928,6 +19050,16 @@ ${events}` : prompt;
     /** Under Require pull request checks while it is off, before when and by whom. */
     get checksOff() {
       return settingsProjectsRequireChecksOff();
+    },
+    /** The Say a crewmate wrote it row's name and its switch's (docs/forge.md, "Saying a crewmate wrote it"). */
+    get disclosureTitle() {
+      return settingsProjectsDisclosure();
+    },
+    /** What the Say a crewmate wrote it row says under its name, on or off. */
+    disclosure: (on) => on ? settingsProjectsDisclosureOn() : settingsProjectsDisclosureOff(),
+    /** The name of the field holding the project's line. */
+    get disclosureLine() {
+      return settingsProjectsDisclosureLine();
     },
     /** Under the rows of a project that merges locally and asks for Careful. */
     get carefulLocal() {

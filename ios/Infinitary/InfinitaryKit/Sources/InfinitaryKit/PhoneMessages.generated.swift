@@ -3705,6 +3705,10 @@ public enum PhoneMessages {
     public static func `settingsProjectsDeliveryNoBatch`() -> String { PhoneWords.format("settingsProjectsDeliveryNoBatch", []) }
     public static func `settingsProjectsDeliveryTitle`() -> String { PhoneWords.format("settingsProjectsDeliveryTitle", []) }
     public static func `settingsProjectsDetailsLabel`() -> String { PhoneWords.format("settingsProjectsDetailsLabel", []) }
+    public static func `settingsProjectsDisclosure`() -> String { PhoneWords.format("settingsProjectsDisclosure", []) }
+    public static func `settingsProjectsDisclosureLine`() -> String { PhoneWords.format("settingsProjectsDisclosureLine", []) }
+    public static func `settingsProjectsDisclosureOff`() -> String { PhoneWords.format("settingsProjectsDisclosureOff", []) }
+    public static func `settingsProjectsDisclosureOn`() -> String { PhoneWords.format("settingsProjectsDisclosureOn", []) }
     public static func `settingsProjectsEmpty`() -> String { PhoneWords.format("settingsProjectsEmpty", []) }
     public static func `settingsProjectsFolder`() -> String { PhoneWords.format("settingsProjectsFolder", []) }
     public static func `settingsProjectsFolderCancel`() -> String { PhoneWords.format("settingsProjectsFolderCancel", []) }
@@ -8323,6 +8327,10 @@ extension PhoneWords {
         "settingsProjectsDeliveryNoBatch": [],
         "settingsProjectsDeliveryTitle": [],
         "settingsProjectsDetailsLabel": [],
+        "settingsProjectsDisclosure": [],
+        "settingsProjectsDisclosureLine": [],
+        "settingsProjectsDisclosureOff": [],
+        "settingsProjectsDisclosureOn": [],
         "settingsProjectsEmpty": [],
         "settingsProjectsFolder": [],
         "settingsProjectsFolderCancel": [],

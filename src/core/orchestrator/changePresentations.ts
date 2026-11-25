@@ -41,7 +41,6 @@ import { issueLine } from "../batches/description";
 import {
   AttachmentUploadError,
   changeTitle,
-  FORK_STORY_DISCLOSURE,
   type Forge,
   type ForgeChange,
   ForgeWriteError,
@@ -530,7 +529,7 @@ export class ChangePresentations {
         const { start } = presentationRegionMarkers(taskId);
         rendered = rendered.replace(
           start,
-          `${start}\n\n${FORK_STORY_DISCLOSURE}\n\n# ${presentationMarkdownText(story.title)}`,
+          `${start}\n\n${forge.storyDisclosure ? `${forge.storyDisclosure}\n\n` : ""}# ${presentationMarkdownText(story.title)}`,
         );
       }
       return destination.host === "github.com" &&

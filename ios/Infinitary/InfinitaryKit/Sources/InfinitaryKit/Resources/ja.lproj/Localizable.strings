@@ -3558,6 +3558,10 @@
 "settingsProjectsDeliveryNoBatch" = "プロジェクトの保管先でプルリクエストとして出すか、プルリクエストなしでローカルマージします。";
 "settingsProjectsDeliveryTitle" = "変更の届け方";
 "settingsProjectsDetailsLabel" = "詳細";
+"settingsProjectsDisclosure" = "乗組員が書いたことを示す";
+"settingsProjectsDisclosureLine" = "乗組員が書いたことを示す行";
+"settingsProjectsDisclosureOff" = "ほかの人のプルリクエストに乗組員が投稿する内容には、乗組員が書いたことを示しません。";
+"settingsProjectsDisclosureOn" = "ほかの人のプルリクエストに乗組員が投稿する内容は、この行から始まります。";
 "settingsProjectsEmpty" = "プロジェクトはまだありません。下で追加するか、どのプロジェクトで作業するかを一等航海士に伝えてください。";
 "settingsProjectsFolder" = "フォルダ";
 "settingsProjectsFolderCancel" = "キャンセル";

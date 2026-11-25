@@ -3558,6 +3558,10 @@
 "settingsProjectsDeliveryNoBatch" = "在项目托管处以拉取请求提交，或不经拉取请求本地合并。";
 "settingsProjectsDeliveryTitle" = "改动去向";
 "settingsProjectsDetailsLabel" = "详细信息";
+"settingsProjectsDisclosure" = "说明由船员撰写";
+"settingsProjectsDisclosureLine" = "说明由船员撰写的那一行";
+"settingsProjectsDisclosureOff" = "船员们在他人的拉取请求上发布的内容不会说明由船员撰写。";
+"settingsProjectsDisclosureOn" = "船员们在他人的拉取请求上发布的内容以这一行开头。";
 "settingsProjectsEmpty" = "还没有项目。在下方添加一个，或告诉你的大副要处理哪个项目。";
 "settingsProjectsFolder" = "文件夹";
 "settingsProjectsFolderCancel" = "取消";

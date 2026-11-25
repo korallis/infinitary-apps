@@ -1,5 +1,5 @@
 ---
-source: d57581294d6dfbfc
+source: d80bcd26e6bed993
 title: Projekte
 description: Wie du ein Projekt zu Infinitary hinzufügst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
 ---
@@ -107,6 +107,10 @@ Bei einem neuen Projekt ist es an, damit fertige Arbeit auf dein Wort wartet.
 Schalte es aus, und Arbeit, die die Überprüfungen besteht, darf ohne Rückfrage zusammengeführt werden.
 
 **Sorgfalt** legt fest, wie gründlich Arbeit geprüft wird: **Schnell**, **Standard** oder **Sorgfältig**.
+
+**Sagen, dass ein Crewmitglied es geschrieben hat** ist bei einem Projekt an, dessen Änderungen über Pull Requests laufen.
+Wenn ein Crewmitglied den Pull Request einer anderen Person prüft, beginnt sein Kommentar mit einer Zeile, die sagt, dass ein Infinitary-Crewmitglied ihn geschrieben hat.
+Ändere die Zeile und drücke **Speichern**, oder schalte den Schalter aus, um sie wegzulassen.
 
 ## Ein Projekt entfernen {#remove-a-project}
 

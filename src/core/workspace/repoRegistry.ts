@@ -128,13 +128,14 @@ type Row = {
   batch_json?: string | null;
   no_checks_json?: string | null;
   batch_gap_minutes?: number | null;
+  contributor_disclosure?: string | null;
 };
 
 /** Where a new repository goes: a task key of its own, or the existing project it joins by key. */
 type Into = { key?: string | undefined; project?: string | undefined };
 
 const ROW_COLUMNS =
-  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json, batch_gap_minutes";
+  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json, batch_gap_minutes, contributor_disclosure";
 
 function fromRow(row: Row): RepoView {
   const contribution = row.contribution_json ? JSON.parse(row.contribution_json) : null;
@@ -167,6 +168,9 @@ function fromRow(row: Row): RepoView {
     ...(row.batch_json ? batchOf(row.batch_json) : {}),
     ...(row.no_checks_json ? noChecksOf(row.no_checks_json) : {}),
     ...(row.batch_gap_minutes ? { batchGap: row.batch_gap_minutes } : {}),
+    ...(row.contributor_disclosure != null
+      ? { contributorDisclosure: row.contributor_disclosure }
+      : {}),
   };
 }
 
@@ -704,6 +708,11 @@ export class RepoRegistry {
           this.db
             .prepare("UPDATE repos SET batch_gap_minutes = ? WHERE id = ?")
             .run(changes.batchGap, id);
+        if (changes.contributorDisclosure !== undefined)
+          this.db
+            // i18n-exempt: SQL, never shown
+            .prepare("UPDATE repos SET contributor_disclosure = ? WHERE id = ?")
+            .run(changes.contributorDisclosure, id);
         this.projects.renameForRepo(id, name);
         if (origin !== repo.origin)
           for (const listener of this.addressListeners) listener(repo, origin);

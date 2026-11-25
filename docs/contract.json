@@ -3230,6 +3230,10 @@
               "exclusiveMinimum": 0,
               "maximum": 9007199254740991
             },
+            "contributorDisclosure": {
+              "type": "string",
+              "maxLength": 300
+            },
             "batchesOffered": {
               "type": "boolean"
             }
@@ -4289,6 +4293,10 @@
                 "exclusiveMinimum": 0,
                 "maximum": 9007199254740991
               },
+              "contributorDisclosure": {
+                "type": "string",
+                "maxLength": 300
+              },
               "batchesOffered": {
                 "type": "boolean"
               }
@@ -4737,6 +4745,17 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "contributorDisclosure": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 300
                   },
                   {
                     "type": "null"
@@ -5681,6 +5700,10 @@
             "type": "integer",
             "exclusiveMinimum": 0,
             "maximum": 9007199254740991
+          },
+          "contributorDisclosure": {
+            "type": "string",
+            "maxLength": 300
           },
           "batchesOffered": {
             "type": "boolean"
@@ -12741,6 +12764,10 @@
             "type": "integer",
             "exclusiveMinimum": 0,
             "maximum": 9007199254740991
+          },
+          "contributorDisclosure": {
+            "type": "string",
+            "maxLength": 300
           },
           "batchesOffered": {
             "type": "boolean"

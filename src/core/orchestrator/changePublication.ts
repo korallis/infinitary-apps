@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import type { OpenChangeInput, StagedChangePresentation } from "@shared/changePresentation";
 import { contributesUpstream } from "@shared/contributions";
+import { contributorDisclosureLine } from "@shared/contributorDisclosure";
 import { forgeOf, hasChangeRequests } from "@shared/forge";
 import { overridePasses, softHoldWords } from "@shared/holds";
 import {
@@ -312,7 +313,9 @@ export class ChangePublication {
     if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
     const target = located.record.delivery?.checkTarget;
     const fork = target && isForkReview(target) ? target : undefined;
-    const forge = fork ? forkStoryForge(located.forge, fork, taskId) : located.forge;
+    const forge = fork
+      ? forkStoryForge(located.forge, fork, taskId, contributorDisclosureLine(located.repo))
+      : located.forge;
     // Own changes follow the checked-out branch; a fork review stays bound to its numbered request.
     const selected = currentChange(located.record.delivery, located.branch);
     const checkedOut = await this.presentationBranch(taskId).catch(() => undefined);
@@ -418,7 +421,12 @@ export class ChangePublication {
           return "Prepare the contributor review story with prepare_change, then pass presentation to open_change. The contributor's description stays unchanged.";
         if (input.base !== undefined && input.base !== selected.base)
           return "The reviewed contributor change keeps its destination branch.";
-        const forge = forkStoryForge(located.forge, selected, taskId);
+        const forge = forkStoryForge(
+          located.forge,
+          selected,
+          taskId,
+          contributorDisclosureLine(located.repo),
+        );
         const change = await this.options.presentations.publish(
           taskId,
           input.presentation,

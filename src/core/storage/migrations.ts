@@ -1571,6 +1571,12 @@ export const MIGRATIONS: readonly Migration[] = [
   ) WITHOUT ROWID;
   CREATE INDEX IF NOT EXISTS task_tags_tag ON task_tags (tag_id, state);
   `,
+  // The project's line saying a crewmate wrote what the crew posts to an
+  // outside contributor (docs/forge.md, "Saying a crewmate wrote it"): null
+  // on every existing project, which posts the default line; an empty
+  // string posts none. `RepoRegistry` is the only writer; no published view
+  // reads it. Dropping the column reverses it.
+  (db) => addColumn(db, "repos", "contributor_disclosure", "TEXT"),
 ];
 
 /**
