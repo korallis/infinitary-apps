@@ -1,15 +1,26 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  FIRST_TOKEN,
+  HOUR,
+  SECOND_EMAIL,
+  START,
+  standInClient,
+  writeDefaultLogin,
+} from "../../../tests/helpers/claudeLogins";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { ClaudeAuthBackend } from "../claude/claudeAuth";
-import type { RunClaude } from "../claude/claudeCli";
+import { claudeEnvFor } from "../claude/claudeCli";
 import { claudeAvailableModels } from "../claude/claudeModels";
 import { readClaudeStore } from "../claude/claudeQuota";
 import { acquireSessionLease, resetStoreLeasesForTest } from "../claude/claudeStoreLease";
+import { claudeLoginDirs } from "../claude/session";
 import { absentKeychain } from "../host";
+import { createAccountStore } from "../models/accountStore";
+import { claudeListReader } from "../models/clientLists";
 import { Flagship } from "../orchestrator/flagship";
 import { appPathsFor } from "../paths";
 import { AccountVault } from "../pi/accountVault";
@@ -43,83 +54,9 @@ vi.mock("../quota/http", async (importOriginal) => {
   };
 });
 
-const START = Date.parse("2026-11-20T09:00:00Z");
-const HOUR = 60 * 60_000;
-const FIRST_EMAIL = "first@example.invalid";
-const SECOND_EMAIL = "second@example.invalid";
-const FIRST_TOKEN = "stand-in-token-first";
 const USAGE_FIXTURE = JSON.parse(
   readFileSync(join(__dirname, "../../../tests/fixtures/quota-credits/claude-usage.json"), "utf8"),
 );
-
-/** The computer's default Claude login, as the client last wrote it. */
-function writeDefaultLogin(home: string): void {
-  mkdirSync(join(home, ".claude"), { recursive: true });
-  writeFileSync(
-    join(home, ".claude.json"),
-    JSON.stringify({
-      oauthAccount: {
-        accountUuid: "uuid-first",
-        organizationUuid: "org-first",
-        emailAddress: FIRST_EMAIL,
-      },
-    }),
-  );
-  writeFileSync(
-    join(home, ".claude", ".credentials.json"),
-    JSON.stringify({
-      claudeAiOauth: {
-        accessToken: FIRST_TOKEN,
-        refreshToken: "stand-in-refresh-first",
-        expiresAt: START + 30 * 24 * HOUR,
-        subscriptionType: "max",
-      },
-    }),
-  );
-  const written = START / 1000;
-  utimesSync(join(home, ".claude.json"), written, written);
-  utimesSync(join(home, ".claude", ".credentials.json"), written, written);
-}
-
-type ClientCall = { command: string; configDir?: string };
-
-/**
- * A Claude client that keeps one sign-in per config folder. A command with
- * no folder named is the default login's, which these cases never ask it
- * about: the default login is read from its store.
- */
-function standInClient() {
-  const calls: ClientCall[] = [];
-  const signedIn = new Map<string, string>();
-  const behavior = { loginFinishes: true, logoutThrows: false };
-  const run: RunClaude = async (args, _dir, options) => {
-    const configDir = options?.env?.CLAUDE_CONFIG_DIR;
-    const command = args.slice(0, 2).join(" ");
-    calls.push({ command, ...(configDir ? { configDir } : {}) });
-    if (!configDir) return { code: 0, stdout: "{}", stderr: "" };
-    if (command === "auth login") {
-      if (!behavior.loginFinishes) return { code: 1, stdout: "", stderr: "" };
-      signedIn.set(configDir, SECOND_EMAIL);
-      return { code: 0, stdout: "Login successful.\n", stderr: "" };
-    }
-    if (command === "auth logout") {
-      if (behavior.logoutThrows) throw new Error("the client is gone");
-      signedIn.delete(configDir);
-      return { code: 0, stdout: "", stderr: "" };
-    }
-    const email = signedIn.get(configDir);
-    return {
-      code: email ? 0 : 1,
-      stdout: JSON.stringify(
-        email
-          ? { loggedIn: true, authMethod: "claude.ai", email, subscriptionType: "pro" }
-          : { loggedIn: false, authMethod: "none" },
-      ),
-      stderr: "",
-    };
-  };
-  return { run, calls, signedIn, behavior };
-}
 
 const bridge: AuthInteractionBridge = {
   prompt: () => new Promise<string>(() => {}),
@@ -149,8 +86,10 @@ function boot(home: string) {
       return readClaudeStore(dir, { ...options, keychain: absentKeychain });
     },
   });
-  const vault = AccountVault.create(paths, {
+  const held: { held: boolean; accounts: number }[] = [];
+  const vault: AccountVault = AccountVault.create(paths, {
     backends: [claude],
+    furtherLoginsHeld: (now) => held.push({ held: now, accounts: vault.list().length }),
     modelsForAccount: ({ providerId }) =>
       providerId === CLAUDE_PROVIDER_ID ? claudeAvailableModels() : [],
   });
@@ -173,7 +112,7 @@ function boot(home: string) {
   const add = () => vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
   const folderOf = (accountId: string) =>
     claudeLoginFolder(join(paths.accountsDir, CLAUDE_PROVIDER_ID, accountId));
-  return { paths, client, storesRead, usageAsks, vault, homeQuota, flagship, add, folderOf };
+  return { paths, client, storesRead, usageAsks, held, vault, homeQuota, flagship, add, folderOf };
 }
 
 describe("further Claude logins", () => {
@@ -310,10 +249,27 @@ describe("further Claude logins", () => {
       { id: "five_hour", percentRemaining: 0, resetsAtMs: resetsAt },
     ]);
 
+    // An ordinary reading moves the meter as it arrives, with no pass asked.
+    run.homeQuota.recordClaudeRateLimit(second.id, {
+      status: "allowed",
+      windowId: "seven_day",
+      utilization: 0.4,
+      resetsAt: START + 100 * HOUR,
+    });
+    await vi.waitFor(() =>
+      expect(rowOf(second.id)?.windows).toMatchObject([
+        { id: "five_hour" },
+        { id: "seven_day", percentRemaining: 60 },
+      ]),
+    );
+
     vi.setSystemTime(resetsAt + 60_000);
     await run.homeQuota.quota.refresh("demand");
     const refilled = rowOf(second.id)?.windows ?? [];
-    expect(refilled).toMatchObject([{ id: "five_hour", percentRemaining: 100 }]);
+    expect(refilled).toMatchObject([
+      { id: "five_hour", percentRemaining: 100 },
+      { id: "seven_day" },
+    ]);
     expect(refilled[0]?.resetsAtMs, "the passed reset is not shown as the next one").toBe(
       undefined,
     );
@@ -351,9 +307,14 @@ describe("further Claude logins", () => {
     const run = boot(home);
     const first = await run.add();
     const second = await run.add();
+    const folder = run.folderOf(second.id);
     run.client.behavior.logoutThrows = true;
     await run.vault.remove(second.id);
-    expect(existsSync(run.folderOf(second.id))).toBe(false);
+    expect(run.client.calls, "the sign-out was tried in the login's folder").toContainEqual({
+      command: "auth logout",
+      configDir: folder,
+    });
+    expect(existsSync(folder)).toBe(false);
     expect(run.vault.list().map((account) => account.id)).toEqual([first.id]);
   });
 
@@ -367,6 +328,106 @@ describe("further Claude logins", () => {
     vi.setSystemTime(START + HOUR);
     expect(run.vault.binding(second.id)).toEqual({ via: "config-dir", configDir: folder });
     expect((await run.vault.status(second.id, { refresh: true })).connected).toBe(false);
+  });
+
+  // Plan item 5: a session runs on its account's own binding, and an account
+  // that is gone is refused rather than run on the default login.
+  it("names a further login's folder to its sessions and refuses a removed login's", async () => {
+    const run = boot(home);
+    const first = await run.add();
+    const second = await run.add();
+    const folder = run.folderOf(second.id);
+    const dirs = claudeLoginDirs(run.vault);
+    expect(dirs.ownConfigDir?.(first.id)).toBe(undefined);
+    expect(dirs.ownConfigDir?.(second.id)).toBe(folder);
+    await run.vault.remove(second.id);
+    expect(() => dirs.ownConfigDir?.(second.id)).toThrow(/Unknown account/);
+  });
+
+  // Plan item 9: the person's gateway headers are their default login's.
+  it("keeps inherited gateway headers out of a further login's client", () => {
+    const inherited = { PATH: "/usr/bin", ANTHROPIC_CUSTOM_HEADERS: "x-team-id: stand-in" };
+    expect(claudeEnvFor(inherited).ANTHROPIC_CUSTOM_HEADERS).toBe("x-team-id: stand-in");
+    const own = claudeEnvFor(inherited, "/stores/second/claude");
+    expect(own.CLAUDE_CONFIG_DIR).toBe("/stores/second/claude");
+    expect(own.ANTHROPIC_CUSTOM_HEADERS).toBe(undefined);
+  });
+
+  it("asks a further login's model list as that login, while no session holds its folder", async () => {
+    const run = boot(home);
+    const first = await run.add();
+    const second = await run.add();
+    const folder = run.folderOf(second.id);
+    const askedAs: (string | undefined)[] = [];
+    const reader = claudeListReader({
+      configDir: () => join(home, ".claude"),
+      ownConfigDir: (accountId) => run.vault.claudeConfigDir(accountId),
+      read: async (ownConfigDir) => {
+        askedAs.push(ownConfigDir);
+        return [];
+      },
+      clientVersion: async () => undefined,
+    });
+    const account = (accountId: string) => ({ accountId, providerId: CLAUDE_PROVIDER_ID });
+    await reader(account(first.id));
+    await reader(account(second.id));
+    expect(askedAs).toEqual([undefined, folder]);
+
+    const release = await acquireSessionLease(folder);
+    expect(await reader(account(second.id))).toEqual({ status: "deferred" });
+    await reader(account(first.id));
+    release();
+    expect(askedAs).toEqual([undefined, folder, undefined]);
+  });
+
+  // The captain's choice on the review: an older version must refuse a
+  // folder that holds a further login, so the folder is marked before the
+  // record exists and handed back once the last further login is removed.
+  it("says a further login is held before its record is saved, and that none is left after the last is removed", async () => {
+    const run = boot(home);
+    const first = await run.add();
+    expect(run.held, "the first login marks nothing").toEqual([]);
+    const second = await run.add();
+    const third = await run.add();
+    expect(run.held).toEqual([
+      { held: true, accounts: 1 },
+      { held: true, accounts: 2 },
+    ]);
+    await run.vault.remove(second.id);
+    await run.vault.remove(third.id);
+    await run.vault.remove(first.id);
+    expect(run.held.slice(2)).toEqual([
+      { held: true, accounts: 2 },
+      { held: false, accounts: 1 },
+      { held: false, accounts: 0 },
+    ]);
+  });
+
+  it("marks the saved-data folder as revision 2 while it holds a further login, and as revision 1 again once it is removed", async () => {
+    const paths = appPathsFor(scratchDir("claude-further-logins-marked-"));
+    const { vault } = createAccountStore(paths, {
+      backends: [
+        new ClaudeAuthBackend({
+          furtherLogins: true,
+          run: standInClient().run,
+          available: () => true,
+          configDir: () => join(home, ".claude"),
+          readStore: (dir, options) =>
+            readClaudeStore(dir, { ...options, keychain: absentKeychain }),
+        }),
+      ],
+      packaged: false,
+      claudeConfigDir: () => join(home, ".claude"),
+      claudeList: { read: async () => [], clientVersion: async () => undefined },
+      rail: "home",
+    });
+    const marker = join(paths.userData, "saved-data-format.json");
+    await vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
+    expect(existsSync(marker), "the first login marks nothing").toBe(false);
+    const second = await vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
+    expect(JSON.parse(readFileSync(marker, "utf8"))).toEqual({ schemaVersion: 1, revision: 2 });
+    await vault.remove(second.id);
+    expect(JSON.parse(readFileSync(marker, "utf8"))).toEqual({ schemaVersion: 1, revision: 1 });
   });
 
   // Plan item 6: the first mate's seat accepts both bindings.

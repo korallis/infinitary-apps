@@ -254,7 +254,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
         ...(coding && hostPlatform() !== "win32" ? { owner: spec.owner } : {}),
         ...(input.exit ? { exit: input.exit } : {}),
       }),
-      // The machine's default login and nothing ambient, none of the
+      // The account's login and nothing ambient, none of the
       // person's Claude notes, plus the session state events the settle rule
       // reads, the output bound, for the seat none of the client's per-turn
       // extras, and for a coding session the longest command time limit.
@@ -379,7 +379,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       stderr: input.stderr,
       ...(input.exit ? { exit: input.exit } : {}),
     }),
-    // The machine's default login and nothing ambient, none of the person's
+    // The account's login and nothing ambient, none of the person's
     // Claude notes, plus the output bound.
     env: {
       ...claudeSessionEnv(input.env, input.ownConfigDir),

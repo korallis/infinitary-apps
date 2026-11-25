@@ -200,6 +200,8 @@ type Registry = {
 export type { AccountBinding, AccountStatus };
 
 export type AccountVaultOptions = {
+  /** Told before the first further Claude login's record is saved, and after one is removed. */
+  furtherLoginsHeld?: (held: boolean) => void;
   /** The Pi backend, named because in-process Pi has extra reach (runtimes). */
   pi?: PiAccountBackend;
   /** Every other registered backend. Pi alone is the phases 1-6 shape. */
@@ -456,6 +458,7 @@ export class AccountVault {
         lastConnectedAt: Date.now(),
         ...(furtherClaude ? { ownLogin: true as const } : {}),
       };
+      if (furtherClaude) this.options.furtherLoginsHeld?.(true);
       this.registry.accounts.push(record);
       this.saveRegistry();
       return { ...record };
@@ -790,6 +793,7 @@ export class AccountVault {
       delete this.registry.pins[account.providerId];
     }
     this.saveRegistry();
+    this.options.furtherLoginsHeld?.(this.registry.accounts.some((entry) => entry.ownLogin));
     return outcome;
   }
 

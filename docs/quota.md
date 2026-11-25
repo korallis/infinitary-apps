@@ -12,12 +12,12 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   Four rules that must not regress:
   - **The vendor's verdict drives reactive recovery.**
     A 401 - and only a 401, never a 403, which is also how a WAF refuses - makes `fetchOneAccount` (`src/core/quota/fetchQuota.ts`) ask `AccountBackend.renew` (`vendor_rejected`), then retry once after an observed credential change.
-    Claude sessions renew their own sign-in; health reads the modification-date-cached store without a client status poll or an advance renewal.
+    Claude sessions renew their own sign-in; the first login's health reads the modification-date-cached store without a client status poll or an advance renewal, and a further login's is the client's own status ("A further Claude login").
     Only after a rejection, with no live session and the store slot free, `ClaudeAuthBackend.renew` asks `auth status --json` once and rereads the store (`docs/claude-renew-probe.md`).
     It runs no fallback command and never speaks Anthropic OAuth.
     Pi accounts keep their existing proactive health policy and resolve-is-renewal: `getAuth` already refreshed.
   - **One session count and one store slot.**
-    `src/core/claude/claudeStoreLease.ts` counts live clients and owns the slot shared by login, logout, catalog reads and the one idle status request.
+    `src/core/claude/claudeStoreLease.ts` counts live clients and owns the slot shared by login, logout, catalog reads and the one idle status request, one count and one slot per login store: the default one, and each further login's folder.
     Claim and check happen in the same tick, so a background request cannot race a live session over its single-use refresh token.
     A session waits for an occupied slot before attaching; a background request defers immediately while a session or slot is active, without a renewal queue or thirty-second wait.
     User-initiated login and logout still serialize through the slot, with the seat detached by their existing owner.
@@ -70,7 +70,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 ## Keeping the Claude reading current
 
-- Health, allowance, identity and login ownership use `readClaudeStore`: one `present`, `absent` or `unreadable` result carrying the access token, advisory expiry and current identity from Claude Code's config.
+- For the first login, health, allowance, identity and login ownership use `readClaudeStore`: one `present`, `absent` or `unreadable` result carrying the access token, advisory expiry and current identity from Claude Code's config.
   A token command set up for Claude Code comes first: while one is set, health is that access, the allowance is not measured and the store is not read for it (`docs/claude-client.md`, "Access a company set up").
   File credentials and the account config are cached by modification date; a Keychain value is cached only when the item reports its modification date, and is invalidated by a changed item or config.
   Access expiry alone does not discard a cached value, and concurrent equivalent reads share their work.
@@ -90,6 +90,9 @@ Its row holds only the plan windows its own sessions push (`pushedOnlyProviderVi
 - a login with no reading yet has a row and no meter, never an empty one;
 - a refused window reads empty until its reset;
 - a reading whose reset has passed reads as refilled, with no reset time, until a session pushes the next one.
+
+Each pushed reading that moves a window is published as it arrives (`recordClaudeRateLimit`), since no sensor pass would bring it.
+The credential resolver refuses such an account before any store read, so the rule does not rest on the sensor's list alone.
 
 ## Typed cut-offs
 

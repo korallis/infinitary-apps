@@ -633,16 +633,18 @@ A Claude subscription is reachable only through Claude's own client - its OAuth 
   The first-run gate counts the same models, and stays down while an account the seat could stand on is only paused by a typed cut-off (`Flagship.standsOnCutOff`): the pause card speaks for it.
   Before rev-9 the same gate made Claude crewmate-only.
   Asserted in `flagship.test.ts` and e2e.
-- **Direct injection, no proxy**: Claude's `binding()` is `{ via: "default-login" }` (CD-1=B).
-  The transport leaves `CLAUDE_CONFIG_DIR` unset so the client uses the bare Keychain item `Claude Code-credentials` and `~/.claude`; a set variable would hash a suffix onto the service name and miss the everyday login (`docs/claude-client.md`).
+- **Direct injection, no proxy**: the first Claude account's `binding()` is `{ via: "default-login" }` (CD-1=B); a further login's is `{ via: "config-dir", configDir }` (next item).
+  For the first login the transport leaves `CLAUDE_CONFIG_DIR` unset so the client uses the bare Keychain item `Claude Code-credentials` and `~/.claude`; a set variable would hash a suffix onto the service name and miss the everyday login (`docs/claude-client.md`).
   Infinitary never mints Anthropic OAuth.
-  The vault still keeps a bookkeeping directory per registry row; it is not the credential store.
-  Unbind does not run `claude auth logout`, but for a login the first mate made on a computer that runs work from a pasted code (`docs/helper.md`, "Its own sign-ins").
+  The vault still keeps a bookkeeping directory per registry row; for the first login it is not the credential store, and for a further login it holds that login's Claude Code folder.
+  Unbinding the first login does not run `claude auth logout`, but for a login the first mate made on a computer that runs work from a pasted code (`docs/helper.md`, "Its own sign-ins"); unbinding a further login runs it in that login's folder.
 - **Further logins, each in its own folder** (2026-11-25, narrows CD-1=B to the first login; the captain approved the plan for several Claude logins).
   The first Claude account still stands on the machine's default login, with `CLAUDE_CONFIG_DIR` unset.
   Each Claude account added beside it on the captain's own computer binds as `{ via: "config-dir", configDir }`: an owner-only Claude Code folder inside the account's store, signed in by the client's own login run with `CLAUDE_CONFIG_DIR` naming it.
   Infinitary never opens that folder's sign-in; the client's `auth status` is its word, and its usage is only what its sessions push.
   Removing it runs the client's sign-out in the folder and deletes the folder.
+  A folder that holds one is marked saved-data format revision 2, which a build from before further logins refuses (`docs/saved-data-compatibility.md`, "Further Claude logins").
+  A session opens on its account's own binding (`claudeLoginDirs`), so an account the vault no longer holds is refused, never run on the default login.
   A computer that runs work keeps one Claude login (`docs/claude-client.md`, "Further logins").
 - **Control contract, measured**: native mid-turn steer, turn-granular interrupt, deltas, resume.
   Two behaviours the code exists to absorb: cost arrives cumulative per session (the ledger stores deltas), and a steer rides `priority: "next"` and folds into the running turn after the tool in flight, so a turn settles when the client says it is idle, never on a result.
@@ -650,7 +652,7 @@ A Claude subscription is reachable only through Claude's own client - its OAuth 
   See `docs/claude-client.md`.
 - **Quota is sensed, with pushed readings laid over** (a further login's is pushed only): the sensor reads the machine's default login and asks the vendor's usage endpoint (`src/core/claude/claudeQuota.ts`, `docs/quota.md`); the plan windows a session pushes are stored per account (`src/core/quota/pushedQuota.ts`, `pushed_quota` table), and a `rejected` reading is a zero window until its reset, laid over the sensed row.
 - **The first mate on Claude** (rev-9; `docs/claude-client.md`): the composition root injects `createClaudeSessionFactory` beside Pi's factory, and `Flagship.resolveBinding` binds a Claude account as `{backend: "claude", accountId}`, never building a runtime for it.
-  The seat runs the client the person installed on the machine's default login; its durable record is the app's own copy under `userData/firstmate/claude/`.
+  The seat runs the client the person installed on its account's login, the machine's default one or a further login's folder; its durable record is the app's own copy under `userData/firstmate/claude/`.
   It lets go of the client (`detach`) before a sign-in or sign-out rewrites the store and whenever it pauses.
   An attach that fails for a fact on its account - no Claude Code to run it - pauses through the ladder with the client's own sentence rather than raising the failure card.
   A Pi seat that runs out may be offered "Move your first mate to Claude" as its rung-2 card, which still asks (the owner's Q6 a).

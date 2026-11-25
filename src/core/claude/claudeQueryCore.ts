@@ -61,7 +61,8 @@ export type ClaudeSessionDeps = {
   configDir: string;
   /**
    * A further Claude login's own Claude Code folder, by account; nothing for
-   * the default login. Absent, every account runs on the default login.
+   * the default login. It throws for an account that is gone, which refuses
+   * the session. Absent, every account runs on the default login.
    */
   ownConfigDir?: (accountId: string) => string | undefined;
   /** Whether managed settings permit app-local cost exports; absence keeps terminal accounting. */

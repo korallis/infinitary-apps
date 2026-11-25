@@ -1,6 +1,7 @@
 /**
- * One live-session count and one slot for client operations on the default
- * Claude store. Sessions renew themselves; an idle rejection may ask status
+ * One live-session count and one slot for client operations on each Claude
+ * login store: the default one, and each further login's own folder.
+ * Sessions renew themselves; an idle rejection may ask status
  * once through the same slot as login, logout and catalog reads. A refresh
  * token is single use, so the check and claim are synchronous, and a client
  * attach waits for the slot before it starts. Background operations never

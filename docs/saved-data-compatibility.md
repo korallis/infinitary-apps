@@ -6,6 +6,17 @@ Each moves the Firstmate 3000 folder of its flavor, `firstmate-3000` or `firstma
 An older app may open saved work only when it supports the persisted formats.
 Release names alone are not compatibility evidence.
 
+## Further Claude logins
+
+An account record may carry `ownLogin`: a Claude login in its own Claude Code folder inside the account's store (`docs/claude-client.md`, "Further logins").
+A build from before them ignores the mark and would run that account, and work saved on it, on the computer's default login, so the folder is marked revision 2 before the first such record is saved (`markFurtherLoginsFormat`, called by the account vault through `createAccountStore`), and that build refuses the folder with the saved-data refusal.
+The first Claude login marks nothing: a folder that never held a further login stays at revision 1 and opens in an older build as before.
+
+The way back to an older build is to remove every added Claude login in Settings first.
+Removing the last one marks the folder revision 1 again, and the older build opens it; each removal signs that login out in its folder and deletes the folder, so nothing of it is left for the older build to meet.
+A start also sets the marker from the records it finds, so a start that ended between the mark and the record corrects itself.
+No database migration is involved.
+
 ## Contribution routes
 
 `repos.contribution_json` stores the verified upstream and owned fork identities, the selected destination, and whether a fork-creation request was attempted.
@@ -51,11 +62,17 @@ A run from source reports the package.json version, which names no release, so i
 
 ## Non-database formats
 
-The closed marker schema is `{ "schemaVersion": 1, "revision": 1 }`.
-Missing means supported legacy state.
+The closed marker schema is `{ "schemaVersion": 1, "revision": <n> }`, where the revision is the newest one whose format the folder holds.
+Missing means supported legacy state, read as revision 1.
+A build reads every revision from 1 to its own `PERSISTED_FORMAT_REVISION` as it is, with no migration between them.
 Invalid, unreadable, extra-key or unknown revision metadata refuses startup rather than guessing.
-After a successful first database initialization, the app records the current boundary atomically.
+After a successful first database initialization, the app records revision 1 atomically; a later revision is marked only when its format is first written ("Further Claude logins" below).
 The marker is never rewritten on a refusal.
+
+| Revision | What the folder may hold | Marked when |
+| --- | --- | --- |
+| 1 | everything before revision 2 | the first database initialization |
+| 2 | an account record that is a further Claude login (`ownLogin`) | before the first such record is saved |
 
 **Before writing any future incompatible non-database format**, increase `PERSISTED_FORMAT_REVISION` in `savedDataCompatibility.ts`, define exactly which older revisions are supported/migrated, and extend compatibility tests.
 Compatible additions do not require an increase.

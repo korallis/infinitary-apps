@@ -38,6 +38,7 @@ import { needsReauthTargets } from "./needsReauth";
 import { claudeAccessOutcome, type ProviderOutcome } from "./outcome";
 import {
   PushedQuotaStore,
+  type PushedWindow,
   pushedCredits,
   pushedOnlyProviderViews,
   pushedProviderViews,
@@ -171,6 +172,8 @@ export function startHomeQuota(options: {
     // resolves through its Pi runtime. Infinitary never mints Anthropic OAuth.
     const claudeDir = claudeStoreDirOf(vault, accountId);
     if (claudeDir !== undefined) {
+      // A further login's sign-in is its client's alone: its store is never read.
+      if (vault.claudeConfigDir(accountId) !== undefined) return undefined;
       // Access set up for Claude Code serves no subscription allowance, and
       // its sign-in is not the store's: the store is not read.
       const access = await options.claudeAccess?.();
@@ -404,11 +407,21 @@ export function startHomeQuota(options: {
         ...(reading.usingOverage !== undefined ? { usingOverage: reading.usingOverage } : {}),
         at: now,
       });
-      const creditsAfter = pushedCredits(pushedQuota.windowsFor(accountId), now)?.credits;
+      const after = pushedQuota.windowsFor(accountId);
+      const creditsAfter = pushedCredits(after, now)?.credits;
+      // A further login has no sensor pass: each reading that moves its
+      // window is the only news of it, so it is published as it arrives.
+      const shown = (windows: PushedWindow[]) => {
+        const window = windows.find((entry) => entry.windowId === reading.windowId);
+        return window && [window.status, window.utilization, window.resetsAt].join();
+      };
+      const movedPushedOnly =
+        vault.claudeConfigDir(accountId) !== undefined && shown(before) !== shown(after);
       // A window that just said no, or just stopped saying it, moves the
       // account's headroom now rather than at the next sensor pass; so does
       // a change in what extra usage can do.
       if (
+        movedPushedOnly ||
         (reading.status === "rejected") !== refusedBefore ||
         creditsBefore?.state !== creditsAfter?.state ||
         Boolean(creditsBefore?.inUse) !== Boolean(creditsAfter?.inUse)

@@ -57,10 +57,12 @@ test("Settings adds another Claude login in its own folder and removes it again"
     const further = accounts.find((account) => account.id !== FIRST);
     expect(further).toMatchObject({ providerId: CLAUDE, connected: true });
     if (!further) return;
+    const first = accounts.find((account) => account.id === FIRST);
+    expect(first, "the first login stays connected").toMatchObject({ connected: true });
     expect(
-      accounts.find((account) => account.id === FIRST),
-      "the first login stays connected",
-    ).toMatchObject({ connected: true });
+      first?.access,
+      "the first login is the throwaway home's subscription, not Claude Code access this computer has set up",
+    ).toBe(undefined);
     const folder = join(userDataDir, "accounts", CLAUDE, further.id, "claude");
     expect(
       existsSync(join(folder, "stub-credential")),

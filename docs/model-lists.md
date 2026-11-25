@@ -59,7 +59,7 @@ Changing the starting levels is a commit to that file in the tap; a development 
 
 | Provider | The runtime read | Shipped fallback |
 | --- | --- | --- |
-| Claude | the installed client's `supportedModels()` (`readClaudeModelCatalog`), checked for known-incomplete older metadata and an answer of aliases only, a one-shot under `claudeStoreLease` that **defers** while a crewmate session holds the store | `CLAUDE_MODELS` |
+| Claude | the installed client's `supportedModels()` (`readClaudeModelCatalog`), checked for known-incomplete older metadata and an answer of aliases only, asked as the account's own login (a further login in its folder, `docs/claude-client.md` "Further logins"), a one-shot under that login's `claudeStoreLease` that **defers** while a crewmate session holds the store | `CLAUDE_MODELS` |
 | Codex, Grok | Pi's catalog (bundled plus the pi.dev overlay), filtered by the account's **own list**: `chatgpt.com/backend-api/codex/models?client_version=…` and `api.x.ai/v1/models`, read with the account's auth the way quota reads it, through the same bounded transport with a wider 8 MiB reply limit (a meter's is 64 KB; a list describing every model may run past that) | Pi's catalog, unfiltered |
 | Kimi Code | Pi's catalog (Kimi serves no list of its own) | - |
 | Copilot | Pi's catalog, which Pi itself narrows at sign-in to the models the account may use (it stores their ids with the sign-in) | - |

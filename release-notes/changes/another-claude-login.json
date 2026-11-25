@@ -5,7 +5,7 @@
       "kind": "feature",
       "area": "subscriptions",
       "title": "Add more than one Claude login",
-      "body": "Settings now offers Add another Claude login once Claude is connected. Each login you add signs in through Claude's own sign-in and gets its own row, which you can pause, prefer or remove without touching your first login. A login you add shows its allowance after its first turn.",
+      "body": "Settings now offers Add another Claude login once Claude is connected. Each login you add signs in through Claude's own sign-in and gets its own row, which you can pause, prefer or remove without touching your first login. A login you add shows its allowance after its first turn. While you keep an added login, an older version of Infinitary will not open your saved work; remove the logins you added before going back to one.",
       "picture": {
         "dark": "another-claude-login-dark.webp",
         "light": "another-claude-login-light.webp",

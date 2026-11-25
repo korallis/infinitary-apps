@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { PERSISTED_FORMAT_REVISION } from "../../src/core/storage/savedDataCompatibility";
 import { UPDATE_CHANNEL_MARKER } from "../../src/core/update/updateChannels";
 import type { UpdateChannel } from "../../src/shared/update";
 
@@ -13,7 +14,10 @@ import type { UpdateChannel } from "../../src/shared/update";
 
 export function seedProtectedProfile(userDataDir: string, futureFormat: boolean): void {
   if (futureFormat)
-    writeFileSync(join(userDataDir, "saved-data-format.json"), '{"schemaVersion":1,"revision":2}');
+    writeFileSync(
+      join(userDataDir, "saved-data-format.json"),
+      JSON.stringify({ schemaVersion: 1, revision: PERSISTED_FORMAT_REVISION + 1 }),
+    );
   mkdirSync(join(userDataDir, "accounts"));
   writeFileSync(join(userDataDir, "accounts", "sentinel.json"), '{"fake":"do not change"}');
   mkdirSync(join(userDataDir, "firstmate"));

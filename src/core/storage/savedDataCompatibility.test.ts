@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { recordNewerMigration } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { assertSavedDataCompatible, openDatabase, openInMemoryDatabase } from "./db";
-import { UnsupportedSavedDataError } from "./savedDataCompatibility";
+import { markFurtherLoginsFormat, UnsupportedSavedDataError } from "./savedDataCompatibility";
 
 function snapshot(dir: string): Record<string, string> {
   return Object.fromEntries(
@@ -60,7 +60,7 @@ describe("saved-data compatibility before writable initialization", () => {
 
   it.each([
     "{",
-    '{"schemaVersion":1,"revision":2}',
+    '{"schemaVersion":1,"revision":3}',
     '{"schemaVersion":2,"revision":1}',
     '{"schemaVersion":1,"revision":1,"unknown":true}',
   ])("refuses unsupported format %s without writing", (format) => {
@@ -70,6 +70,39 @@ describe("saved-data compatibility before writable initialization", () => {
     const before = snapshot(dir);
     expect(() => openDatabase(dir)).toThrow(UnsupportedSavedDataError);
     expect(snapshot(dir)).toEqual(before);
+  });
+
+  // The captain's choice on the review of several Claude logins: block
+  // older versions from a folder that holds one, with a safe way back.
+  it("marks a folder that holds a further Claude login as revision 2, opens it, and hands it back once none is left", () => {
+    const dir = scratchDir("fm-compat-further-");
+    openDatabase(dir).close();
+    const marker = () => JSON.parse(readFileSync(join(dir, "saved-data-format.json"), "utf8"));
+    markFurtherLoginsFormat(dir, true);
+    expect(marker()).toEqual({ schemaVersion: 1, revision: 2 });
+    openDatabase(dir).close();
+    markFurtherLoginsFormat(dir, true);
+    expect(marker()).toEqual({ schemaVersion: 1, revision: 2 });
+    markFurtherLoginsFormat(dir, false);
+    expect(marker()).toEqual({ schemaVersion: 1, revision: 1 });
+  });
+
+  it("marks a folder from before the marker, and leaves a marker it cannot read as it is", () => {
+    const legacy = scratchDir("fm-compat-further-legacy-");
+    markFurtherLoginsFormat(legacy, false);
+    expect(readdirSync(legacy), "nothing to hand back, so nothing is written").toEqual([]);
+    markFurtherLoginsFormat(legacy, true);
+    expect(JSON.parse(readFileSync(join(legacy, "saved-data-format.json"), "utf8"))).toEqual({
+      schemaVersion: 1,
+      revision: 2,
+    });
+    const newer = scratchDir("fm-compat-further-newer-");
+    writeFileSync(join(newer, "saved-data-format.json"), '{"schemaVersion":1,"revision":3}');
+    markFurtherLoginsFormat(newer, true);
+    markFurtherLoginsFormat(newer, false);
+    expect(readFileSync(join(newer, "saved-data-format.json"), "utf8")).toBe(
+      '{"schemaVersion":1,"revision":3}',
+    );
   });
 
   it("does not guess a database with unknown tables or invalid migration history", () => {

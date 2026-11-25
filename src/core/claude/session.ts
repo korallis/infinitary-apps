@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { AccountBinding } from "../accounts/accountBackend";
 import { hostEnv, withTaskShell } from "../hostEnv";
 import { TICK_PERIOD_MS } from "../orchestrator/ticker";
 import type { SessionClock } from "../session/bounds";
@@ -34,9 +35,10 @@ import { ClaudeTranscriptLookup } from "./claudeTranscript";
  * built-ins (W1 S6), the crewmate's with the client's own coding set - and
  * the adapted decision model's one-shot question (W1 S10).
  *
- * Every Claude session runs the machine's default login, or the token
- * command an organization or the person set up for Claude Code with its
- * address (`claudeAccess.ts`, as flag settings), and nothing ambient
+ * Every Claude session runs its account's login - the machine's default
+ * one, or a further login's own folder - or, for the default login, the
+ * token command an organization or the person set up for Claude Code with
+ * its address (`claudeAccess.ts`, as flag settings), and nothing ambient
  * (`claudeEnvFor`), nothing else of the person's own Claude setup
  * (`settingSources: []`, `strictMcpConfig: true`, and the client's auto
  * memory off: `CLAUDE_SESSION_ENV`) but a gateway's custom headers beside
@@ -148,13 +150,21 @@ import { ClaudeTranscriptLookup } from "./claudeTranscript";
  * exit or answer an interrupt, the way the quiet watchdog rides it; no
  * session owns a timer.
  */
-/** Where each Claude account's client runs: a further login's own folder, else the default one. */
+/**
+ * Where each Claude account's client runs, from the account's own binding:
+ * a further login's folder, else the default one. An account the vault no
+ * longer holds is refused, so a removed login's session never runs on the
+ * default login.
+ */
 export function claudeLoginDirs(vault: {
-  claudeConfigDir(accountId: string): string | undefined;
+  binding(accountId: string): AccountBinding;
 }): Pick<ClaudeSessionDeps, "configDir" | "ownConfigDir"> {
   return {
     configDir: defaultClaudeConfigDir(),
-    ownConfigDir: (accountId) => vault.claudeConfigDir(accountId),
+    ownConfigDir: (accountId) => {
+      const binding = vault.binding(accountId);
+      return binding.via === "config-dir" ? binding.configDir : undefined;
+    },
   };
 }
 

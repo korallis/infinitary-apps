@@ -390,7 +390,9 @@ export const INFINITARY_ENTRYPOINT = "infinitary";
  * shell the client runs for a crewmate sees what the person installed.
  * Setting the variable even to ~/.claude would suffix the service name and
  * miss the everyday login (docs/claude-client.md). A further login names its
- * own folder in `ownConfigDir`, the one case that sets the variable.
+ * own folder in `ownConfigDir`, the one case that sets the variable; gateway
+ * headers this process inherited are the person's default login's, so that
+ * run loses them.
  */
 export function claudeEnvFor(
   base: NodeJS.ProcessEnv = hostEnv(),
@@ -403,7 +405,10 @@ export function claudeEnvFor(
   // CD-1=B: the vendor's own default login, unless this run is a further
   // login's, whose folder the caller names; never an inherited one.
   delete env.CLAUDE_CONFIG_DIR;
-  if (ownConfigDir) env.CLAUDE_CONFIG_DIR = ownConfigDir;
+  if (ownConfigDir) {
+    env.CLAUDE_CONFIG_DIR = ownConfigDir;
+    delete env.ANTHROPIC_CUSTOM_HEADERS;
+  }
   // Ambient credentials would silently serve a key the user never connected
   // here. The machine login, and a token command an organization or the
   // person set up for Claude Code with the address it is sent to
@@ -462,7 +467,10 @@ export const runClaude: RunClaude = (args, configDir, options = {}) => {
   return new Promise<ClaudeRunResult>((resolve, reject) => {
     const child = spawn(executable, args, {
       stdio: ["pipe", "pipe", "pipe"],
-      env: withoutAwsEnvironment({ ...claudeEnvFor(), ...options.env }),
+      env: withoutAwsEnvironment({
+        ...claudeEnvFor(undefined, options.env?.CLAUDE_CONFIG_DIR),
+        ...options.env,
+      }),
     });
     let stdout = "";
     let stderr = "";

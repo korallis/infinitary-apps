@@ -215,6 +215,8 @@ export async function readClaudeModelCatalog(
     utilityQos?: boolean;
     /** The person's own token command, address and gateway headers, as a session is handed them (`claudeAccess.ts`). */
     settings?: ClaudeAccessSettings;
+    /** A further login's own Claude Code folder: the client is asked as that login. */
+    ownConfigDir?: string;
   } = {},
 ): Promise<ClaudeModelRow[]> {
   const executable = resolveClaudeExecutable();
@@ -227,9 +229,9 @@ export async function readClaudeModelCatalog(
     prompt: input,
     options: {
       cwd: options.cwd ?? process.cwd(),
-      // The machine's default login, and nothing ambient - the same
-      // boundary a crewmate session runs under (claudeCli.ts).
-      env: claudeEnvFor(),
+      // The account's login, and nothing ambient - the same boundary a
+      // crewmate session runs under (claudeCli.ts).
+      env: claudeEnvFor(undefined, options.ownConfigDir),
       // The user's own machine-wide Claude configuration is theirs: the
       // catalog under test is the one a crewmate run would see.
       settingSources: [],
