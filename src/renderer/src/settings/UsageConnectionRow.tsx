@@ -310,6 +310,7 @@ function UsageConnectionForm({
         </div>
       </fieldset>
       <span className="fm-usage-conn-hint">{m.settingsUsageConnectionSaveLine()}</span>
+      <span className="fm-usage-conn-hint">{m.settingsUsageConnectionEmailLine()}</span>
       <SettingError error={problem} surface="usage-connection" />
       <div className="fm-usage-conn-acts">
         <Button type="submit" variant="primary" size="sm" disabled={saving || !endpoint.trim()}>

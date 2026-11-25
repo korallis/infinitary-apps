@@ -40,11 +40,11 @@ async function quiesce(services: CoreServices, stopCopies: () => void): Promise<
   void services.integrations.dispose();
   services.taskProtocol.dispose();
   services.quota.stop();
-  services.stopLivenessSweep();
+  const usageSent = services.stopLivenessSweep();
   services.personal.dispose();
   services.sql.dispose();
   services.automaticPlacement.dispose();
-  await Promise.all([firstmate, crew, placedCopies, services.recordReader.dispose()]);
+  await Promise.all([firstmate, crew, placedCopies, services.recordReader.dispose(), usageSent]);
 }
 
 /**

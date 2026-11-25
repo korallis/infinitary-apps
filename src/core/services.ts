@@ -1773,7 +1773,7 @@ export async function createServices(
       clearInterval(livenessInterval);
       // The daily read of each phone's box of letters (docs/phone-push.md, "Letters").
       notifier.stop();
-      void usage.usageReporter.stop().then(usageRoutes.stop);
+      return usage.usageReporter.stop().then(usageRoutes.stop);
     },
     stopWorkPresentation: () => workPresentation.dispose(),
     supervisor,

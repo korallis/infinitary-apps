@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { readdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { secretRefSchema } from "@shared/secrets";
+import { type SecretConsumer, secretConsumerSchema, secretRefSchema } from "@shared/secrets";
 import { canonical, type RootKeys, sha256, writePrivateFile } from "./custody";
 
 /** Metadata only. A label is the captain's own words; `version` rises on every replacement. */
@@ -22,12 +22,20 @@ export type VaultEntry = {
    * ask and its saved decisions apply, unlike an app sign-in's.
    */
   forProgram?: true;
+  /**
+   * The app service a hidden entry belongs to, when it is not an Integrations
+   * sign-in: the person's reporting connection's header (docs/secrets.md,
+   * "App sign-ins"), so Settings names it and its service can sweep one it
+   * no longer names.
+   */
+  consumer?: SecretConsumer;
 };
 
 export type SecretMetadataInput = {
   discoverable?: boolean;
   environment?: string;
   forProgram?: true;
+  consumer?: SecretConsumer;
 };
 
 /**
@@ -41,7 +49,8 @@ type Stored = { entry: Omit<VaultEntry, "revision">; mac: string; sealed: string
  * and only the fields this version understands leave the record.
  */
 function metadata(stored: Stored): VaultEntry {
-  const { ref, label, version, discoverable, updatedAt, environment, forProgram } = stored.entry;
+  const { ref, label, version, discoverable, updatedAt, environment, forProgram, consumer } =
+    stored.entry;
   return {
     ref,
     label,
@@ -51,6 +60,7 @@ function metadata(stored: Stored): VaultEntry {
     updatedAt,
     ...(environment !== undefined ? { environment } : {}),
     ...(forProgram === true ? { forProgram } : {}),
+    ...(consumer !== undefined ? { consumer } : {}),
   };
 }
 
@@ -137,6 +147,9 @@ export class SecretVault {
           ? {}
           : { environment: previous.environment }),
       ...((options.forProgram ?? previous?.forProgram) ? { forProgram: true as const } : {}),
+      ...((options.consumer ?? previous?.consumer)
+        ? { consumer: options.consumer ?? previous?.consumer }
+        : {}),
     };
     const text = canonical(entry);
     const iv = randomBytes(12);
@@ -196,6 +209,7 @@ export class SecretVault {
       !Number.isInteger(entry.version) ||
       typeof entry.discoverable !== "boolean" ||
       (entry.forProgram !== undefined && entry.forProgram !== true) ||
+      (entry.consumer !== undefined && !secretConsumerSchema.safeParse(entry.consumer).success) ||
       typeof parsed.sealed !== "string" ||
       path !== this.path(entry.ref) ||
       !this.keys.verify("entries", canonical(entry), parsed.mac)

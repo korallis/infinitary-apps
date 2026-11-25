@@ -71115,6 +71115,16 @@
                 "forProgram": {
                   "type": "boolean",
                   "const": true
+                },
+                "consumer": {
+                  "type": "string",
+                  "enum": [
+                    "usage-report"
+                  ]
+                },
+                "unnamed": {
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "required": [
@@ -71803,6 +71813,16 @@
                   "const": true
                 },
                 "forProgram": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "consumer": {
+                  "type": "string",
+                  "enum": [
+                    "usage-report"
+                  ]
+                },
+                "unnamed": {
                   "type": "boolean",
                   "const": true
                 }
@@ -72754,6 +72774,16 @@
                   "const": true
                 },
                 "forProgram": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "consumer": {
+                  "type": "string",
+                  "enum": [
+                    "usage-report"
+                  ]
+                },
+                "unnamed": {
                   "type": "boolean",
                   "const": true
                 }

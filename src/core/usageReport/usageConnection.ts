@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node
 import { isIP } from "node:net";
 import { dirname, join } from "node:path";
 import * as m from "@shared/i18n/messages.generated";
+import type { SecretConsumer } from "@shared/secrets";
 import {
   type UsageConnectionProblem,
   type UsageConnectionSave,
@@ -12,7 +13,9 @@ import {
   usageConnectionFormatSchema,
 } from "@shared/usageConnection";
 import { z } from "zod";
+import { claudeLoginEmail, defaultClaudeConfigDir } from "../claude/claudeQuota";
 import type { CoreServices } from "../coreServices";
+import { hostEnv } from "../hostEnv";
 import {
   guardedMcpFetch,
   holdMcpDestination,
@@ -27,7 +30,7 @@ import {
 } from "../pi/customApiPolicy";
 import type { SecretBroker } from "../secrets/brokers";
 import { canonical, sha256 } from "../secrets/custody";
-import { companyUsageDestinations } from "./companyDestination";
+import { type CompanyHosts, companyUsageDestinations, hostnameOf } from "./companyDestination";
 import type { UsageReportDestination } from "./usageReporter";
 import type { OtlpSignal } from "./usageReportFormats";
 
@@ -38,11 +41,12 @@ export const USAGE_CONNECTION_FILE = "usage-connection.json";
 export const USAGE_REPORT_BROKER = "usage-report";
 
 /**
- * A connection's batches go out at most this often, OpenTelemetry's own
- * default metric export interval: each send with kept headers is one use
- * in Secrets, whose history keeps every use until the person deletes it.
+ * A connection's batches go out at most this often, and once more as the app
+ * quits: each send with kept headers is one use in Secrets, whose history
+ * keeps every use until the person deletes it, so a working day adds a few
+ * dozen lines rather than a few thousand, and a dashboard lags this much.
  */
-export const CONNECTION_SEND_MS = 60_000;
+export const CONNECTION_SEND_MS = 10 * 60_000;
 
 const POST_TIMEOUT_MS = 10_000;
 const SIGNALS = ["metrics", "logs", "traces"] as const satisfies readonly OtlpSignal[];
@@ -62,14 +66,24 @@ export type UsageConnectionDeps = {
   resolve?: McpResolver;
   /** Where a send goes; the guarded fetch of the saved address unless a check stands one in. */
   fetchFor?: (saved: { endpoint: string; mode: CustomNetworkMode }) => typeof fetch;
+  /**
+   * The person's Claude Code sign-in email, read now, which every record
+   * carries as `user.email` so a per-person view counts their work.
+   */
+  email?: () => string | undefined;
 };
 
 export type UsageConnection = {
   view(): UsageConnectionView;
   save(input: UsageConnectionSave): Promise<UsageConnectionSaved>;
   remove(): Promise<UsageConnectionView>;
-  /** The connection as the report's destination, or none. */
-  destinations(): readonly UsageReportDestination[];
+  /**
+   * The connection as the report's destination, or none. `company` names the
+   * hosts the company setup already reaches: one the report sends every
+   * other model's work to gets nothing again, and one only Claude's own
+   * client reports to gets no Claude work.
+   */
+  destinations(company?: CompanyHosts): readonly UsageReportDestination[];
   /** The saved address's host, for Settings → Usage's line. */
   host(): string | null;
   /** Sends what is waiting, once, as the app stops. */
@@ -100,17 +114,21 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
     deps.fetchFor ??
     ((saved) =>
       guardedMcpFetch(holdMcpDestination(saved.endpoint, saved.mode), resolve) as typeof fetch);
-  let saved = read(deps.file);
-  let registered = false;
+  const loaded = read(deps.file);
+  let saved = loaded.saved;
+  /** A file this build could not read whole names nothing for certain, so no sweep forgets by it. */
+  let unreadable = loaded.unreadable;
   /** Each signal's resource entries waiting for the next send, as OTLP's request arrays. */
   let waiting: Partial<Record<OtlpSignal, unknown[]>> = {};
   let timer: ReturnType<typeof setTimeout> | undefined;
 
-  const register = () => {
-    if (registered) return;
-    registered = true;
-    deps.keys.registerBroker(reportBroker(() => saved, fetchFor));
-  };
+  deps.keys.registerBroker(
+    reportBroker(
+      () => saved,
+      fetchFor,
+      () => (unreadable ? undefined : (saved?.headers.map((header) => header.ref) ?? [])),
+    ),
+  );
 
   const send = async (): Promise<void> => {
     if (timer) clearTimeout(timer);
@@ -131,7 +149,6 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
       if (connection.headers.length === 0) {
         statuses = await postAll(connection, bodies, fetchFor(connection));
       } else {
-        register();
         const used = await deps.keys.use({
           id: randomUUID(),
           reason: m.settingsUsageConnectionUseReason({ host }),
@@ -154,7 +171,10 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
         console.warn(`[usage report] ${host} refused a ${signal} batch (HTTP ${status}); dropped`);
   };
 
-  const destination = (connection: SavedConnection): UsageReportDestination => ({
+  const destination = (
+    connection: SavedConnection,
+    withoutClaude: boolean,
+  ): UsageReportDestination => ({
     id: "person-connection",
     format: connection.format,
     endpoints: Object.fromEntries(
@@ -163,7 +183,12 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
     // Kept headers never leave Secrets: `post` sends through the broker.
     headers: () => Promise.resolve({}),
     resource: {},
-    ...(connection.format === "claude-code" ? { claudeFromLedger: true as const } : {}),
+    ...personOf(deps.email?.()),
+    ...(withoutClaude
+      ? { withoutClaude: true as const }
+      : connection.format === "claude-code"
+        ? { claudeFromLedger: true as const }
+        : {}),
     post: (signal, body) => {
       const entries = (body as Record<string, unknown>)[OTLP_ARRAY[signal]];
       if (Array.isArray(entries) && entries.length > 0) {
@@ -180,7 +205,12 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
   return {
     view: () => viewOf(saved),
     host: () => (saved ? new URL(saved.endpoint).host : null),
-    destinations: () => (saved ? [destination(saved)] : []),
+    destinations: (company) => {
+      if (!saved) return [];
+      const host = hostnameOf(saved.endpoint);
+      if (company?.allWork.includes(host)) return [];
+      return [destination(saved, company?.claudeWork === host)];
+    },
     stop: send,
     async save(input) {
       const kept: string[] = [];
@@ -214,6 +244,7 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
           const ref = await deps.keys.keepHidden({
             label: m.settingsUsageConnectionSecretLabel({ name: header.name }),
             value: Buffer.from(header.value, "utf8"),
+            consumer: USAGE_REPORT_CONSUMER,
           });
           if (!ref) throw new Refused("secrets-locked");
           kept.push(ref);
@@ -222,6 +253,7 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
         const before = saved;
         write(deps.file, next);
         saved = next;
+        unreadable = false;
         // What waits was built in the old format for the old address; sent now it would reach
         // the new address, or a tool reading the new format, in the old format, so it is dropped.
         if (before?.endpoint !== next.endpoint || before?.format !== next.format) dropWaiting();
@@ -239,6 +271,7 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
       dropWaiting();
       rmSync(deps.file, { force: true });
       saved = null;
+      unreadable = false;
       await forgetUnnamed(before, null);
       return null;
     },
@@ -255,6 +288,13 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
     for (const header of before?.headers ?? [])
       if (!named.has(header.ref)) await deps.keys.forgetHidden(header.ref).catch(() => false);
   }
+}
+
+/** The Secrets owner of the connection's kept headers (docs/secrets.md, "App sign-ins"). */
+const USAGE_REPORT_CONSUMER = "usage-report" satisfies SecretConsumer;
+
+function personOf(email: string | undefined): Pick<UsageReportDestination, "person"> {
+  return email ? { person: { "user.email": email } } : {};
 }
 
 /** The top-level array of each signal's OTLP/HTTP JSON request. */
@@ -342,10 +382,12 @@ async function postAll(
 function reportBroker(
   current: () => SavedConnection | null,
   fetchFor: (saved: SavedConnection) => typeof fetch,
+  named: () => readonly string[] | undefined,
 ): SecretBroker {
   return {
     id: USAGE_REPORT_BROKER,
     signIn: true,
+    keeps: { consumer: USAGE_REPORT_CONSUMER, named },
     async prepare(input) {
       const connection = current();
       const bodies =
@@ -390,12 +432,14 @@ function reportBroker(
 
 /**
  * Where the usage report goes: the company's Claude Code setup and the
- * person's own connection. The connection's headers live behind the
- * integrations' keys, which are built after the report starts, so it joins
- * once `keys` hands them over; until then it reads as none.
+ * person's own connection, which repeats nothing the setup already sends to
+ * the same host. The connection's headers live behind the integrations'
+ * keys, which are built after the report starts, so it joins once `keys`
+ * hands them over; until then it reads as none.
  */
 export function usageReportRoutes(userData: string) {
   const company = companyUsageDestinations();
+  const email = claudeEmail();
   let connection: UsageConnection | undefined;
   const reads: Pick<CoreServices["usage"], "reporting" | "connection"> = {
     reporting: async () => {
@@ -414,11 +458,15 @@ export function usageReportRoutes(userData: string) {
   return {
     destinations: (): readonly UsageReportDestination[] => [
       ...company.destinations(),
-      ...(connection?.destinations() ?? []),
+      ...(connection?.destinations(company.hosts()) ?? []),
     ],
     /** Builds the connection over the integrations' keys, and returns them unchanged. */
     keys(keys: IntegrationKeys): IntegrationKeys {
-      connection = usageConnection({ file: join(userData, USAGE_CONNECTION_FILE), keys });
+      connection = usageConnection({
+        file: join(userData, USAGE_CONNECTION_FILE),
+        keys,
+        email: email.current,
+      });
       return keys;
     },
     reads,
@@ -428,18 +476,52 @@ export function usageReportRoutes(userData: string) {
   };
 }
 
-function read(file: string): SavedConnection | null {
+/** The saved connection; a file there that does not parse reads as none and `unreadable`. */
+/**
+ * The person's Claude Code sign-in email as the report last read it, read
+ * again at most once a minute in the background, so a destination built
+ * synchronously can carry it.
+ */
+function claudeEmail(): { current(): string | undefined } {
+  let held: string | undefined;
+  let readAt = Date.now();
+  const reread = () => {
+    const env = hostEnv();
+    void claudeLoginEmail(defaultClaudeConfigDir(env), env)
+      .then((found) => {
+        held = found;
+      })
+      .catch(() => undefined);
+  };
+  reread();
+  return {
+    current() {
+      if (Date.now() - readAt >= EMAIL_REREAD_MS) {
+        readAt = Date.now();
+        reread();
+      }
+      return held;
+    },
+  };
+}
+
+const EMAIL_REREAD_MS = 60_000;
+
+function read(file: string): { saved: SavedConnection | null; unreadable: boolean } {
   let text: string;
   try {
     text = readFileSync(file, "utf8");
-  } catch {
-    return null;
+  } catch (caught) {
+    const missing = (caught as NodeJS.ErrnoException).code === "ENOENT";
+    return { saved: null, unreadable: !missing };
   }
   try {
     const parsed = savedSchema.safeParse(JSON.parse(text));
-    return parsed.success ? parsed.data : null;
+    return parsed.success
+      ? { saved: parsed.data, unreadable: false }
+      : { saved: null, unreadable: true };
   } catch {
-    return null;
+    return { saved: null, unreadable: true };
   }
 }
 

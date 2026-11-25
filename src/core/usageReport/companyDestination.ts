@@ -16,6 +16,22 @@ import {
 import { hostEnv } from "../hostEnv";
 import type { UsageReportDestination } from "./usageReporter";
 
+/**
+ * The hosts the company setup reaches, by name: the report sends every
+ * other model's work to `allWork` while Claude's own records go there too,
+ * and only Claude's own records reach `claudeWork`, such as a setup over gRPC.
+ */
+export type CompanyHosts = { allWork: readonly string[]; claudeWork: string | null };
+
+/** A host compared by its name alone: one collector often listens on two ports. */
+export function hostnameOf(address: string): string {
+  try {
+    return new URL(address.includes("://") ? address : `http://${address}`).hostname.toLowerCase();
+  } catch {
+    return address.toLowerCase();
+  }
+}
+
 /** The company setup is read again at most this often, as the reporter asks on every heard event. */
 const SETUP_REREAD_MS = 60_000;
 
@@ -53,6 +69,8 @@ export type CompanyDestinationDeps = {
  */
 export function companyDestination(deps: CompanyDestinationDeps): {
   destinations(): readonly UsageReportDestination[];
+  /** The hosts the setup read last reaches, so the person's connection repeats none of it. */
+  hosts(): CompanyHosts;
   refresh(): Promise<void>;
   reporting(): Promise<UsageReporting>;
 } {
@@ -91,6 +109,10 @@ export function companyDestination(deps: CompanyDestinationDeps): {
       return held;
     },
     refresh,
+    hosts: () => ({
+      allWork: held.flatMap((destination) => Object.values(destination.endpoints).map(hostnameOf)),
+      claudeWork: setupHost ? hostnameOf(setupHost) : null,
+    }),
     /**
      * Settings → Usage's line: where the report sends every other model's
      * work, or else where only Claude's own records go: a managed setup's

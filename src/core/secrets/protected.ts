@@ -1247,6 +1247,7 @@ export class ProtectedSecrets implements SecretsBackend {
             discoverable: entry.discoverable,
             ...(entry.environment !== undefined ? { environment: entry.environment } : {}),
             ...(entry.forProgram ? { forProgram: true as const } : {}),
+            ...(entry.consumer ? { consumer: entry.consumer } : {}),
             value: opened.value.toString("base64"),
           });
         } finally {

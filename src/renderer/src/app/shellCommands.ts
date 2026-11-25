@@ -517,6 +517,11 @@ export function openIntegrations(): void {
   openSettingsAt("integrations", INTEGRATIONS_FIRST);
 }
 
+/** Settings → Intelligence at the reporting connection's row; Secrets' rows for its headers open it. */
+export function openUsageConnection(): void {
+  openSettingsAt("subscriptions", "[data-usage-connection-edit], [data-usage-connection-add]");
+}
+
 /** The tab's first control: a row's disclosure, or an add chip with nothing connected. */
 const INTEGRATIONS_FIRST = "[data-integration-toggle], [data-integration-add]";
 

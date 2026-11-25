@@ -1,3 +1,4 @@
+import type { SecretConsumer } from "@shared/secrets";
 import type { BrokeredUse, SecretBroker } from "../secrets/brokers";
 import type { UseState } from "../secrets/requests";
 
@@ -27,6 +28,8 @@ export interface IntegrationKeys {
     label: string;
     value: Buffer;
     forProgram?: true;
+    /** The app service it belongs to, when not an Integrations sign-in. */
+    consumer?: SecretConsumer;
   }): Promise<string | undefined>;
   /** Every key kept for a program, so the binding can forget one nothing names; undefined when Secrets cannot answer now. */
   programKeys(): Promise<string[] | undefined>;

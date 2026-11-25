@@ -24,7 +24,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { openIntegrations } from "../app/shellCommands";
+import { openIntegrations, openUsageConnection } from "../app/shellCommands";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input, SecretField } from "../design";
 import { thisDesktop } from "../design/core/desktop";
@@ -586,7 +586,11 @@ function SecretRow({
           <span className="fm-secrets-key-status">{status}</span>
         </summary>
         <div className="fm-secrets-key-body">
-          {entry.kept ? (
+          {entry.kept && entry.unnamed ? (
+            <LeftOver entry={entry} asking={asking} canWrite={canWrite} />
+          ) : entry.kept && entry.consumer ? (
+            <KeptForConnection />
+          ) : entry.kept ? (
             <Kept
               forProgram={entry.forProgram === true}
               copy={
@@ -704,6 +708,72 @@ function Kept({ forProgram, copy }: { forProgram: boolean; copy: React.ReactNode
           {m.settingsSecretsManageInIntegrations()}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * A reporting connection's header (docs/secrets.md, "App sign-ins"): saving
+ * the connection in Settings → Intelligence was the consent, and it is
+ * changed or removed there.
+ */
+function KeptForConnection() {
+  return (
+    <div className="fm-secrets-kept" data-secrets-kept="usage-report">
+      <p className="fm-secrets-kept-note">{m.settingsSecretsKeptUsageReport()}</p>
+      <div className="fm-secrets-actions">
+        <Button variant="secondary" onClick={openUsageConnection}>
+          {m.settingsSecretsManageInIntelligence()}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A service's hidden entry its saved settings no longer name, left by a
+ * crash or a forget refused while Secrets was closed: nothing uses it, so
+ * Forget asks on this row as for the person's own secret.
+ */
+function LeftOver({
+  entry,
+  asking,
+  canWrite,
+}: {
+  entry: Entry;
+  asking: Asking;
+  canWrite: boolean;
+}) {
+  const { view, busy } = asking;
+  const question =
+    view.question?.about.kind === "forget" && view.question.about.ref === entry.ref
+      ? view.question
+      : null;
+  return (
+    <div className="fm-secrets-kept" data-secrets-kept="left-over">
+      <p className="fm-secrets-kept-note">{m.settingsSecretsKeptLeftOver()}</p>
+      {question ? (
+        <SecretQuestion question={question} answering={busy} onAnswer={asking.answer} />
+      ) : (
+        <div className="fm-secrets-actions">
+          <span data-secret-asks={`forget:${entry.ref}`}>
+            <Button
+              variant="ghost"
+              off={busy || !canWrite}
+              note={!canWrite ? SECRETS_WORDS.unavailable : undefined}
+              onClick={() =>
+                asking.ask(
+                  { kind: "forget", ref: entry.ref },
+                  `forget:${entry.ref}`,
+                  `row:${entry.ref}`,
+                )
+              }
+            >
+              {SECRETS_WORDS.forget}
+            </Button>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

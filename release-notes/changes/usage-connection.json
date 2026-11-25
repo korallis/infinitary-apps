@@ -5,7 +5,7 @@
       "kind": "feature",
       "area": "subscriptions",
       "title": "Send your crew's usage to your own monitoring tool",
-      "body": "Settings → Intelligence has a new Usage reporting row. Add the OpenTelemetry address of a tool such as Grafana, Datadog or Langfuse, and any headers it asks for, and Infinitary sends every model's usage there once you save: timing, models, tokens and estimated cost, never prompts or replies. Headers are kept in Secrets. Choose Claude Code's format for a tool that already reads Claude Code's own reports. Settings → Usage names where the usage goes.",
+      "body": "Settings → Intelligence has a new Usage reporting row. Add the OpenTelemetry address of a tool such as Grafana, Datadog or Langfuse, and any headers it asks for, and Infinitary sends every model's usage there once you save: timing, models, tokens, estimated cost and your Claude Code sign-in email, never prompts or replies, every ten minutes and once more when you quit. Headers are kept in Secrets. Choose Claude Code's format for a tool that already reads Claude Code's own reports. Settings → Usage names where the usage goes.",
       "picture": {
         "dark": "usage-connection-dark.webp",
         "light": "usage-connection-light.webp",

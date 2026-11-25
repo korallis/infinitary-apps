@@ -3863,8 +3863,11 @@ public enum PhoneMessages {
     public static func `settingsSecretsFinishFormOrChange`() -> String { PhoneWords.format("settingsSecretsFinishFormOrChange", []) }
     public static func `settingsSecretsHistoryExported`() -> String { PhoneWords.format("settingsSecretsHistoryExported", []) }
     public static func `settingsSecretsKeptForProgram`() -> String { PhoneWords.format("settingsSecretsKeptForProgram", []) }
+    public static func `settingsSecretsKeptLeftOver`() -> String { PhoneWords.format("settingsSecretsKeptLeftOver", []) }
     public static func `settingsSecretsKeptSignIn`() -> String { PhoneWords.format("settingsSecretsKeptSignIn", []) }
+    public static func `settingsSecretsKeptUsageReport`() -> String { PhoneWords.format("settingsSecretsKeptUsageReport", []) }
     public static func `settingsSecretsManageInIntegrations`() -> String { PhoneWords.format("settingsSecretsManageInIntegrations", []) }
+    public static func `settingsSecretsManageInIntelligence`() -> String { PhoneWords.format("settingsSecretsManageInIntelligence", []) }
     public static func `settingsSecretsMove`() -> String { PhoneWords.format("settingsSecretsMove", []) }
     public static func `settingsSecretsMoveDraft`() -> String { PhoneWords.format("settingsSecretsMoveDraft", []) }
     public static func `settingsSecretsNamePlaceholder`() -> String { PhoneWords.format("settingsSecretsNamePlaceholder", []) }
@@ -4081,6 +4084,7 @@ public enum PhoneMessages {
     public static func `settingsUsageConnectionCancel`() -> String { PhoneWords.format("settingsUsageConnectionCancel", []) }
     public static func `settingsUsageConnectionClaudeCode`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionClaudeCode", [`host`]) }
     public static func `settingsUsageConnectionEdit`() -> String { PhoneWords.format("settingsUsageConnectionEdit", []) }
+    public static func `settingsUsageConnectionEmailLine`() -> String { PhoneWords.format("settingsUsageConnectionEmailLine", []) }
     public static func `settingsUsageConnectionFailed`() -> String { PhoneWords.format("settingsUsageConnectionFailed", []) }
     public static func `settingsUsageConnectionHeaderKept`() -> String { PhoneWords.format("settingsUsageConnectionHeaderKept", []) }
     public static func `settingsUsageConnectionHeaderName`() -> String { PhoneWords.format("settingsUsageConnectionHeaderName", []) }
@@ -8544,8 +8548,11 @@ extension PhoneWords {
         "settingsSecretsFinishFormOrChange": [],
         "settingsSecretsHistoryExported": [],
         "settingsSecretsKeptForProgram": [],
+        "settingsSecretsKeptLeftOver": [],
         "settingsSecretsKeptSignIn": [],
+        "settingsSecretsKeptUsageReport": [],
         "settingsSecretsManageInIntegrations": [],
+        "settingsSecretsManageInIntelligence": [],
         "settingsSecretsMove": [],
         "settingsSecretsMoveDraft": [],
         "settingsSecretsNamePlaceholder": [],
@@ -8762,6 +8769,7 @@ extension PhoneWords {
         "settingsUsageConnectionCancel": [],
         "settingsUsageConnectionClaudeCode": ["host"],
         "settingsUsageConnectionEdit": [],
+        "settingsUsageConnectionEmailLine": [],
         "settingsUsageConnectionFailed": [],
         "settingsUsageConnectionHeaderKept": [],
         "settingsUsageConnectionHeaderName": [],

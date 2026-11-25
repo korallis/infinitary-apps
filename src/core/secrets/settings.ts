@@ -13,6 +13,7 @@ import {
   SECRETS_WORDS,
   type SecretAction,
   type SecretApprovals,
+  type SecretConsumer,
   type SecretDecision,
   type SecretDecisionInput,
   type SecretEnrollInput,
@@ -127,6 +128,8 @@ export class SecretsSettings {
   private readonly taskOf = new Map<string, Set<string>>();
   private readonly awaiting = new Map<string, Set<string>>();
   private readonly brokers = new Map<string, SecretBroker>();
+  /** The sweep of left-over service entries now running, which never rejects. */
+  private sweeping: Promise<void> = Promise.resolve();
   /** Values of approved uses whose programs run on a computer that runs work, each handed once. */
   private readonly handoffs = new SecretHandoffs();
   /** The computer each such use runs on, by request: only that computer and task take or end it. */
@@ -196,6 +199,7 @@ export class SecretsSettings {
       const opened = await opening;
       for (const broker of this.brokers.values()) opened.protected.registerBroker(broker);
       this.owner = opened;
+      await this.sweepUnnamed(opened);
       return this.owner;
     } finally {
       if (this.opening === opening) this.opening = undefined;
@@ -241,6 +245,8 @@ export class SecretsSettings {
 
   async view(): Promise<SecretsView> {
     const owner = await this.ready().catch(() => undefined);
+    // An entry a sweep is forgetting is not shown as left over.
+    await this.sweeping;
     const epoch = this.viewEpoch;
     const empty: SecretsView = {
       availability: this.options.open ? "unavailable" : "not-enabled",
@@ -266,7 +272,17 @@ export class SecretsSettings {
       availability: await owner.protected.status(),
       home: authority?.home ?? null,
       entries: metadata.map(
-        ({ ref, label, version, revision, updatedAt, environment, discoverable, forProgram }) => ({
+        ({
+          ref,
+          label,
+          version,
+          revision,
+          updatedAt,
+          environment,
+          discoverable,
+          forProgram,
+          consumer,
+        }) => ({
           ref,
           label,
           version,
@@ -276,7 +292,14 @@ export class SecretsSettings {
           ...this.lastUse(history.filter((item) => item.secrets.includes(ref)).at(-1)),
           ...(discoverable
             ? {}
-            : { kept: true as const, ...(forProgram ? { forProgram: true as const } : {}) }),
+            : {
+                kept: true as const,
+                ...(forProgram ? { forProgram: true as const } : {}),
+                ...(consumer ? { consumer } : {}),
+                ...(consumer && this.namedFor(consumer)?.includes(ref) === false
+                  ? { unnamed: true as const }
+                  : {}),
+              }),
         }),
       ),
       uses: owner.requests.receipts().map((receipt) => this.receiptView(owner, receipt)),
@@ -546,8 +569,15 @@ export class SecretsSettings {
         break;
       case "forget": {
         const entries = await owner.protected.metadata();
-        // An app sign-in is forgotten by signing out where it was made, never here.
-        const entry = entries.find((one) => one.ref === action.ref && one.discoverable);
+        // An app sign-in is forgotten by signing out where it was made, never here; a service's
+        // entry its saved settings no longer name is left over, and nothing else can forget it.
+        const entry = entries.find(
+          (one) =>
+            one.ref === action.ref &&
+            (one.discoverable ||
+              (one.consumer !== undefined &&
+                this.namedFor(one.consumer)?.includes(one.ref) === false)),
+        );
         if (entry)
           this.askInPlace(
             `forget-${entry.ref}`,
@@ -1522,6 +1552,35 @@ export class SecretsSettings {
     if (this.brokers.has(broker.id)) throw new Error("Duplicate secret broker.");
     this.owner?.protected.registerBroker(broker);
     this.brokers.set(broker.id, broker);
+    const owner = this.owner;
+    if (owner) this.sweeping = this.sweeping.then(() => this.sweepUnnamed(owner));
+  }
+
+  /** The references a service's saved settings name for `consumer`; undefined while unknown. */
+  private namedFor(consumer: SecretConsumer): readonly string[] | undefined {
+    for (const broker of this.brokers.values())
+      if (broker.keeps?.consumer === consumer) return broker.keeps.named();
+    return undefined;
+  }
+
+  /**
+   * Forgets each hidden entry a service keeps that its saved settings no
+   * longer name, left by a crash between keeping and saving or a forget
+   * refused while Secrets was closed (docs/secrets.md, "App sign-ins").
+   */
+  private async sweepUnnamed(owner: Owner): Promise<void> {
+    try {
+      for (const entry of await owner.protected.metadata()) {
+        if (entry.discoverable || !entry.consumer) continue;
+        const named = this.namedFor(entry.consumer);
+        if (named && !named.includes(entry.ref)) {
+          await owner.protected.forgetSecret(entry.ref, entry.version, entry.revision);
+          this.options.changed();
+        }
+      }
+    } catch {
+      // A sweep that cannot run now leaves the entry for Forget on the Secrets page.
+    }
   }
 
   /** Host-registered consumers only. The caller keeps raw results inside its trusted boundary. */
@@ -1594,6 +1653,8 @@ export class SecretsSettings {
     value: Buffer;
     /** Kept for a program the service starts (docs/secrets.md, "Programs that keep running"). */
     forProgram?: true;
+    /** The app service it belongs to, when not an Integrations sign-in. */
+    consumer?: SecretConsumer;
   }): Promise<string | undefined> {
     try {
       const owner = await this.ready(true);
@@ -1607,6 +1668,7 @@ export class SecretsSettings {
       const written = await owner.protected.putSecret(ref, input.label, input.value, {
         discoverable: false,
         ...(input.forProgram ? { forProgram: true as const } : {}),
+        ...(input.consumer ? { consumer: input.consumer } : {}),
       });
       return written?.ref;
     } catch {

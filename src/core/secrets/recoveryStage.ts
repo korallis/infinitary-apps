@@ -79,6 +79,7 @@ export async function stageRecovery(
           discoverable: entry.discoverable,
           environment: entry.environment,
           ...(entry.forProgram ? { forProgram: true as const } : {}),
+          ...(entry.consumer ? { consumer: entry.consumer } : {}),
         });
         const read = await vault.open(entry.ref);
         try {

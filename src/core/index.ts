@@ -234,7 +234,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       void services.integrations.dispose();
       services.taskProtocol.dispose();
       services.quota.stop();
-      services.stopLivenessSweep();
+      const usageSent = services.stopLivenessSweep();
       services.personal.dispose();
       // The query process holds a read snapshot while it runs: stop it.
       services.sql.dispose();
@@ -259,7 +259,9 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       customApiFile.close();
       // A custom connection's catalog fetch stops, so no late write puts its store back.
       const catalog = services.vault.closeCustomCatalog();
-      return Promise.all([firstmate, crew, placedCopies, records, catalog]).then(() => undefined);
+      return Promise.all([firstmate, crew, placedCopies, records, catalog, usageSent]).then(
+        () => undefined,
+      );
     },
   };
 }

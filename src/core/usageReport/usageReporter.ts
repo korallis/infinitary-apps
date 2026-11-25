@@ -14,6 +14,8 @@ import {
   standardBodies,
   type UsageReportFormat,
   type UsageRole,
+  withoutClaudeCalls,
+  withoutClaudeClient,
 } from "./usageReportFormats";
 
 /**
@@ -42,6 +44,12 @@ export type UsageReportDestination = {
    * person adds); a company setup gets Claude's own records instead.
    */
   claudeFromLedger?: true;
+  /**
+   * Claude's own client already reports Claude work to this destination's
+   * host (a company setup over gRPC there), so no Claude work goes from the
+   * ledger in either format.
+   */
+  withoutClaude?: true;
   /**
    * Sends one signal's body in place of a plain post with `headers`, for a
    * destination whose headers stay in Secrets; answers the HTTP status.
@@ -270,16 +278,18 @@ export class UsageReporter {
     if (rows.length === 0 && spans.length === 0) return;
     await Promise.all(
       this.options.destinations().map(async (destination) => {
+        const sent = destination.withoutClaude ? withoutClaudeClient(rows) : rows;
+        const sentSpans = destination.withoutClaude ? withoutClaudeCalls(spans) : spans;
         const bodies: OtlpBodies =
           destination.format === "claude-code"
             ? claudeCodeBodies(
-                rows,
+                sent,
                 destination.resource,
                 since,
                 destination.person,
                 destination.claudeFromLedger,
               )
-            : standardBodies(rows, spans, destination.resource, since);
+            : standardBodies(sent, sentSpans, destination.resource, since, destination.person);
         await Promise.all(
           (Object.keys(bodies) as OtlpSignal[]).map((signal) =>
             this.send(destination, signal, bodies[signal]),

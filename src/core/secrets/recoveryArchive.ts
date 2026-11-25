@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { secretHistorySchema, secretRefSchema } from "@shared/secrets";
+import { secretConsumerSchema, secretHistorySchema, secretRefSchema } from "@shared/secrets";
 import { z } from "zod";
 import { canonical } from "./custody";
 
@@ -23,6 +23,7 @@ const recoveryValueSchema = z.strictObject({
   discoverable: z.boolean(),
   environment: z.string().optional(),
   forProgram: z.literal(true).optional(),
+  consumer: secretConsumerSchema.optional(),
   value: base64,
 });
 /** Private archive contents. No permission, enrollment, native root or live approval is exported. */

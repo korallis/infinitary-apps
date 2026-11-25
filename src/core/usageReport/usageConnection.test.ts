@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
@@ -10,6 +10,7 @@ import { openInMemoryDatabase } from "../storage/db";
 import { homeUsage } from "../storage/homeUsage";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
+import type { CompanyHosts } from "./companyDestination";
 import { USAGE_CONNECTION_FILE, type UsageConnection, usageConnection } from "./usageConnection";
 
 /**
@@ -47,10 +48,18 @@ async function collector(): Promise<{ url: string; received: Received[] }> {
 
 const TOKEN = "glc_invented-grafana-cloud-token";
 
-function setup(resolve?: (hostname: string) => Promise<string[]>) {
+function setup(
+  resolve?: (hostname: string) => Promise<string[]>,
+  options: { email?: string; company?: CompanyHosts } = {},
+) {
   const secrets = integrationKeys();
   const file = join(scratchDir("usage-connection-"), USAGE_CONNECTION_FILE);
-  const connection = usageConnection({ file, keys: secrets.keys, ...(resolve ? { resolve } : {}) });
+  const connection = usageConnection({
+    file,
+    keys: secrets.keys,
+    ...(resolve ? { resolve } : {}),
+    ...(options.email ? { email: () => options.email } : {}),
+  });
   const db = openInMemoryDatabase();
   const tasks = new TaskService({ db });
   seedTask(tasks, {
@@ -65,7 +74,7 @@ function setup(resolve?: (hostname: string) => Promise<string[]>) {
     projectLimit: () => null,
     isTask: (taskId) => tasks.get(taskId) !== undefined,
     hearEvents: () => {},
-    reportDestinations: () => connection.destinations(),
+    reportDestinations: () => connection.destinations(options.company),
   });
   return { secrets, file, connection, usage };
 }
@@ -138,7 +147,7 @@ async function save(connection: UsageConnection, url: string, extra = {}) {
 }
 
 describe("usageConnection", () => {
-  it("sends a minute's usage once, with its kept header, without asking and without the value on disk", async () => {
+  it("sends what waits once, with its kept header, without asking and without the value on disk", async () => {
     const { url, received } = await collector();
     const { secrets, file, connection, usage } = setup();
     expect(await save(connection, url)).toEqual({
@@ -288,5 +297,114 @@ describe("usageConnection", () => {
     await connection.stop();
     expect(received).toEqual([]);
     expect(next.received).toEqual([]);
+  });
+
+  it("names the person by their Claude Code sign-in email on each record, in both formats", async () => {
+    const { url, received } = await collector();
+    const { connection, usage } = setup(undefined, { email: "ana@example.com" });
+    await save(connection, url, { headers: [] });
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+    await connection.stop();
+    await connection.save({ endpoint: url, format: "claude-code", headers: [] });
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+    await connection.stop();
+
+    const emails = (metric: any) =>
+      (metric.sum ?? metric.histogram).dataPoints.map(
+        (point: any) =>
+          point.attributes.find((attribute: any) => attribute.key === "user.email")?.value
+            .stringValue,
+      );
+    const metrics = metricsAt(received, "/v1/metrics");
+    const standard = metrics.find((metric: any) => metric.name === "infinitary.cost.usage");
+    const claudeCode = metrics.find((metric: any) => metric.name === "claude_code.cost.usage");
+    expect(emails(standard)).toEqual(["ana@example.com"]);
+    expect(emails(claudeCode)).toEqual(["ana@example.com"]);
+  });
+
+  it("sends nothing to a host the company setup already sends every model's work to", async () => {
+    const { url, received } = await collector();
+    const { connection, usage } = setup(undefined, {
+      company: { allWork: ["127.0.0.1"], claudeWork: "127.0.0.1" },
+    });
+    await save(connection, url, { headers: [] });
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+    await connection.stop();
+    expect(received).toEqual([]);
+  });
+
+  it("leaves out Claude's work where Claude's own client already reports to the same host", async () => {
+    const { url, received } = await collector();
+    const { connection, usage } = setup(undefined, {
+      company: { allWork: [], claudeWork: "127.0.0.1" },
+    });
+    await save(connection, url, { format: "claude-code", headers: [] });
+    usage.recordUsage(CODEX_CALL);
+    usage.recordUsage(CLAUDE_CALL);
+    await usage.usageReporter.flush();
+    await connection.stop();
+
+    const cost = metricsAt(received, "/v1/metrics").find(
+      (metric: any) => metric.name === "claude_code.cost.usage",
+    );
+    expect(modelsOf(cost)).toEqual(["gpt-5.5"]);
+  });
+
+  it("marks its kept headers as the reporting connection's, and offers Forget only on one it no longer names", async () => {
+    const { url } = await collector();
+    const { secrets, connection } = setup();
+    await save(connection, url);
+    const [named] = await secrets.entries();
+    // An entry a crash left between keeping it and saving the connection.
+    const left = await secrets.keys.keepHidden({
+      label: "Usage reporting: X-Team",
+      value: Buffer.from("invented-left-over", "utf8"),
+      consumer: "usage-report",
+    });
+    const view = await secrets.keys.view();
+    expect(view.entries.find((entry) => entry.ref === named?.ref)).toMatchObject({
+      kept: true,
+      consumer: "usage-report",
+    });
+    expect(view.entries.find((entry) => entry.ref === named?.ref)?.unnamed).toBeUndefined();
+    expect(view.entries.find((entry) => entry.ref === left)).toMatchObject({
+      kept: true,
+      consumer: "usage-report",
+      unnamed: true,
+    });
+
+    await secrets.keys.action({ kind: "forget", ref: named?.ref ?? "" });
+    expect((await secrets.keys.view()).question).toBeNull();
+    await secrets.keys.action({ kind: "forget", ref: left ?? "" });
+    expect((await secrets.keys.view()).question?.about).toEqual({ kind: "forget", ref: left });
+  });
+
+  it("forgets a header no saved connection names once its broker joins an open Secrets, and none while the file is damaged", async () => {
+    const leftOver = async (secrets: ReturnType<typeof integrationKeys>) =>
+      secrets.keys.keepHidden({
+        label: "Usage reporting: X-Team",
+        value: Buffer.from("invented-left-over", "utf8"),
+        consumer: "usage-report",
+      });
+    const fresh = integrationKeys();
+    const swept = await leftOver(fresh);
+    usageConnection({
+      file: join(scratchDir("usage-connection-"), USAGE_CONNECTION_FILE),
+      keys: fresh.keys,
+    });
+    await fresh.keys.view();
+    expect((await fresh.entries()).map((entry) => entry.ref)).not.toContain(swept);
+
+    const damaged = integrationKeys();
+    const kept = await leftOver(damaged);
+    const file = join(scratchDir("usage-connection-"), USAGE_CONNECTION_FILE);
+    writeFileSync(file, "{ damaged");
+    const connection = usageConnection({ file, keys: damaged.keys });
+    expect(connection.view()).toBeNull();
+    await damaged.keys.view();
+    expect((await damaged.entries()).map((entry) => entry.ref)).toContain(kept);
   });
 });

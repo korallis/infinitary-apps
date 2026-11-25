@@ -35,6 +35,10 @@ export const SECRET_STATE_WORDS: Record<z.infer<typeof secretStateSchema>, strin
   unavailable: "Unavailable",
   unknown: "Outcome unknown",
 };
+/** An app service that keeps hidden entries of its own outside Integrations (docs/secrets.md, "App sign-ins"). */
+export const secretConsumerSchema = z.enum(["usage-report"]);
+export type SecretConsumer = z.infer<typeof secretConsumerSchema>;
+
 export const secretMetadataSchema = z.strictObject({
   ref: secretRefSchema,
   label: z.string(),
@@ -62,6 +66,16 @@ export const secretMetadataSchema = z.strictObject({
    * it with the program, which is the consent, so its uses ask nothing.
    */
   forProgram: z.literal(true).optional(),
+  /**
+   * With `kept`: the app service that keeps it, when not an Integrations
+   * sign-in; the page names that service and where to change it.
+   */
+  consumer: secretConsumerSchema.optional(),
+  /**
+   * With `consumer`: no saved setting of that service names it any more, so
+   * the page offers Forget.
+   */
+  unnamed: z.literal(true).optional(),
 });
 export const secretUseSchema = z.strictObject({
   request: z.string(),

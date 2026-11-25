@@ -3,6 +3,7 @@ import { createServer, type IncomingHttpHeaders } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import type { CustodySlot } from "../../src/core/secrets/custody";
 import { USAGE_CONNECTION_FILE } from "../../src/core/usageReport/usageConnection";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -10,8 +11,8 @@ import { waitForFirstmateIdle } from "./crew";
 import { leaveSettings } from "./handoverCards";
 import { ANSWER_PROMPT_MARKER, MOCK_ANSWER_TITLE } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { launchSecrets } from "./secretsHarness";
-import { settingRow } from "./settings";
+import { launchSecrets, type SecretsJourneyGlobal } from "./secretsHarness";
+import { settingRow, settingsSection } from "./settings";
 import { usageTab } from "./usage";
 import { focusOn, pressKey, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
@@ -23,16 +24,18 @@ const TOKEN = "glc_invented-grafana-cloud-token";
  * INF-6587's approved plan, piece 3 (docs/usage-report.md, "The person's
  * reporting connection"): the person adds a reporting connection in
  * Settings → Intelligence by keys, with an Authorization header kept in
- * Secrets; the crew's next turn reaches the person's collector, a local
- * HTTP server this test owns, in the standard format with the header, and
- * no file holds the header's value. Settings → Usage names the host, and
- * Remove forgets the connection.
+ * Secrets, and no file holds the header's value. Settings → Usage names the
+ * host. The connection sends every ten minutes and once more at quit, so
+ * quitting delivers the crew's turn to the person's collector, a local HTTP
+ * server this test owns, in the standard format with the header. After a
+ * relaunch Secrets names the header as the reporting connection's, and
+ * Remove forgets the connection and its header.
  * The app, its Secrets controller and its sending are real; custody is the
- * Secrets harness's disposable stand-in and the model is the mock provider.
+ * Secrets harness's disposable stand-in, kept across the relaunch as a
+ * computer's would be, and the model is the mock provider.
  */
 test("the person adds a reporting connection by keys and the crew's usage reaches it", async () => {
-  // The connection sends once a minute, so the turn's batch arrives up to a minute later.
-  test.setTimeout(3 * 60_000);
+  test.setTimeout(4 * 60_000);
   const arrived: Arrived[] = [];
   const collector = createServer((request, response) => {
     let text = "";
@@ -47,8 +50,11 @@ test("the person adds a reporting connection by keys and the crew's usage reache
   await new Promise<void>((done) => collector.listen(0, "127.0.0.1", done));
   const url = `http://127.0.0.1:${(collector.address() as AddressInfo).port}`;
   const host = new URL(url).host;
+  let custody: Map<CustodySlot, Buffer> = new Map();
   const userDataDir = scratchDir("infinitary-usage-connection-");
-  const launched = await launchSecrets({ userDataDir });
+  let launched: Awaited<ReturnType<typeof launchSecrets>> | undefined = await launchSecrets({
+    userDataDir,
+  });
   try {
     const { app, page } = launched;
     const row = settingRow(page, "usage-connection");
@@ -87,7 +93,7 @@ test("the person adds a reporting connection by keys and the crew's usage reache
       expect(saved).not.toContain(TOKEN);
     });
 
-    await test.step("the crew's next turn reaches the collector with the kept header", async () => {
+    await test.step("the crew takes a turn", async () => {
       await leaveSettings(page);
       const input = promptInput(page);
       await expect(input).toBeEnabled();
@@ -103,16 +109,6 @@ test("the person adds a reporting connection by keys and the crew's usage reache
         )
         .toBe(true);
       await waitForFirstmateIdle(page);
-      await expect
-        .poll(() => arrived.some((entry) => entry.path === "/v1/metrics"), { timeout: 90_000 })
-        .toBe(true);
-      for (const entry of arrived) expect(entry.headers.authorization).toBe(`Bearer ${TOKEN}`);
-      const names = arrived
-        .filter((entry) => entry.path === "/v1/metrics")
-        .flatMap((entry) => entry.body.resourceMetrics)
-        .flatMap((resource: any) => resource.scopeMetrics)
-        .flatMap((scope: any) => scope.metrics.map((metric: any) => metric.name));
-      expect(names).toContain("gen_ai.client.token.usage");
     });
 
     await test.step("Settings → Usage names where it goes", async () => {
@@ -122,10 +118,54 @@ test("the person adds a reporting connection by keys and the crew's usage reache
       );
     });
 
-    await test.step("Remove, by keys, forgets the connection", async () => {
-      const intelligence = page.locator('[role="tab"][id$="-tab-subscriptions"]');
-      await focusOn(intelligence);
-      await pressKey(intelligence, "Enter");
+    await test.step("quitting sends what waits, with the kept header", async () => {
+      expect(arrived).toEqual([]);
+      // The computer's custody outlives the app, so the relaunch opens the same Secrets.
+      const slots = await app.evaluate(() =>
+        [...(globalThis as SecretsJourneyGlobal).secretsJourney.custody.slots].map(
+          ([slot, bytes]) => [slot, bytes.toString("base64")] as const,
+        ),
+      );
+      custody = new Map(slots.map(([slot, bytes]) => [slot, Buffer.from(bytes, "base64")]));
+      await launched?.close();
+      launched = undefined;
+      expect(arrived.some((entry) => entry.path === "/v1/metrics")).toBe(true);
+      for (const entry of arrived) expect(entry.headers.authorization).toBe(`Bearer ${TOKEN}`);
+      const names = arrived
+        .filter((entry) => entry.path === "/v1/metrics")
+        .flatMap((entry) => entry.body.resourceMetrics)
+        .flatMap((resource: any) => resource.scopeMetrics)
+        .flatMap((scope: any) => scope.metrics.map((metric: any) => metric.name));
+      expect(names).toContain("gen_ai.client.token.usage");
+    });
+
+    launched = await launchSecrets({ userDataDir, leftCustody: custody });
+    const relaunched = launched;
+    const page2 = relaunched.page;
+    const row2 = settingRow(page2, "usage-connection");
+
+    await test.step("Secrets names the header as the reporting connection's", async () => {
+      await runFromSearch(relaunched.app, page2, "settings.secrets");
+      const secret = settingsSection(page2, "secrets").locator("li[data-secret-row]", {
+        hasText: m.settingsUsageConnectionSecretLabel({ name: "Authorization" }),
+      });
+      const summary = secret.locator(":scope > details > summary");
+      await focusOn(summary);
+      await pressKey(summary, "Enter");
+      await expect(secret.locator('[data-secrets-kept="usage-report"]')).toContainText(
+        m.settingsSecretsKeptUsageReport(),
+      );
+      await pressKey(
+        secret.getByRole("button", { name: m.settingsSecretsManageInIntelligence() }),
+        "Enter",
+      );
+      await expect(
+        row2.getByRole("button", { name: m.settingsUsageConnectionEdit() }),
+      ).toBeFocused();
+    });
+
+    await test.step("Remove, by keys, forgets the connection and its header", async () => {
+      const row = row2;
       await pressKey(row.getByRole("button", { name: m.settingsUsageConnectionRemove() }), "Enter");
       await expect(row).toContainText(m.settingsUsageConnectionRemoveWarning());
       const confirm = row.getByRole("button", { name: m.settingsUsageConnectionRemoveConfirm() });
@@ -133,9 +173,15 @@ test("the person adds a reporting connection by keys and the crew's usage reache
       await pressKey(confirm, "Enter");
       await expect(row).toContainText(m.settingsUsageConnectionNone());
       expect(existsSync(join(userDataDir, USAGE_CONNECTION_FILE))).toBe(false);
+      await runFromSearch(relaunched.app, page2, "settings.secrets");
+      await expect(
+        settingsSection(page2, "secrets").locator("li[data-secret-row]", {
+          hasText: m.settingsUsageConnectionSecretLabel({ name: "Authorization" }),
+        }),
+      ).toHaveCount(0);
     });
   } finally {
-    await launched.close();
+    await launched?.close();
     await new Promise<void>((done) => collector.close(() => done()));
   }
 });

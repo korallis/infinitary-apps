@@ -88545,6 +88545,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Infinitary keeps this for a server you added in Integrations and gives it to the server each time it starts, without asking: adding it with the server was your consent. Remove the server there to forget it.`;
   }
+  function settingsSecretsKeptLeftOver() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد أي اتصال تقارير يستخدم هذه الترويسة، فلن تفقد شيئًا إن نسيتها.`;
+      case "de":
+        return `Keine Berichtsverbindung nutzt diesen Header mehr, also geht nichts verloren, wenn du ihn vergisst.`;
+      case "es":
+        return `Ninguna conexión de informes usa ya este encabezado, así que no se pierde nada si lo olvidas.`;
+      case "fr":
+        return `Aucune connexion de rapports n’utilise plus cet en-tête : l’oublier ne fait rien perdre.`;
+      case "ja":
+        return `このヘッダーを使うレポート接続はもうないため、削除しても失われるものはありません。`;
+      case "ko":
+        return `이 헤더를 쓰는 보고 연결이 더 이상 없으므로 지워도 잃는 것이 없습니다.`;
+      case "pt-BR":
+        return `Nenhuma conexão de relatórios usa mais este cabeçalho, então nada se perde se você esquecê-lo.`;
+      case "zh-Hans":
+        return `已没有报告连接使用此请求头，忘记它不会丢失任何东西。`;
+      case "zh-Hant":
+        return `已沒有報告連線使用此標頭，忘記它不會遺失任何東西。`;
+      case "en-XA":
+        return `[Ñö ŕéþöŕţîñĝ çöññéçţîöñ ûšéš ţĥîš ĥéáðéŕ áñý ɱöŕé, šö ñöţĥîñĝ îš ļöšţ îƒ ýöû ƒöŕĝéţ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No reporting connection uses this header any more, so nothing is lost if you forget it.‬`;
+    }
+    return `No reporting connection uses this header any more, so nothing is lost if you forget it.`;
+  }
   function settingsSecretsKeptSignIn() {
     switch (currentLanguage()) {
       case "ar":
@@ -88572,6 +88599,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Infinitary keeps this for a sign-in you made in Integrations and uses it without asking: signing in was your consent. Sign out there to remove it.`;
   }
+  function settingsSecretsKeptUsageReport() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحتفظ Infinitary بهذه الترويسة لاتصال التقارير لديك ويرسلها دون أن يسألك: حفظ الاتصال كان موافقتك. غيّرها أو أزلها في الإعدادات ← الذكاء.`;
+      case "de":
+        return `Infinitary bewahrt diesen Header für deine Berichtsverbindung auf und sendet ihn ohne Rückfrage: Das Speichern der Verbindung war deine Zustimmung. Ändere oder entferne ihn in Einstellungen → Intelligenz.`;
+      case "es":
+        return `Infinitary guarda este encabezado para tu conexión de informes y lo envía sin preguntar: guardar la conexión fue tu consentimiento. Cámbialo o quítalo en Configuración → Inteligencia.`;
+      case "fr":
+        return `Infinitary conserve cet en-tête pour votre connexion de rapports et l’envoie sans demander : enregistrer la connexion valait accord. Modifiez-le ou retirez-le dans Réglages → Intelligence.`;
+      case "ja":
+        return `Infinitary はこのヘッダーをレポート接続のために保管し、確認せずに送信します。接続を保存したことが同意です。変更や削除は 設定 → インテリジェンス で行ってください。`;
+      case "ko":
+        return `Infinitary는 이 헤더를 보고 연결을 위해 보관하고 묻지 않고 보냅니다. 연결을 저장한 것이 동의입니다. 설정 → 지능에서 바꾸거나 지우세요.`;
+      case "pt-BR":
+        return `O Infinitary guarda este cabeçalho para sua conexão de relatórios e o envia sem perguntar: salvar a conexão foi o seu consentimento. Altere ou remova em Ajustes → Inteligência.`;
+      case "zh-Hans":
+        return `Infinitary 为你的报告连接保存此请求头，并在发送时不再询问：保存连接即表示你已同意。在设置 → “智能”中修改或移除。`;
+      case "zh-Hant":
+        return `Infinitary 為你的報告連線保存此標頭，並在傳送時不再詢問：儲存連線即表示你已同意。在設定 → 智慧等級 中修改或移除。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ķééþš ţĥîš ĥéáðéŕ ƒöŕ ýöûŕ ŕéþöŕţîñĝ çöññéçţîöñ áñð šéñðš îţ ŵîţĥöûţ ášķîñĝ: šáṽîñĝ ţĥé çöññéçţîöñ ŵáš ýöûŕ çöñšéñţ. Çĥáñĝé öŕ ŕéɱöṽé îţ îñ Šéţţîñĝš → Îñţéļļîĝéñçé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary keeps this header for your reporting connection and sends it without asking: saving the connection was your consent. Change or remove it in Settings → Intelligence.‬`;
+    }
+    return `Infinitary keeps this header for your reporting connection and sends it without asking: saving the connection was your consent. Change or remove it in Settings → Intelligence.`;
+  }
   function settingsSecretsManageInIntegrations() {
     switch (currentLanguage()) {
       case "ar":
@@ -88598,6 +88652,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Manage in Integrations‬`;
     }
     return `Manage in Integrations`;
+  }
+  function settingsSecretsManageInIntelligence() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الإدارة في الذكاء`;
+      case "de":
+        return `In Intelligenz verwalten`;
+      case "es":
+        return `Gestionar en Inteligencia`;
+      case "fr":
+        return `Gérer dans Intelligence`;
+      case "ja":
+        return `インテリジェンスで管理`;
+      case "ko":
+        return `지능에서 관리`;
+      case "pt-BR":
+        return `Gerenciar em Inteligência`;
+      case "zh-Hans":
+        return `在智能中管理`;
+      case "zh-Hant":
+        return `在智慧等級中管理`;
+      case "en-XA":
+        return `[Ṁáñáĝé îñ Îñţéļļîĝéñçé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Manage in Intelligence‬`;
+    }
+    return `Manage in Intelligence`;
   }
   function settingsSecretsMove() {
     switch (currentLanguage()) {
@@ -94552,6 +94633,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Edit`;
   }
+  function settingsUsageConnectionEmailLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحمل كل سجل بريد تسجيل دخولك إلى Claude Code، إن كان على هذا الكمبيوتر تسجيل دخول، كي يحسب عرضٌ لكل شخص عملك.`;
+      case "de":
+        return `Jeder Eintrag trägt die E-Mail-Adresse deiner Claude-Code-Anmeldung, wenn dieser Computer eine hat, damit eine Ansicht pro Person deine Arbeit zählt.`;
+      case "es":
+        return `Cada registro lleva el correo de tu inicio de sesión en Claude Code, si este computador tiene uno, para que una vista por persona cuente tu trabajo.`;
+      case "fr":
+        return `Chaque enregistrement porte l’adresse e-mail de votre connexion à Claude Code, si cet ordinateur en a une, pour qu’une vue par personne compte votre travail.`;
+      case "ja":
+        return `このコンピュータに Claude Code のサインインがあれば、各記録にそのメールアドレスが含まれ、人ごとの表示であなたの作業が数えられます。`;
+      case "ko":
+        return `이 컴퓨터에 Claude Code 로그인이 있으면 각 기록에 그 이메일이 담겨, 사람별 보기에서 내 작업이 집계됩니다.`;
+      case "pt-BR":
+        return `Cada registro leva o e-mail do seu login no Claude Code, quando este computador tem um, para que uma visão por pessoa conte o seu trabalho.`;
+      case "zh-Hans":
+        return `如果这台电脑登录了 Claude Code，每条记录都会带上该登录的邮箱，让按人查看的视图计入你的工作。`;
+      case "zh-Hant":
+        return `如果這台電腦登入了 Claude Code，每筆記錄都會帶上該登入的電子郵件，讓依人檢視的畫面計入你的工作。`;
+      case "en-XA":
+        return `[Éáçĥ ŕéçöŕð çáŕŕîéš ýöûŕ Çļáûðé Çöðé šîĝñ-îñ éɱáîļ, ŵĥéñ ţĥîš çöɱþûţéŕ ĥáš öñé, šö á þéŕ-þéŕšöñ ṽîéŵ çöûñţš ýöûŕ ŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Each record carries your Claude Code sign-in email, when this computer has one, so a per-person view counts your work.‬`;
+    }
+    return `Each record carries your Claude Code sign-in email, when this computer has one, so a per-person view counts your work.`;
+  }
   function settingsUsageConnectionFailed() {
     switch (currentLanguage()) {
       case "ar":
@@ -95348,7 +95456,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "es":
         return `Infinitary envía el uso de tu tripulación a ${host}, como pide tu conexión de informes.`;
       case "fr":
-        return `Infinitary envoie l’utilisation de ton équipage à ${host}, comme le demande ta connexion de rapports.`;
+        return `Infinitary envoie l’utilisation de votre équipage à ${host}, comme le demande votre connexion de rapports.`;
       case "ja":
         return `レポート接続の設定に従い、Infinitary はクルーの使用状況を ${host} に送信します。`;
       case "ko":
@@ -114699,8 +114807,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSecretsFinishFormOrChange,
     settingsSecretsHistoryExported,
     settingsSecretsKeptForProgram,
+    settingsSecretsKeptLeftOver,
     settingsSecretsKeptSignIn,
+    settingsSecretsKeptUsageReport,
     settingsSecretsManageInIntegrations,
+    settingsSecretsManageInIntelligence,
     settingsSecretsMove,
     settingsSecretsMoveDraft,
     settingsSecretsNamePlaceholder,
@@ -114917,6 +115028,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsUsageConnectionCancel,
     settingsUsageConnectionClaudeCode,
     settingsUsageConnectionEdit,
+    settingsUsageConnectionEmailLine,
     settingsUsageConnectionFailed,
     settingsUsageConnectionHeaderKept,
     settingsUsageConnectionHeaderName,
@@ -118287,8 +118399,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSecretsFinishFormOrChange": [],
     "settingsSecretsHistoryExported": [],
     "settingsSecretsKeptForProgram": [],
+    "settingsSecretsKeptLeftOver": [],
     "settingsSecretsKeptSignIn": [],
+    "settingsSecretsKeptUsageReport": [],
     "settingsSecretsManageInIntegrations": [],
+    "settingsSecretsManageInIntelligence": [],
     "settingsSecretsMove": [],
     "settingsSecretsMoveDraft": [],
     "settingsSecretsNamePlaceholder": [],
@@ -118505,6 +118620,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsUsageConnectionCancel": [],
     "settingsUsageConnectionClaudeCode": ["host"],
     "settingsUsageConnectionEdit": [],
+    "settingsUsageConnectionEmailLine": [],
     "settingsUsageConnectionFailed": [],
     "settingsUsageConnectionHeaderKept": [],
     "settingsUsageConnectionHeaderName": [],

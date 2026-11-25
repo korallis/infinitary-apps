@@ -1,3 +1,4 @@
+import type { SecretConsumer } from "@shared/secrets";
 import { canonical, sha256 } from "./custody";
 
 /** JSON inputs only. The trusted adapter owns validation, transport and result handling. */
@@ -74,6 +75,14 @@ export type SecretBroker = {
    * entries kept for a program runs with no question.
    */
   givenWithProgram?: true;
+  /**
+   * The hidden entries the adapter's service keeps outside Integrations, such
+   * as the reporting connection's headers. `named` answers the references its
+   * saved settings name, or undefined when they cannot be read whole, so a
+   * damaged file forgets nothing; Secrets forgets the rest when it opens and
+   * offers Forget on one left over.
+   */
+  keeps?: { consumer: SecretConsumer; named(): readonly string[] | undefined };
   prepare(input: BrokerInput): Promise<PreparedBroker | undefined>;
 };
 
