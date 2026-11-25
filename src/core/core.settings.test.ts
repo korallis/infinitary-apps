@@ -161,6 +161,7 @@ describe("the core, driven with no Electron in the process", () => {
     const notifications = await core.dispatch("inf:settings:notifications:get", []);
     const resources = await core.dispatch("inf:settings:personal-resources:get", []);
     const limit = await core.dispatch("inf:settings:cost-limit:get", []);
+    const summary = await core.dispatch("inf:settings:summary-point:get", []);
     await core.dispatch("inf:settings:appearance:set", [
       {
         ...(await core.dispatch("inf:settings:appearance:get", [])),
@@ -174,6 +175,7 @@ describe("the core, driven with no Electron in the process", () => {
     await core.dispatch("inf:settings:notifications:set", [false]);
     await core.dispatch("inf:settings:personal-resources:set", [true]);
     await core.dispatch("inf:settings:cost-limit:set", [{ usd: 75 }]);
+    await core.dispatch("inf:settings:summary-point:set", [200_000]);
     const all = await core.dispatch("inf:settings:current", [[...PANEL_SETTING_NAMES]]);
     expect(all).toEqual({
       theme: { theme: "light" },
@@ -184,6 +186,8 @@ describe("the core, driven with no Electron in the process", () => {
       "ambient-music": { on: true, paused: false, style: "quiet-cove", volume: 25 },
       notifications: { enabled: false },
       "cost-limit": { limit: { usd: 75 } },
+      // INF-6693: a panel reads the point alone, never the models it names.
+      "summary-point": { point: 200_000 },
       "personal-resources": { enabled: true },
       "panels-switch": {
         enabled: (await core.dispatch("inf:shell:preferences", [])).panels.enabled,
@@ -192,6 +196,7 @@ describe("the core, driven with no Electron in the process", () => {
     await core.dispatch("inf:settings:notifications:set", [notifications]);
     await core.dispatch("inf:settings:personal-resources:set", [resources]);
     await core.dispatch("inf:settings:cost-limit:set", [limit.limit]);
+    await core.dispatch("inf:settings:summary-point:set", [summary.point]);
     // A line with no panel value is refused, and so is one the catalog lacks.
     for (const name of ["project-settings", "firstmate-account", "dictation", "nothing-at-all"])
       await expect(core.dispatch("inf:settings:current", [[name]])).rejects.toThrow(
