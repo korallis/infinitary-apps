@@ -44,14 +44,21 @@ describe("readProxySettings", () => {
     expect(readProxySettings(tables)?.clientKey).toBe("sk-client-one");
   });
 
-  // The review's finding: a remark is quoted text, so braces, commas or
-  // key-like words inside it never stand in for the key or hide the list.
   it("reads the key field alone when a remark holds braces or key-like text", () => {
     const tables = SETTINGS.replace(
       'api-keys = ["sk-client-one", "sk-client-two"]',
       'api-keys = [{ remark = "old, key = \\"sk-remark\\" }", key = "sk-client-one" }, { key = "sk-client-two", remark = "{Codex}" }]',
     );
     expect(readProxySettings(tables)?.clientKey).toBe("sk-client-one");
+  });
+
+  it("reads key tables only when commas separate them, a trailing comma allowed", () => {
+    const listed = (list: string) =>
+      readProxySettings(
+        SETTINGS.replace('api-keys = ["sk-client-one", "sk-client-two"]', `api-keys = ${list}`),
+      )?.clientKey;
+    expect(listed('[{ key = "sk-client-one" }, { key = "sk-client-two" },]')).toBe("sk-client-one");
+    expect(listed('[{ key = "sk-client-one" } { key = "sk-client-two" }]')).toBe(undefined);
   });
 
   it("reads no client key when a table in the list has no key", () => {

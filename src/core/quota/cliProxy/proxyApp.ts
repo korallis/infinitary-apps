@@ -158,6 +158,7 @@ function keyTables(text: string): string[] | undefined {
     keys.push(key);
     rest = rest.slice(1).trimStart();
     if (rest.startsWith(",")) rest = rest.slice(1).trimStart();
+    else if (!rest.startsWith("]")) return undefined;
   }
   rest = rest.slice(1).trimStart();
   return rest === "" || rest.startsWith("#") ? keys : undefined;
