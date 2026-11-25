@@ -12,6 +12,16 @@ import { ForgeError, ForgeWriteError } from "./forge";
 import { presentationRegionMarkers } from "./presentation";
 
 /**
+ * A fork's story comment is public words to someone outside the project, so it
+ * says who wrote it. The approved round replies add that the maintainer
+ * approved them; a review's story goes out before any such approval, so it
+ * leaves that clause out.
+ */
+// i18n-exempt: posted where the project lives in its own language, never shown in the app
+export const FORK_STORY_DISCLOSURE =
+  "_Written by an Infinitary crewmate, an AI agent working for this project's maintainer._";
+
+/**
  * Where each kind keeps a change's comments, and how one is rewritten.
  * Bitbucket Cloud and Data Center have none yet: reviewing someone else's
  * pull request from a fork there comes later.

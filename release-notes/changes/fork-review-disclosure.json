@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "fork-review-disclosure",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Reviews of outside pull requests say a crewmate wrote them",
+      "body": "When a crewmate reviews someone else's pull request, the story it posts as a comment now opens with a line saying an Infinitary crewmate, an AI agent working for the project's maintainer, wrote it.",
+      "noPicture": "This changes the words of a comment posted where the project lives, not a view in the app.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

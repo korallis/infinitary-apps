@@ -307,4 +307,4 @@ export function createForgeResolver(
 }
 
 export { isForkReview } from "@shared/mergeReview";
-export { forkStoryForge } from "./forkStory";
+export { FORK_STORY_DISCLOSURE, forkStoryForge } from "./forkStory";

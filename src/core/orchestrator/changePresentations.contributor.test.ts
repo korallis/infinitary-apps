@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { arrange, BRANCH, HEAD, TASK } from "../../../tests/helpers/changePresentationsHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { type ForgeApi, type ForgePull, forkStoryForge, parseApiRequest } from "../forge";
-import { presentationMarkdownText } from "../forge/presentation";
+import { presentationMarkdownText, presentationRegionMarkers } from "../forge/presentation";
 
 // Accepted contributor plan, piece A: preserve the contributor's words and
 // reuse the publication owner's confirmed and uncertain-write lifecycle.
@@ -109,12 +109,19 @@ describe("contributor review stories", () => {
       expect(c.comments[0]?.body).toContain(
         presentationMarkdownText(c.at.draft.whatChanged[0] ?? ""),
       );
-      expect(c.comments[0]?.body).toContain(`# ${presentationMarkdownText(c.at.draft.title)}`);
+      // The captain's ask: a reply to an outside contributor always says an
+      // Infinitary crewmate made it. The line opens the crew's story, above its title.
+      const { start } = presentationRegionMarkers(TASK);
+      expect(c.comments[0]?.body).toContain(
+        `${start}\n\n_Written by an Infinitary crewmate, an AI agent working for this project's maintainer._\n\n` +
+          `# ${presentationMarkdownText(c.at.draft.title)}`,
+      );
       expect(c.at.change).toEqual(c.original);
       expect(c.at.update).not.toHaveBeenCalled();
       expect(c.at.open).not.toHaveBeenCalled();
       const verified = await c.at.service.assertPublished(TASK, published, c.forge);
       expect(verified.squashMessage).toContain(c.at.draft.whatChanged[0]);
+      expect(verified.squashMessage).not.toContain("Infinitary crewmate");
       expect(verified.title).toBe(c.at.draft.title);
       // Re-publication is a read, never a duplicate comment.
       await c.publish();

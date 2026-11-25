@@ -894,7 +894,8 @@ The crewmate reads contributor code before running it, and declares `asks_first`
 To publish its story, the crewmate checks out the reviewed commit without changing it, calls `prepare_change`, then `open_change` with the presentation revision while that fork is selected.
 The saved-story publisher writes and reads back a comment (GitHub issue comment or GitLab merge-request note), with its existing attachment barrier and uncertain-write recovery.
 It never changes the contributor's description or title, pushes to their fork, or opens a replacement request.
-The story comment opens with the crew's title, separate from the contributor's request title.
+The story comment's own section opens with an italic line saying an Infinitary crewmate, an AI agent working for the project's maintainer, wrote it (`FORK_STORY_DISCLOSURE`), then the crew's title, separate from the contributor's request title.
+Both sit inside the story's markers, so the squash summary never carries them.
 The active naming runbook owns its wording; fork merging adds no conventional-title requirement.
 A merge card's click, for the task's own change or a reviewed pull request, reads the merges the project allows where it lives right before anything is sent (`wayToSend`, `src/core/forge/mergeWays.ts`), and picks one as a batch of one does (`mergeWayFor`): a squash where allowed, otherwise a rebase merge, then a merge commit.
 A project that allows none of them holds the merge with nothing sent, and the click's answer names the project's settings to change.
