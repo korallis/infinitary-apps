@@ -90,8 +90,8 @@ const CLAUDE_COMPACTION_SETTINGS = {
 } as const;
 
 /** A person's client switches must not disable or enlarge the app's compaction budget. */
-function claudeSessionEnv(base?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  const env = claudeEnvFor(base);
+function claudeSessionEnv(base?: NodeJS.ProcessEnv, ownConfigDir?: string): NodeJS.ProcessEnv {
+  const env = claudeEnvFor(base, ownConfigDir);
   for (const key of [
     "DISABLE_COMPACT",
     "DISABLE_AUTO_COMPACT",
@@ -143,6 +143,8 @@ type ClaudeSessionOptionsInput = {
   spec: SessionSpec;
   /** The host environment; the client's own is derived from it. */
   env: NodeJS.ProcessEnv;
+  /** A further login's own Claude Code folder; absent for the default login. */
+  ownConfigDir?: string;
   executable: string | undefined;
   stderr: (data: string) => void;
   /**
@@ -257,7 +259,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       // reads, the output bound, for the seat none of the client's per-turn
       // extras, and for a coding session the longest command time limit.
       env: {
-        ...claudeSessionEnv(input.env),
+        ...claudeSessionEnv(input.env, input.ownConfigDir),
         ...CLAUDE_SESSION_ENV,
         ...CLAUDE_ROLLING_ENV,
         ...(coding ? CLAUDE_CODING_ENV : CLAUDE_SEAT_ENV),
@@ -380,7 +382,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
     // The machine's default login and nothing ambient, none of the person's
     // Claude notes, plus the output bound.
     env: {
-      ...claudeSessionEnv(input.env),
+      ...claudeSessionEnv(input.env, input.ownConfigDir),
       ...CLAUDE_SESSION_ENV,
       // A one-shot without an explicit bound uses the client's allowance,
       // never an answer-only cap inherited from the shell (INF-1451).

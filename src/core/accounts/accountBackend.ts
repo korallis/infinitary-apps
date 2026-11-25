@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { MachineLoginOutcome } from "@shared/accounts";
 import type { ClaudeAccessSource } from "@shared/claudeAccess";
 import { REFRESH_TOKEN_LAPSED } from "@shared/credentialHealth";
@@ -26,13 +27,24 @@ import type { CredentialHealth, RenewalOutcome, RenewReason } from "./credential
 /**
  * The one value the vault produces for a spawn or attach. Locations only.
  * `pi-runtime` is in-process (one ModelRuntime per account's auth file);
- * `default-login` is Claude's machine-default login (CD-1=B) - no
- * per-account store, CLAUDE_CONFIG_DIR left unset so the client uses the
- * bare Keychain item.
+ * `default-login` is the first Claude login, the machine's default one
+ * (CD-1=B) - no per-account store, CLAUDE_CONFIG_DIR left unset so the
+ * client uses the bare Keychain item; `config-dir` is a further Claude
+ * login, whose client runs with CLAUDE_CONFIG_DIR set to the account's own
+ * folder (docs/claude-client.md, "Further logins").
  */
 export type AccountBinding =
   | { via: "pi-runtime"; authPath: string; modelsPath: string }
-  | { via: "default-login" };
+  | { via: "default-login" }
+  | { via: "config-dir"; configDir: string };
+
+/**
+ * A further Claude login's own Claude Code config folder, inside its store
+ * directory (`AccountRef.ownLogin`). The first login's store never has it.
+ */
+export function claudeLoginFolder(storeDir: string): string {
+  return join(storeDir, "claude");
+}
 
 export type AccountStatus = {
   connected: boolean;
@@ -69,6 +81,12 @@ export type AccountRef = {
   accountId: string;
   /** The account's isolated store directory (already created, 0700). */
   dir: string;
+  /**
+   * A further Claude login, signed in inside its own folder in `dir`
+   * (`claudeLoginFolder`) rather than standing on the computer's default
+   * login. The vault's record says so; absent for every other account.
+   */
+  ownLogin?: boolean;
 };
 
 /** What signing an account out did to the login its vendor's client keeps for the whole macOS user. */
@@ -97,6 +115,12 @@ export type AccountLoginRequest = AccountRef & {
 
 export interface AccountBackend {
   readonly id: BackendId;
+  /**
+   * An account added beside this backend's first signs in inside a folder of
+   * its own (`AccountRef.ownLogin`). Without it the vault refuses a second
+   * account where the provider stands on one login for the whole computer.
+   */
+  readonly furtherLogins?: boolean;
   /**
    * Auth methods this backend offers for a provider, for the connect UI.
    * The renderer speaks only of subscriptions and keys - never of harnesses.

@@ -41,6 +41,7 @@ The client passes the label on to every command it runs, and the account evaluat
 `claudeEntrypoint.integration.test.ts` checks actual request billing metadata for all three roles and persisted transcript labels for rolling sessions, including a resumed conversation and an SDK-default control, on a boxed real client with dummy credentials and a local API.
 
 `claudeEnvFor` leaves `CLAUDE_CONFIG_DIR` unset: setting it at all, even to `~/.claude`, selects a differently named Keychain item rather than the machine's default login (CD-1=B, captain, 2026-09-10).
+A further login is the one exception: its runs name its own folder ("Further logins", below).
 
 `runClaude` uses piped stdin, stdout and stderr, with no terminal or PTY.
 For sign-in, `claudeAuth.ts` lets the client open the browser.
@@ -304,6 +305,33 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   A cancel and a 401 or 403 refusal on that client are the session contract's question cases below, and `decisionKindClassifier.test.ts` owns how a cut-off reaches the account.
   The same file runs `pnpm score:kinds --provider anthropic-claude` on that boxed client.
   The session contract's shared suite (`tests/helpers/sessionContract.ts`) runs the question's cases on Claude twice, scripted (`claudeSession.contract.test.ts`) and on the same boxed client (`claudeSession.contract.integration.test.ts`), and on real Pi against the same stub API (`pi/piSession.contract.test.ts`), with identical assertions.
+
+## Further logins
+
+The captain's own computer holds several Claude logins: Settings offers "Add another Claude login" once one Claude account is connected.
+The first account stands on the machine's default login, as before.
+Each one added beside it is a login of its own (`ownLogin` on its saved record, `AccountVault.add`), in an owner-only Claude Code folder inside the account's store, `accounts/anthropic-claude/<account>/claude/` (`claudeLoginFolder`), and binds as `{ via: "config-dir", configDir }`.
+
+- **Sign-in is the client's own.**
+  `ClaudeAuthBackend.login` runs the installed client's `auth login` with `CLAUDE_CONFIG_DIR` naming the folder, through the same browser or pasted-code flow as the first login.
+  Nothing is pasted into or copied by Infinitary, and a sign-in that does not finish leaves no account and no folder.
+- **The client's word is the sign-in state.**
+  Health comes from `claude auth status --json` run with that folder, kept for five minutes (`OWN_LOGIN_STATUS_TTL_MS`) and asked only while no session holds the folder's lease; while one does, the last word stands.
+  Infinitary never reads the folder's credentials or its Keychain item, and that status carries no expiry, so a further login's row never says when its sign-in ends.
+  Renewal is the client's, inside its sessions.
+- **Sessions run in the folder.**
+  `claudeEnvFor` sets `CLAUDE_CONFIG_DIR` for a further login's client and leaves it unset for the first, and each folder has its own store lease.
+  A person's own token command, gateway address and custom headers ("Access a company set up") reach only the first login's sessions; what an organization manages is read by the client itself in every session.
+  The client keeps a session's transcript in the folder it ran in, so a conversation resumes only on the login that held it.
+  `claudeFurtherLogin.integration.test.ts` holds the folder and the settings rule on the client the product would run.
+- **Usage is pushed only** (`docs/quota.md`, "A further Claude login").
+- **Removing it** runs the client's `auth logout` in the folder, holding the folder's lease, and then deletes the folder; a sign-out that fails still deletes it.
+  The first login's store is never touched.
+- **The first mate may sit on any of them**: `SEAT_BINDINGS.claude` names both bindings.
+
+A computer that runs work keeps one Claude login: its session host does not run accounts in folders, so a second Claude account there is refused and the chip stays unavailable.
+The model list read, a moved project's or home's transcripts, and the observer's transcript source read the default folder only.
+An account record marked `ownLogin` read by a build from before further logins is taken for the default login.
 
 ## App-owned automatic compaction
 

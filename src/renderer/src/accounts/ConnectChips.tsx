@@ -216,18 +216,21 @@ export function ProviderChips({
         </ConnectedAccount>
       );
     }
-    const claudeTaken = provider.id === CLAUDE_PROVIDER_ID && account !== undefined;
+    // A computer that runs work has the one Claude login it holds; here a
+    // connected Claude offers another login, in a folder of its own.
+    const claude = provider.id === CLAUDE_PROVIDER_ID && account !== undefined;
+    const claudeTaken = claude && place === "there";
     const note =
       unavailable && provider.id === CLAUDE_PROVIDER_ID && place === "there"
         ? CONNECT_CHIP_NOTES.installClaudeThere
         : unavailable?.note;
     const name = claudeTaken
-      ? place === "there"
-        ? m.accountsConnectClaudeLoginThere()
-        : m.accountsConnectClaudeLoginOn({ here: home.this })
-      : account
-        ? m.accountsConnectAddAnother({ provider: provider.name })
-        : m.accountsConnectProvider({ provider: provider.name });
+      ? m.accountsConnectClaudeLoginThere()
+      : claude
+        ? m.accountsConnectAddClaudeLogin()
+        : account
+          ? m.accountsConnectAddAnother({ provider: provider.name })
+          : m.accountsConnectProvider({ provider: provider.name });
     // Why the chip cannot be pressed: what the backend said (F14), or the
     // login Claude already uses; a provider with no way in and no word why
     // says that it cannot be added.

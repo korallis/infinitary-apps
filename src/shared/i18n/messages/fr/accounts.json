@@ -1,10 +1,12 @@
 {
+  "accountsClaudeFurtherLoginNoAnswer": "Claude Code n’a pas répondu, Infinitary n’a donc pas lancé de connexion. Réessayez.",
+  "accountsClaudeFurtherLoginUnfinished": "La connexion à Claude a échoué. Réessayez.",
   "accountsClaudeLoginUnreadable": "Infinitary n’a pas pu lire la connexion Claude sur {here} et n’a donc pas lancé de nouvelle connexion par-dessus. Réessayez ; si cela continue, quittez Infinitary et rouvrez-le depuis le Dock.",
   "accountsClaudeLoginUnreadableReopen": "Infinitary n’a pas pu lire la connexion Claude sur {here} et n’a donc pas lancé de nouvelle connexion par-dessus. Réessayez ; si cela continue, quittez Infinitary et rouvrez-le.",
   "accountsConnectAddAnother": "Ajouter un autre compte {provider}",
+  "accountsConnectAddClaudeLogin": "Ajouter une autre connexion Claude",
   "accountsConnectBrowser": "Se connecter avec votre navigateur",
   "accountsConnectCancel": "Annuler",
-  "accountsConnectClaudeLoginOn": "Claude utilise la connexion de {here}",
   "accountsConnectClaudeLoginThere": "Claude utilise la connexion de là-bas",
   "accountsConnectConnected": "{provider} est connecté",
   "accountsConnectConnecting": "Connexion...",

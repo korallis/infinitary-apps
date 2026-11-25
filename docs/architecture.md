@@ -627,7 +627,7 @@ A Claude subscription is reachable only through Claude's own client - its OAuth 
   `PROVIDER_CATALOG` entries name their `backend` and the `roles` they may serve (`src/shared/providers.ts`).
   Claude is `backend: "claude"`, `roles: ["firstmate", "crewmate"]` (rev-9; `["crewmate"]` before it).
 - **Eligibility, asserted at every binding path.**
-  `Flagship.isEligible` checks three things no single edit can widen - the catalog role lists `firstmate`, the provider's backend has a seat (`SEAT_BINDINGS`), and the vault binding is the one that seat stands on (`pi-runtime` for Pi, `default-login` for Claude) - plus the one serveability predicate (a cut-off or a missing client withholds the account).
+  `Flagship.isEligible` checks three things no single edit can widen - the catalog role lists `firstmate`, the provider's backend has a seat (`SEAT_BINDINGS`), and the vault binding is one that seat stands on (`pi-runtime` for Pi; `default-login` or a further login's `config-dir` for Claude) - plus the one serveability predicate (a cut-off or a missing client withholds the account).
   `deriveForProvider`, a persisted pin, both exhaustion-ladder rungs, and both IPC setters (`firstmate-account`, and `firstmate-model` through `Flagship.servesFirstmate`) go through it, refusing with a user-facing reason.
   `resolveModel` (`firstmateModelPick.ts`) derives only a model that can answer the first mate (its role, and an account the seat can stand on), and ranks high → medium → premium → low across Pi and Claude without provider preference; an Auto derivation may choose Claude, while a later cross-provider move still asks the captain.
   The first-run gate counts the same models, and stays down while an account the seat could stand on is only paused by a typed cut-off (`Flagship.standsOnCutOff`): the pause card speaks for it.
@@ -637,12 +637,18 @@ A Claude subscription is reachable only through Claude's own client - its OAuth 
   The transport leaves `CLAUDE_CONFIG_DIR` unset so the client uses the bare Keychain item `Claude Code-credentials` and `~/.claude`; a set variable would hash a suffix onto the service name and miss the everyday login (`docs/claude-client.md`).
   Infinitary never mints Anthropic OAuth.
   The vault still keeps a bookkeeping directory per registry row; it is not the credential store.
-  One Claude account ever; unbind does not run `claude auth logout`, but for a login the first mate made on a computer that runs work from a pasted code (`docs/helper.md`, "Its own sign-ins").
+  Unbind does not run `claude auth logout`, but for a login the first mate made on a computer that runs work from a pasted code (`docs/helper.md`, "Its own sign-ins").
+- **Further logins, each in its own folder** (2026-11-25, narrows CD-1=B to the first login; the captain approved the plan for several Claude logins).
+  The first Claude account still stands on the machine's default login, with `CLAUDE_CONFIG_DIR` unset.
+  Each Claude account added beside it on the captain's own computer binds as `{ via: "config-dir", configDir }`: an owner-only Claude Code folder inside the account's store, signed in by the client's own login run with `CLAUDE_CONFIG_DIR` naming it.
+  Infinitary never opens that folder's sign-in; the client's `auth status` is its word, and its usage is only what its sessions push.
+  Removing it runs the client's sign-out in the folder and deletes the folder.
+  A computer that runs work keeps one Claude login (`docs/claude-client.md`, "Further logins").
 - **Control contract, measured**: native mid-turn steer, turn-granular interrupt, deltas, resume.
   Two behaviours the code exists to absorb: cost arrives cumulative per session (the ledger stores deltas), and a steer rides `priority: "next"` and folds into the running turn after the tool in flight, so a turn settles when the client says it is idle, never on a result.
   One Claude session serves all three presets - the seat's and the crewmate's rolling session and the question's one-shot - behind one factory (`createClaudeSessionFactory`, `src/core/claude/session.ts`, `docs/claude-client.md`); a rolling session's record is the app's copy of the client's transcript (`SessionRecordStore`), in the seat's or the task's folder.
   See `docs/claude-client.md`.
-- **Quota is sensed, with pushed readings laid over**: the sensor reads the machine's default login and asks the vendor's usage endpoint (`src/core/claude/claudeQuota.ts`, `docs/quota.md`); the plan windows a session pushes are stored per account (`src/core/quota/pushedQuota.ts`, `pushed_quota` table), and a `rejected` reading is a zero window until its reset, laid over the sensed row.
+- **Quota is sensed, with pushed readings laid over** (a further login's is pushed only): the sensor reads the machine's default login and asks the vendor's usage endpoint (`src/core/claude/claudeQuota.ts`, `docs/quota.md`); the plan windows a session pushes are stored per account (`src/core/quota/pushedQuota.ts`, `pushed_quota` table), and a `rejected` reading is a zero window until its reset, laid over the sensed row.
 - **The first mate on Claude** (rev-9; `docs/claude-client.md`): the composition root injects `createClaudeSessionFactory` beside Pi's factory, and `Flagship.resolveBinding` binds a Claude account as `{backend: "claude", accountId}`, never building a runtime for it.
   The seat runs the client the person installed on the machine's default login; its durable record is the app's own copy under `userData/firstmate/claude/`.
   It lets go of the client (`detach`) before a sign-in or sign-out rewrites the store and whenever it pauses.
@@ -711,7 +717,7 @@ Spec: `fm3000-claude-meter-stale-refresh-s1` §11.2.
   Claude reports a readable store as healthy regardless of advisory expiry and makes no proactive renewal or status request on this tick.
   A degraded no-interactive-session block has no in-process remedy and is explicitly not terminal.
 - **Ceilings stay honest.**
-  Unifying the seam does not rewrite shipped CD decisions: Claude is still one default login (CD-1=B), Keychain VALUE still rides the host capability (the read order is amended in the host section), and the needs_reauth card is still proof-gated (CD-3=A).
+  Unifying the seam does not rewrite shipped CD decisions: Claude's first login is still the default login (CD-1=B), Keychain VALUE still rides the host capability (the read order is amended in the host section), and the needs_reauth card is still proof-gated (CD-3=A).
 
 ### 16.5 One macOS grant carries a session (2026-09-14)
 
@@ -971,7 +977,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   Never read `~/.pi`; e2e proves it via a HOME override.
   User-turn images ride Pi's `PromptOptions.images` / `steer(text, images)` as flat `{ type, data, mimeType }` parts, never as a content array in the text position - Pi's `prompt()` does string work on `text` and crashes on an array (`firstmateSession.realSession.test.ts` pins the shape).
 - A provider is served by the backend its `PROVIDER_CATALOG` entry names (`src/shared/providers.ts`), and may only serve the `roles` it lists.
-  Claude Max rides its own first-party client because Pi's Anthropic OAuth is refused for third-party clients, serves both roles since rev-9 (it was `crewmate`-only before), and uses the machine's default `claude login` as its one credential (CD-1=B: one Claude account ever, `binding()` is `{ via: "default-login" }`, `CLAUDE_CONFIG_DIR` left unset so the client uses the bare Keychain item, unbind does not run `claude auth logout` but for a login the first mate made on a computer that runs work); the bare `anthropic` Pi provider is still not offered, and leftover Anthropic auth/sessions must not crash the app.
+  Claude Max rides its own first-party client because Pi's Anthropic OAuth is refused for third-party clients, serves both roles since rev-9 (it was `crewmate`-only before), and uses the machine's default `claude login` as its first credential (CD-1=B: the first Claude account's `binding()` is `{ via: "default-login" }`, `CLAUDE_CONFIG_DIR` left unset so the client uses the bare Keychain item; a further login is `config-dir`, §16.1; unbind does not run `claude auth logout` but for a login the first mate made on a computer that runs work); the bare `anthropic` Pi provider is still not offered, and leftover Anthropic auth/sessions must not crash the app.
   Cursor was removed (on 2026-09-24, under the 2026-09-24 standing product principle in `docs/principles.md`): a stored account for a retired id is skipped on load (`isRetiredProvider`), its files stay, and a task that ran on Cursor is never resumed into another transport (`CrewSessions.retiredProviderOf`).
   A backend is a catalog entry plus a registration in `src/core/services.ts` - see `docs/architecture.md` section 16.1.
 - Crewmate isolation is social (system prompt + git worktree), not a filesystem jail.

@@ -59,6 +59,11 @@ export type ClaudeSessionDeps = {
    * and where the client keeps a rolling session's own transcript.
    */
   configDir: string;
+  /**
+   * A further Claude login's own Claude Code folder, by account; nothing for
+   * the default login. Absent, every account runs on the default login.
+   */
+  ownConfigDir?: (accountId: string) => string | undefined;
   /** Whether managed settings permit app-local cost exports; absence keeps terminal accounting. */
   costReportingAllowed?: () => Promise<boolean>;
   /**
@@ -101,6 +106,20 @@ export type ClaudeSessionDeps = {
   accessSettings?: () => Promise<ClaudeAccessSettings>;
   resolveWorkSettings?: ResolveClaudeSettings;
 };
+
+/**
+ * The login store one account's client runs on: a further login's own
+ * folder (`own`), which the client is pointed at, or the default one, which
+ * it reaches with no folder named. The store lease and the client's
+ * transcripts are per store.
+ */
+export function claudeLoginStore(
+  deps: Pick<ClaudeSessionDeps, "configDir" | "ownConfigDir">,
+  accountId: string,
+): { dir: string; own: boolean } {
+  const own = deps.ownConfigDir?.(accountId);
+  return own ? { dir: own, own: true } : { dir: deps.configDir, own: false };
+}
 
 export function noteTo(deps: ClaudeSessionDeps): (line: string) => void {
   return deps.log ?? ((line) => console.warn(`[claude] ${line}`));

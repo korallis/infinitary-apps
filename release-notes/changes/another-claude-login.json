@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "another-claude-login",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "Add more than one Claude login",
+      "body": "Settings now offers Add another Claude login once Claude is connected. Each login you add signs in through Claude's own sign-in and gets its own row, which you can pause, prefer or remove without touching your first login. A login you add shows its allowance after its first turn.",
+      "picture": {
+        "dark": "another-claude-login-dark.webp",
+        "light": "another-claude-login-light.webp",
+        "alt": "The subscriptions list in Settings with two Claude rows, the second named by its email, above the Add account row"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -4,12 +4,14 @@ import Foundation
 
 /// The catalog's messages on the phone: one function per message, in the phone's language.
 public enum PhoneMessages {
+    public static func `accountsClaudeFurtherLoginNoAnswer`() -> String { PhoneWords.format("accountsClaudeFurtherLoginNoAnswer", []) }
+    public static func `accountsClaudeFurtherLoginUnfinished`() -> String { PhoneWords.format("accountsClaudeFurtherLoginUnfinished", []) }
     public static func `accountsClaudeLoginUnreadable`(`here`: String) -> String { PhoneWords.format("accountsClaudeLoginUnreadable", [`here`]) }
     public static func `accountsClaudeLoginUnreadableReopen`(`here`: String) -> String { PhoneWords.format("accountsClaudeLoginUnreadableReopen", [`here`]) }
     public static func `accountsConnectAddAnother`(`provider`: String) -> String { PhoneWords.format("accountsConnectAddAnother", [`provider`]) }
+    public static func `accountsConnectAddClaudeLogin`() -> String { PhoneWords.format("accountsConnectAddClaudeLogin", []) }
     public static func `accountsConnectBrowser`() -> String { PhoneWords.format("accountsConnectBrowser", []) }
     public static func `accountsConnectCancel`() -> String { PhoneWords.format("accountsConnectCancel", []) }
-    public static func `accountsConnectClaudeLoginOn`(`here`: String) -> String { PhoneWords.format("accountsConnectClaudeLoginOn", [`here`]) }
     public static func `accountsConnectClaudeLoginThere`() -> String { PhoneWords.format("accountsConnectClaudeLoginThere", []) }
     public static func `accountsConnectConnected`(`provider`: String) -> String { PhoneWords.format("accountsConnectConnected", [`provider`]) }
     public static func `accountsConnectConnecting`() -> String { PhoneWords.format("accountsConnectConnecting", []) }
@@ -4704,12 +4706,14 @@ public enum PhoneMessages {
 extension PhoneWords {
     /// What each message fills, its count included, in the order its Apple format numbers them: the Mac's `MESSAGE_FILLS`.
     static let fills: [String: [String]] = [
+        "accountsClaudeFurtherLoginNoAnswer": [],
+        "accountsClaudeFurtherLoginUnfinished": [],
         "accountsClaudeLoginUnreadable": ["here"],
         "accountsClaudeLoginUnreadableReopen": ["here"],
         "accountsConnectAddAnother": ["provider"],
+        "accountsConnectAddClaudeLogin": [],
         "accountsConnectBrowser": [],
         "accountsConnectCancel": [],
-        "accountsConnectClaudeLoginOn": ["here"],
         "accountsConnectClaudeLoginThere": [],
         "accountsConnectConnected": ["provider"],
         "accountsConnectConnecting": [],

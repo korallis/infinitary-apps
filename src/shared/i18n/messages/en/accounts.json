@@ -1,10 +1,12 @@
 {
+  "accountsClaudeFurtherLoginNoAnswer": "Claude Code didn't answer, so Infinitary didn't start a sign-in. Try again.",
+  "accountsClaudeFurtherLoginUnfinished": "Claude failed to sign in. Try again.",
   "accountsClaudeLoginUnreadable": "Infinitary couldn't read the Claude login on {here}, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Dock.",
   "accountsClaudeLoginUnreadableReopen": "Infinitary couldn't read the Claude login on {here}, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it again.",
   "accountsConnectAddAnother": "Add another {provider} account",
+  "accountsConnectAddClaudeLogin": "Add another Claude login",
   "accountsConnectBrowser": "Sign in with your browser",
   "accountsConnectCancel": "Cancel",
-  "accountsConnectClaudeLoginOn": "Claude uses the login on {here}",
   "accountsConnectClaudeLoginThere": "Claude uses the login there",
   "accountsConnectConnected": "{provider} is connected",
   "accountsConnectConnecting": "Connecting...",

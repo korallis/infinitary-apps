@@ -44,6 +44,7 @@ import {
   CLAUDE_MODEL_PROVIDER,
   ClaudeQueryCore,
   type ClaudeSessionDeps,
+  claudeLoginStore,
   MessageQueue,
   noteTo,
   refuseMissingClient,
@@ -586,7 +587,8 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     // This client holds the account's store for as long as it runs: it
     // refreshes its own login inside the run, and the refresh token behind
     // it is single use. A sign-in in progress is waited out first.
-    const release = await acquireSessionLease(this.deps.configDir);
+    const store = claudeLoginStore(this.deps, this.config.accountId);
+    const release = await acquireSessionLease(store.dir);
     // Every exit before the connection holds the lease hands it back: a
     // resume reads its transcript copy here, and that read can fail.
     const input = new MessageQueue();
@@ -605,7 +607,11 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       if (this.asked === undefined && recorded) this.asked = this.record.swappedFrom(this.id);
       const project = await this.projectResources();
       await assertClaudeWorkSettings(this.deps.resolveWorkSettings);
-      const access = await this.deps.accessSettings?.().catch(() => undefined);
+      // The person's own token command and address are their default
+      // login's; a further login signs in only with its own folder.
+      const access = store.own
+        ? undefined
+        : await this.deps.accessSettings?.().catch(() => undefined);
       // A company's reporting keys in the launch environment are a setup the
       // receiver passes records on to (`claudeReporting.ts`), not a reason
       // to step aside; any other reporting choice there still is.
@@ -636,6 +642,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
         stderr: (data) => this.note((costReports?.redact(data) ?? data).trimEnd()),
         exit,
         ...(access ? { access } : {}),
+        ...(store.own ? { ownConfigDir: store.dir } : {}),
         attachment: {
           ...(this.asked ? { model: this.asked } : {}),
           ...(this.instructions?.text ? { served: this.instructions.text } : {}),

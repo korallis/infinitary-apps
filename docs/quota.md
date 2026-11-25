@@ -82,6 +82,15 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 - Claude's usage service is asked at most once per account every five minutes (`CLAUDE_ASK_INTERVAL_MS`), and ten minutes after a 429 whatever its retry-after says.
   Refreshes between asks resolve the store first and serve the last answer only for the same login; a person's Retry always asks.
 
+## A further Claude login
+
+A Claude login in its own folder (`docs/claude-client.md`, "Further logins") is never read from its store and never sent to Claude's usage service: the sensor skips it (`pushedOnly`, `src/core/quota/homeQuota.ts`).
+Its row holds only the plan windows its own sessions push (`pushedOnlyProviderViews`, `src/core/quota/pushedQuota.ts`):
+
+- a login with no reading yet has a row and no meter, never an empty one;
+- a refused window reads empty until its reset;
+- a reading whose reset has passed reads as refilled, with no reset time, until a session pushes the next one.
+
 ## Typed cut-offs
 
 Before a Claude value read, the child checks that the store is unlocked and reads that one item's access rules (`SecKeychainItemCopyAccess`, `src/main/host/darwinKeychain.ts`).

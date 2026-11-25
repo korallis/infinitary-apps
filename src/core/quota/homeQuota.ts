@@ -39,6 +39,7 @@ import { claudeAccessOutcome, type ProviderOutcome } from "./outcome";
 import {
   PushedQuotaStore,
   pushedCredits,
+  pushedOnlyProviderViews,
   pushedProviderViews,
   withPushedCredits,
   withRejectedReadings,
@@ -96,16 +97,29 @@ export type HomeQuota = {
 };
 
 /**
- * The machine's default Claude config root when this account is Claude,
- * or nothing. Locations only - never a credential. CD-1=B: not the vault
- * account directory, which is bookkeeping only.
+ * The Claude config root this account's client runs on when it is Claude,
+ * or nothing: a further login's own folder, else the machine's default
+ * one. Locations only - never a credential. CD-1=B: for the first login it
+ * is not the vault account directory, which is bookkeeping only.
  */
 export function claudeStoreDirOf(vault: AccountVault, accountId: string): string | undefined {
   const account = vault.list().find((row) => row.id === accountId);
   if (!account || quotaEntryForPiProvider(account.providerId)?.quotaId !== "claude") {
     return undefined;
   }
-  return defaultClaudeConfigDir();
+  return vault.claudeConfigDir(accountId) ?? defaultClaudeConfigDir();
+}
+
+/**
+ * Whether the account's allowance is measured only by what its sessions
+ * push: a provider no sensor covers, or a further Claude login, whose
+ * usage only Claude Code reports and whose sign-in Infinitary never opens
+ * to ask Anthropic's usage address with.
+ */
+function pushedOnly(vault: AccountVault, account: { id: string; providerId: string }): boolean {
+  const entry = quotaEntryForPiProvider(account.providerId);
+  if (!entry) return false;
+  return !entry.sensed || vault.claudeConfigDir(account.id) !== undefined;
 }
 
 export function startHomeQuota(options: {
@@ -205,7 +219,7 @@ export function startHomeQuota(options: {
             vault.list().flatMap((account) => {
               if (!account.enabled) return [];
               const entry = quotaEntryForPiProvider(account.providerId);
-              if (!entry?.sensed) return [];
+              if (!entry?.sensed || pushedOnly(vault, account)) return [];
               return [
                 {
                   accountId: account.id,
@@ -301,6 +315,22 @@ export function startHomeQuota(options: {
             vault.list().flatMap((account) => {
               const entry = quotaEntryForPiProvider(account.providerId);
               if (!entry || entry.sensed) return [];
+              return [
+                {
+                  accountId: account.id,
+                  accountLabel: account.label,
+                  quotaId: entry.quotaId,
+                  providerLabel: entry.label,
+                },
+              ];
+            }),
+            (accountId) => pushedQuota.windowsFor(accountId),
+            now,
+          ),
+          ...pushedOnlyProviderViews(
+            vault.list().flatMap((account) => {
+              const entry = quotaEntryForPiProvider(account.providerId);
+              if (!entry?.sensed || !account.enabled || !pushedOnly(vault, account)) return [];
               return [
                 {
                   accountId: account.id,

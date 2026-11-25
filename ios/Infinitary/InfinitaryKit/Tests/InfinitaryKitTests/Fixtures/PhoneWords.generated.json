@@ -1,10 +1,12 @@
 [
+  {"said":{"m":"accountsClaudeFurtherLoginNoAnswer"},"words":"Claude Code didn't answer, so Infinitary didn't start a sign-in. Try again."},
+  {"said":{"m":"accountsClaudeFurtherLoginUnfinished"},"words":"Claude failed to sign in. Try again."},
   {"said":{"m":"accountsClaudeLoginUnreadable","a":{"here":"‹here›"}},"words":"Infinitary couldn't read the Claude login on ‹here›, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Dock."},
   {"said":{"m":"accountsClaudeLoginUnreadableReopen","a":{"here":"‹here›"}},"words":"Infinitary couldn't read the Claude login on ‹here›, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it again."},
   {"said":{"m":"accountsConnectAddAnother","a":{"provider":"‹provider›"}},"words":"Add another ‹provider› account"},
+  {"said":{"m":"accountsConnectAddClaudeLogin"},"words":"Add another Claude login"},
   {"said":{"m":"accountsConnectBrowser"},"words":"Sign in with your browser"},
   {"said":{"m":"accountsConnectCancel"},"words":"Cancel"},
-  {"said":{"m":"accountsConnectClaudeLoginOn","a":{"here":"‹here›"}},"words":"Claude uses the login on ‹here›"},
   {"said":{"m":"accountsConnectClaudeLoginThere"},"words":"Claude uses the login there"},
   {"said":{"m":"accountsConnectConnected","a":{"provider":"‹provider›"}},"words":"‹provider› is connected"},
   {"said":{"m":"accountsConnectConnecting"},"words":"Connecting..."},
@@ -3931,7 +3933,7 @@
   {"said":{"m":"welcomeStartersLead"},"words":"To begin, press one and finish the sentence:"},
   {"said":{"m":"welcomeTasks"},"words":"Every ask gets a record here."},
   {"said":{"m":"welcomeTitle"},"words":"How we work"},
-  {"said":{"m":"accountsClaudeLoginUnreadable","a":{"here":{"m":"accountsConnectBrowser"}}},"words":"Infinitary couldn't read the Claude login on Sign in with your browser, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Dock."},
+  {"said":{"m":"accountsClaudeLoginUnreadable","a":{"here":{"m":"accountsClaudeFurtherLoginNoAnswer"}}},"words":"Infinitary couldn't read the Claude login on Claude Code didn't answer, so Infinitary didn't start a sign-in. Try again., so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Dock."},
   {"said":{"m":"accountsClaudeLoginUnreadable"},"words":null},
   {"said":{"m":"notInTheCatalog"},"words":null}
 ]

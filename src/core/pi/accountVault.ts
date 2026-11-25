@@ -49,6 +49,7 @@ import {
   type AccountBinding,
   type AccountRef,
   type AccountStatus,
+  claudeLoginFolder,
   type LogoutOutcome,
   statusFromHealth,
 } from "../accounts/accountBackend";
@@ -77,8 +78,8 @@ import { piReasoningCapabilities } from "./reasoning";
  *   userData/accounts/registry.json                  non-secret metadata only
  *   userData/accounts/<providerId>/<accountId>/      0700, one per account
  *       Pi accounts:     auth.json (0600, written by Pi only) + models.json
- *       Claude accounts: bookkeeping only - the credential is the machine's
- *                        default `claude login`, not this directory (CD-1=B)
+ *       Claude accounts: bookkeeping only - the first's credential is the
+ *                        default `claude login` (CD-1=B), a further one's claude/
  *
  * Infinitary owns the matrix - how many accounts exist, where each store
  * lives, isolation, and which run sees which. The harness owns each store's
@@ -118,6 +119,8 @@ export type AccountRecord = {
    * that can say: a different one later is a changed login (`onLoginChange`).
    */
   login?: string;
+  /** A further Claude login, in its own folder in the store (docs/claude-client.md, "Further logins"). */
+  ownLogin?: true;
   /**
    * A typed cut-off standing on this account (`noteCutOff`). Absent on a row
    * written before it existed, which is simply no cut-off.
@@ -399,7 +402,14 @@ export class AccountVault {
         : githubEnterpriseHost(options.enterpriseHost);
     if (options.enterpriseHost !== undefined && !enterpriseHost)
       throw new Error(CODE_STEP_WORDS.badEnterprise);
-    if (providerId === CLAUDE_PROVIDER_ID && this.list(providerId).length > 0) {
+    // One Claude account stands on the login already on this computer; one
+    // added beside it is a login of its own where the backend makes them.
+    const furtherClaude =
+      providerId === CLAUDE_PROVIDER_ID &&
+      this.registry.accounts.some(
+        (account) => account.providerId === CLAUDE_PROVIDER_ID && !account.ownLogin,
+      );
+    if (furtherClaude && !this.requireBackend(providerId).furtherLogins) {
       throw new Error(`Claude uses the login already on ${HERE.this}.`);
     }
     // Set before any await, so a second click cannot start another login
@@ -419,7 +429,17 @@ export class AccountVault {
       id = `acct_${randomBytes(4).toString("hex")}`;
       const dir = this.storeDir(providerId, id);
       mkdirSync(dir, { recursive: true, mode: 0o700 });
-      const ref: AccountRef = { providerId, accountId: id, dir };
+      if (furtherClaude) {
+        const folder = claudeLoginFolder(dir);
+        mkdirSync(folder, { mode: 0o700 });
+        chmodSync(folder, 0o700);
+      }
+      const ref: AccountRef = {
+        providerId,
+        accountId: id,
+        dir,
+        ...(furtherClaude ? { ownLogin: true } : {}),
+      };
       await backend.login({
         ...ref,
         type,
@@ -434,6 +454,7 @@ export class AccountVault {
         enabled: true,
         createdAt: Date.now(),
         lastConnectedAt: Date.now(),
+        ...(furtherClaude ? { ownLogin: true as const } : {}),
       };
       this.registry.accounts.push(record);
       this.saveRegistry();
@@ -1119,6 +1140,13 @@ export class AccountVault {
     return this.requireBackend(account.providerId).binding(this.refFor(account));
   }
 
+  /** A further Claude login's own Claude Code folder; nothing for any other account. */
+  claudeConfigDir(accountId: string): string | undefined {
+    const account = this.get(accountId);
+    if (!account?.ownLogin) return undefined;
+    return claudeLoginFolder(this.storeDir(account.providerId, account.id));
+  }
+
   /** The account's own ModelRuntime (cached): the in-process Pi injection. */
   runtimeFor(accountId: string): Promise<ModelRuntime> {
     const account = this.requireAccount(accountId);
@@ -1625,6 +1653,7 @@ export class AccountVault {
       providerId: account.providerId,
       accountId: account.id,
       dir: this.storeDir(account.providerId, account.id),
+      ...(account.ownLogin ? { ownLogin: true } : {}),
     };
   }
 

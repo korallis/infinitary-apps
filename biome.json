@@ -318,6 +318,7 @@
         "!src/core/usageReport/usageReporter.integration.test.ts",
         "!src/core/placed/placedClaudeCost.integration.test.ts",
         "!src/core/claude/claudeAttribution.integration.test.ts",
+        "!src/core/claude/claudeFurtherLogin.integration.test.ts",
         "!src/core/claude/claudeCommandTimeLimit.integration.test.ts",
         "!src/core/claude/claudeSeatOverflow.integration.test.ts",
         "!src/core/pi/seatCompaction.integration.test.ts",
