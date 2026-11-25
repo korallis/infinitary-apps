@@ -1,5 +1,5 @@
 ---
-source: 4e862d71de30e0c9
+source: 809001f06c842a92
 title: O que sai do seu computador
 description: O que o Infinitary envia, para onde vai e o único botão que envia algo para nós.
 ---
@@ -50,6 +50,13 @@ Ajustes → **Uso** diz para onde ele vai.
 Se esse lugar continuar recusando o trabalho do Claude, ou não puder ser alcançado, essa linha diz isso no lugar.
 Uma configuração que o administrador da sua empresa gerencia para o computador inteiro chega ao Claude Code diretamente, como sempre, e o Infinitary também envia para lá o trabalho de qualquer outro modelo, do mesmo jeito.
 Qualquer um dos dois tipos de configuração recebe só o trabalho do Claude se enviar seu uso por gRPC ou com arquivos de certificado, e Ajustes → **Uso** então diz isso.
+
+## Seus próprios relatórios de uso {#your-own-usage-reporting}
+
+Uma conexão de relatórios que você adiciona em Ajustes → **Inteligência** envia o uso da sua tripulação para a ferramenta de monitoramento ou rastreamento que você indicar, como Grafana, Datadog ou Langfuse, assim que você salva.
+Ela envia os mesmos registros: tempos, modelos, tokens e custo estimado, se o trabalho foi do seu imediato ou de um tripulante e o tipo de trabalho, nunca suas palavras, títulos de tarefas ou nomes de projetos.
+Os cabeçalhos que a ferramenta pede, como um token, ficam em Segredos e só vão para esse endereço.
+Ajustes → **Uso** diz para onde ele vai, e Remover o interrompe.
 
 ## Verificações de atualização {#update-checks}
 

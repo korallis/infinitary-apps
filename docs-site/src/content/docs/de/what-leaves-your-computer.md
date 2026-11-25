@@ -1,5 +1,5 @@
 ---
-source: 4e862d71de30e0c9
+source: 809001f06c842a92
 title: Was deinen Computer verlässt
 description: Was Infinitary sendet, wohin es geht und der eine Schalter, der überhaupt etwas an uns sendet.
 ---
@@ -50,6 +50,13 @@ Einstellungen → **Nutzung** nennt, wohin sie geht.
 Weist diese Stelle Claudes Arbeit immer wieder ab oder ist sie nicht erreichbar, sagt diese Zeile das stattdessen.
 Eine Einrichtung, die der Administrator deiner Firma für den ganzen Computer verwaltet, erreicht Claude Code direkt, wie bisher, und Infinitary schickt die Arbeit jedes anderen Modells ebenfalls dorthin, auf dieselbe Weise.
 Beide Arten von Einrichtung bekommen nur Claudes Arbeit, wenn sie ihre Nutzung über gRPC oder mit Zertifikatsdateien schicken, und Einstellungen → **Nutzung** sagt das dann.
+
+## Deine eigenen Nutzungsberichte {#your-own-usage-reporting}
+
+Eine Berichtsverbindung, die du in Einstellungen → **Intelligenz** hinzufügst, schickt die Nutzung deiner Crew an das Überwachungs- oder Tracing-Werkzeug, das du nennst, etwa Grafana, Datadog oder Langfuse, sobald du sie speicherst.
+Sie schickt dieselben Einträge: Zeiten, Modelle, Tokens und geschätzte Kosten, ob dein erster Offizier oder ein Crewmitglied die Arbeit getan hat und die Art der Arbeit, nie deine Worte, Aufgabentitel oder Projektnamen.
+Header, die das Werkzeug verlangt, etwa ein Token, bleiben in Geheimnisse und gehen nur an diese Adresse.
+Einstellungen → **Nutzung** nennt, wohin sie geht, und Entfernen beendet sie.
 
 ## Suche nach Updates {#update-checks}
 

@@ -50,6 +50,13 @@ If that place keeps turning Claude's work away, or cannot be reached, that line 
 A setup your company's administrator manages for the whole computer reaches Claude Code directly, as it always did, and Infinitary sends every other model's work there too, the same way.
 Either kind of setup gets only Claude's work when it sends its usage over gRPC or with certificate files, and Settings → **Usage** then says so.
 
+## Your own usage reporting
+
+A reporting connection you add in Settings → **Intelligence** sends your crew's usage to the monitoring or tracing tool you name, such as Grafana, Datadog or Langfuse, once you save it.
+It sends the same records: timing, models, tokens and estimated cost, whether your first mate or a crewmate did the work and the kind of work, never your words, task titles or project names.
+Headers the tool asks for, such as a token, are kept in Secrets and sent only to that address.
+Settings → **Usage** names where it goes, and Remove stops it.
+
 ## Update checks
 
 Infinitary checks for a newer version every few hours, from the place its releases are published.

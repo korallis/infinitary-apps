@@ -1,5 +1,5 @@
 ---
-source: 4e862d71de30e0c9
+source: 809001f06c842a92
 title: Ce qui quitte votre ordinateur
 description: Ce qu’envoie Infinitary, où cela va, et le seul interrupteur qui nous envoie quoi que ce soit.
 ---
@@ -50,6 +50,13 @@ Réglages → **Utilisation** indique où il va.
 Si cet endroit continue de refuser le travail de Claude, ou s’il est impossible de le joindre, cette ligne le dit à la place.
 Une configuration que l’administrateur de votre entreprise gère pour tout l’ordinateur atteint Claude Code directement, comme avant, et Infinitary y envoie aussi le travail de tout autre modèle, de la même façon.
 Les deux sortes de configuration ne reçoivent que le travail de Claude si elles envoient leur utilisation par gRPC ou avec des fichiers de certificat, et Réglages → **Utilisation** le précise alors.
+
+## Vos propres rapports d’utilisation {#your-own-usage-reporting}
+
+Une connexion de rapports que vous ajoutez dans Réglages → **Intelligence** envoie l’utilisation de votre équipage à l’outil de supervision ou de traçage que vous indiquez, comme Grafana, Datadog ou Langfuse, dès que vous l’enregistrez.
+Elle envoie les mêmes enregistrements : durées, modèles, jetons et coût estimé, si le travail vient de votre second ou d’un membre d’équipage et le type de travail, jamais vos mots, les titres de tâches ou les noms de projets.
+Les en-têtes que l’outil demande, comme un jeton, sont gardés dans Secrets et envoyés seulement à cette adresse.
+Réglages → **Utilisation** indique où il va, et Retirer l’arrête.
 
 ## Les recherches de mises à jour {#update-checks}
 
