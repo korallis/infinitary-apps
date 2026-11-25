@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "company-reporting-certificates-every-model",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Every model's work reaches a company collector that needs its security files",
+      "body": "When your Claude Code settings name the security files your company gave you for usage reporting, or your computer already trusts your company's collector, Infinitary now reports the work of every other model there too, not only Claude's. Settings → Usage then says the collector gets all of your crew's usage.",
+      "picture": {
+        "dark": "company-reporting-certificates-every-model-dark.webp",
+        "light": "company-reporting-certificates-every-model-light.webp",
+        "alt": "Settings → Usage saying the crew's usage, Claude work and every other model's work, is also reported to the company's collector"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

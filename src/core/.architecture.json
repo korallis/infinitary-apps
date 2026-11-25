@@ -1895,7 +1895,7 @@
     {
       "from": "usageReport",
       "to": "claude",
-      "why": "reads the company's Claude Code setup, its headers and the login's email"
+      "why": "reads the company's Claude Code setup, its headers and the login's email, and sends through the forward's secure connection"
     },
     {
       "from": "usageReport",

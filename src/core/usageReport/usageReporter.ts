@@ -1,6 +1,8 @@
+import type { Agent } from "node:http";
 import type { FmEvent } from "@shared/events";
 import { isProgressTool } from "@shared/events";
 import type { UsageWorkKind } from "@shared/usage";
+import { type CertificateFiles, collectorAgent, postOtlpHttp } from "../claude/claudeReporting";
 import type { UsageRow } from "../storage/usageStore";
 import {
   callSpan,
@@ -27,6 +29,12 @@ export type UsageReportDestination = {
   format: UsageReportFormat;
   /** Full OTLP/HTTP URL per signal; a signal without one is not sent there. */
   endpoints: Partial<Record<OtlpSignal, string>>;
+  /**
+   * The certificate files a secure signal is sent with, as Claude's client
+   * sends its own reports; a secure signal without them is checked against
+   * the computer's trusted list.
+   */
+  certificates?: Partial<Record<OtlpSignal, CertificateFiles>>;
   /** Asked per batch; values often hold a token, so they are never logged. */
   headers(signal: OtlpSignal): Promise<Record<string, string>>;
   /** The destination's own resource attributes, such as which team. */
@@ -79,6 +87,12 @@ export class UsageReporter {
   private batchSince: number;
   private readonly turns = new Map<string, Turn>();
   private timer: ReturnType<typeof setTimeout> | undefined;
+  /**
+   * Each destination signal's kept connections, made again when its address
+   * or certificate files change, so a file is read, and a file that cannot
+   * be read is logged, once per setup rather than per batch.
+   */
+  private readonly connections = new Map<string, { made: string; agent: Agent }>();
 
   constructor(private readonly options: UsageReporterOptions) {
     this.batchSince = Date.now();
@@ -280,18 +294,43 @@ export class UsageReporter {
     const url = destination.endpoints[signal];
     if (!url) return;
     try {
-      const status = await postOtlpJson(url, await destination.headers(signal), body);
-      if (status < 200 || status >= 300) {
+      const answer = await postOtlpHttp(
+        url,
+        this.connection(destination, signal, url),
+        Buffer.from(JSON.stringify(body)),
+        "application/json",
+        await destination.headers(signal),
+        POST_TIMEOUT_MS,
+      );
+      if (answer.failure === "refused")
         console.warn(
-          `[usage report] ${hostOf(url)} refused a ${signal} batch (HTTP ${status}); dropped`,
+          `[usage report] ${hostOf(url)} refused a ${signal} batch (HTTP ${answer.status}); dropped`,
         );
-      }
+      else if (answer.failure)
+        console.warn(
+          `[usage report] ${hostOf(url)} unreachable for a ${signal} batch (${answer.failure}); dropped`,
+        );
     } catch (caught) {
       const reason = caught instanceof Error ? caught.name : "error";
       console.warn(
         `[usage report] ${hostOf(url)} unreachable for a ${signal} batch (${reason}); dropped`,
       );
     }
+  }
+
+  private connection(destination: UsageReportDestination, signal: OtlpSignal, url: string): Agent {
+    const files = destination.certificates?.[signal];
+    const made = JSON.stringify([url, files ?? null]);
+    const id = `${destination.id} ${signal}`;
+    const held = this.connections.get(id);
+    if (held?.made === made) return held.agent;
+    held?.agent.destroy();
+    // A relative certificate path resolves against the folder the app runs in.
+    const agent = collectorAgent(url, files, process.cwd(), (line) =>
+      console.warn(`[usage report] ${hostOf(url)}: ${line}`),
+    );
+    this.connections.set(id, { made, agent });
+    return agent;
   }
 }
 
@@ -301,21 +340,4 @@ function hostOf(url: string): string {
   } catch {
     return "unreadable";
   }
-}
-
-/** One OTLP/HTTP JSON export; answers the HTTP status. Redirects are refused, never followed. */
-export async function postOtlpJson(
-  url: string,
-  headers: Record<string, string>,
-  body: unknown,
-): Promise<number> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { ...headers, "content-type": "application/json" },
-    body: JSON.stringify(body),
-    redirect: "error",
-    signal: AbortSignal.timeout(POST_TIMEOUT_MS),
-  });
-  await response.body?.cancel();
-  return response.status;
 }

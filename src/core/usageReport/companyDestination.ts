@@ -43,10 +43,9 @@ export type CompanyDestinationDeps = {
  * and every other provider's calls go there too. Otherwise the person's own
  * setup, unless the receiver steps aside (`receiverStepsAside`), the rule
  * Settings → Usage names its host by.
- * A signal the setup sends over gRPC takes no JSON request, and the report's
- * requests carry none of the certificate files a signal may name, so either
- * is left out; Claude's own records still reach it through the receiver or
- * Claude's own client, which carry them.
+ * A signal the setup sends over gRPC takes no JSON request, so it is left
+ * out; Claude's own records still reach it through the receiver or Claude's
+ * own client. A signal's certificate files go with its requests.
  * The line warns while the person's own setup keeps refusing the receiver's
  * forward (`lastingRefusal`); a managed collector's answers reach only
  * Claude's client, so it carries no refusal.
@@ -95,7 +94,7 @@ export function companyDestination(deps: CompanyDestinationDeps): {
      * Settings → Usage's line: where the report sends every other model's
      * work, or else where only Claude's own records go: a managed setup's
      * client, or the receiver for the person's own, reports Claude's work to
-     * a setup the report cannot send to over gRPC or with certificate files.
+     * a setup the report cannot send to over gRPC.
      */
     async reporting() {
       await refresh();
@@ -117,9 +116,12 @@ function toDestination(
   email: string | undefined,
 ): UsageReportDestination[] {
   const endpoints: UsageReportDestination["endpoints"] = {};
+  const certificates: NonNullable<UsageReportDestination["certificates"]> = {};
   for (const signal of ["logs", "metrics"] as const) {
     const found = setup.signals[signal];
-    if (found && found.protocol !== "grpc" && !found.tls) endpoints[signal] = found.endpoint;
+    if (!found || found.protocol === "grpc") continue;
+    endpoints[signal] = found.endpoint;
+    if (found.tls) certificates[signal] = found.tls;
   }
   if (!endpoints.logs && !endpoints.metrics) return [];
   const serviceName = setup.clientEnv.OTEL_SERVICE_NAME?.trim();
@@ -128,6 +130,7 @@ function toDestination(
       id: "company-claude-code",
       format: "claude-code",
       endpoints,
+      ...(Object.keys(certificates).length > 0 ? { certificates } : {}),
       headers: (signal) =>
         signal === "traces" ? Promise.resolve({}) : companyHeaders(setup, signal, env()),
       // OTLP's resource attribute list has the header list's shape.

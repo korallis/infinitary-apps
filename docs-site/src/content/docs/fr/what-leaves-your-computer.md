@@ -1,5 +1,5 @@
 ---
-source: 4e862d71de30e0c9
+source: 6bc810f8c25a2b9e
 title: Ce qui quitte votre ordinateur
 description: Ce qu’envoie Infinitary, où cela va, et le seul interrupteur qui nous envoie quoi que ce soit.
 ---
@@ -49,7 +49,7 @@ Le travail de tout autre modèle part sous les mêmes noms, avec son modèle, so
 Réglages → **Utilisation** indique où il va.
 Si cet endroit continue de refuser le travail de Claude, ou s’il est impossible de le joindre, cette ligne le dit à la place.
 Une configuration que l’administrateur de votre entreprise gère pour tout l’ordinateur atteint Claude Code directement, comme avant, et Infinitary y envoie aussi le travail de tout autre modèle, de la même façon.
-Les deux sortes de configuration ne reçoivent que le travail de Claude si elles envoient leur utilisation par gRPC ou avec des fichiers de certificat, et Réglages → **Utilisation** le précise alors.
+Les deux sortes de configuration ne reçoivent que le travail de Claude si elles envoient leur utilisation par gRPC, et Réglages → **Utilisation** le précise alors.
 
 ## Les recherches de mises à jour {#update-checks}
 

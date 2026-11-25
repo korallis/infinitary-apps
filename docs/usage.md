@@ -99,17 +99,19 @@ Every other provider's work reaches the same collector, and a managed setup's, i
   A secure collector is checked as Claude's client checks it: against the file `OTEL_EXPORTER_OTLP_CERTIFICATE` names, which replaces every other authority, or else against Node's own list with any `NODE_EXTRA_CA_CERTS` and the computer's trusted certificates as Node read them when the app started, less those past their end date.
   `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE` and `OTEL_EXPORTER_OTLP_CLIENT_KEY` are sent as a pair, over OTLP/HTTP and gRPC alike; each key's signal form (`OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE`) wins over the general one, an empty one reads as unset, and a path resolves against the folder the client runs in.
   A file that cannot be read, or a pair that does not fit, is left out with a log line, as the client leaves it out with a warning.
+  The usage report's posts to the same collector go the same way (`docs/usage-report.md`, "Sending"), so every other provider's work reaches it too.
   A gRPC address with no scheme (`collector.example.com:4317`) is secure unless the setup's `OTEL_EXPORTER_OTLP_INSECURE` is `true`, as in Claude's gRPC exporter.
 - **A managed setup.**
   An administrator's managed setup reaches Claude's client directly and cannot be overridden; there the receiver stays off as before and Infinitary passes nothing on, so nothing is counted twice.
 - **What a person sees.**
-  Usage shows one line naming where usage is reported (`usage.reporting`, `companyDestination`'s `reporting`): the host the usage report sends every model's work to, an administrator's managed setup included, or else, marked Claude work only, the host of a setup it cannot send to, such as one over gRPC or with certificate files, where Claude's own client or the receiver still reports Claude's records; each computer that runs work follows its own setup for Claude work, which the line says.
+  Usage shows one line naming where usage is reported (`usage.reporting`, `companyDestination`'s `reporting`): the host the usage report sends every model's work to, an administrator's managed setup included, or else, marked Claude work only, the host of a setup it cannot send to, such as one over gRPC, where Claude's own client or the receiver still reports Claude's records; each computer that runs work follows its own setup for Claude work, which the line says.
   When a collector of the person's setup keeps failing, its first and latest failure a minute or more apart with no batch taken between them (`REFUSAL_LASTS_MS`, past one batch's retries within the client's ten-second export limit), the line turns to a warning that Claude work is not reaching it and why: it could not be reached, the connection could not be made secure (an untrusted certificate, or a client certificate it turned away or missed), or it answered with a refusal.
   One failed batch followed by no more work stays quiet, and the next batch the collector takes brings the line back (`lastingRefusal`).
   A managed collector's answers reach only Claude's client, so its line never warns.
 
 `claudeReporting.integration.test.ts` holds this on the client the product would run, boxed, with stand-in collectors over OTLP/HTTP JSON, protobuf and gRPC and a header command: the collector gets the client's own batches byte for byte, the token and cost counters among them, the person's resource attributes on logs and metrics, prompts only where the person's `OTEL_LOG_USER_PROMPTS` asks, and a managed setup leaves the collector empty.
 Collectors on a certificate authority of their own, over OTLP/HTTP and gRPC, take only the setup's client certificate and get every priced call; one the computer's trusted list vouches for is reached with no certificate key, and an untrusted one is named as not connecting securely.
+`usageReporter.integration.test.ts` holds the same for the usage report: a Codex call reaches a collector that takes only the setup's client certificate, and one the computer's trusted list vouches for, while an untrusted one drops the batch with a log line saying the connection could not be made secure.
 
 ## Daily totals
 

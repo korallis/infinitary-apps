@@ -28,6 +28,12 @@ import { type ClaudeReportForward, hasClaudeReporting } from "./claudeCostReport
 export type ReportingSignal = "logs" | "metrics";
 export type ReportingProtocol = "http/json" | "http/protobuf" | "grpc";
 
+/**
+ * A setup's certificate files for a secure collector, as paths: its own
+ * certificate authority, and a client certificate with its key.
+ */
+export type CertificateFiles = { ca?: string; cert?: string; key?: string };
+
 /** Where one signal goes, in the protocol the setup asks for. */
 export type CompanyDestination = {
   /** The full per-signal address for OTLP over HTTP; the collector's origin for gRPC. */
@@ -36,11 +42,7 @@ export type CompanyDestination = {
   /** The setup's static headers. Values often hold a company token: never logged. */
   headers: Record<string, string>;
   timeoutMs: number;
-  /**
-   * The setup's certificate files for a secure collector, as paths: its own
-   * certificate authority, and a client certificate with its key.
-   */
-  tls?: { ca?: string; cert?: string; key?: string };
+  tls?: CertificateFiles;
 };
 
 export type ClaudeCompanyReporting = {
@@ -427,10 +429,10 @@ export function useSystemRootsForTests(read?: () => readonly string[]): void {
  * computer's trusted list, or else that list, and the client certificate
  * only with its key. A file that cannot be read, or a pair that does not
  * fit, is left out with a log line, as the client leaves it out with a
- * warning. Paths resolve against the folder the client runs in.
+ * warning. Relative paths resolve against `cwd`.
  */
 function secureContextFor(
-  files: NonNullable<CompanyDestination["tls"]> | undefined,
+  files: CertificateFiles | undefined,
   cwd: string,
   note: (line: string) => void,
 ): SecureContext {
@@ -470,23 +472,40 @@ function secureContextFor(
 
 /**
  * How long a kept connection to the collector stays open with nothing to
- * send, which also ends it once its attachment does: a kept connection never
+ * send, which also ends it once its owner does: a kept connection never
  * holds the app open.
  */
 const IDLE_MS = 30_000;
+
+/**
+ * The connections to one OTLP/HTTP address, kept open between batches: over
+ * https, secured with `secureContextFor`'s certificate files and trusted list.
+ * The usage report connects to its collectors this way too, so both reach a
+ * collector that needs certificates alike.
+ */
+export function collectorAgent(
+  endpoint: string,
+  files: CertificateFiles | undefined,
+  cwd: string,
+  note: (line: string) => void,
+): HttpAgent {
+  return new URL(endpoint).protocol === "https:"
+    ? new HttpsAgent({
+        keepAlive: true,
+        timeout: IDLE_MS,
+        secureContext: secureContextFor(files, cwd, note),
+      })
+    : new HttpAgent({ keepAlive: true, timeout: IDLE_MS });
+}
 
 /** One destination's connections: kept open between batches over HTTP, made per batch over gRPC. */
 type Leg = { agent?: HttpAgent; secureContext?: SecureContext };
 
 function legFor(to: CompanyDestination, cwd: string, note: (line: string) => void): Leg {
-  const secure = new URL(to.endpoint).protocol === "https:";
-  const secureContext = secure ? secureContextFor(to.tls, cwd, note) : undefined;
-  if (to.protocol === "grpc") return secureContext ? { secureContext } : {};
-  return {
-    agent: secureContext
-      ? new HttpsAgent({ keepAlive: true, timeout: IDLE_MS, secureContext })
-      : new HttpAgent({ keepAlive: true, timeout: IDLE_MS }),
-  };
+  if (to.protocol !== "grpc") return { agent: collectorAgent(to.endpoint, to.tls, cwd, note) };
+  return new URL(to.endpoint).protocol === "https:"
+    ? { secureContext: secureContextFor(to.tls, cwd, note) }
+    : {};
 }
 
 /**
@@ -504,16 +523,32 @@ function postCompany(
   headers: Record<string, string>,
 ): Promise<ForwardAnswer> {
   if (to.protocol === "grpc") return postGrpc(to, leg, signal, body, headers);
+  return postOtlpHttp(to.endpoint, leg.agent, body, contentType, headers, to.timeoutMs);
+}
+
+/**
+ * One OTLP/HTTP export over `agent`'s connections, answered as the collector
+ * answered it, or as a 503 naming why it was never reached. Redirects are not
+ * followed: the headers may hold a company token.
+ */
+export function postOtlpHttp(
+  endpoint: string,
+  agent: HttpAgent | undefined,
+  body: Buffer,
+  contentType: string,
+  headers: Record<string, string>,
+  timeoutMs: number,
+): Promise<ForwardAnswer> {
   return new Promise((resolve) => {
     const failed = (error: unknown) =>
       resolve({ status: 503, body: Buffer.alloc(0), failure: failureOf(error) });
-    const url = new URL(to.endpoint);
+    const url = new URL(endpoint);
     try {
       const request = (url.protocol === "https:" ? httpsRequest : httpRequest)(
         url,
         {
           method: "POST",
-          ...(leg.agent ? { agent: leg.agent } : {}),
+          ...(agent ? { agent } : {}),
           headers: {
             // Node's fetch names itself so, for a proxy that refuses a request
             // naming nothing; the setup's own User-Agent wins.
@@ -522,7 +557,7 @@ function postCompany(
             "content-type": contentType,
             "content-length": body.length,
           },
-          signal: AbortSignal.timeout(to.timeoutMs),
+          signal: AbortSignal.timeout(timeoutMs),
         },
         (response) => {
           const chunks: Buffer[] = [];

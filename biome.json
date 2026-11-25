@@ -315,6 +315,7 @@
         "!src/core/claude/claudeAccess.integration.test.ts",
         "!src/core/claude/claudeCostReports.integration.test.ts",
         "!src/core/claude/claudeReporting.integration.test.ts",
+        "!src/core/usageReport/usageReporter.integration.test.ts",
         "!src/core/placed/placedClaudeCost.integration.test.ts",
         "!src/core/claude/claudeAttribution.integration.test.ts",
         "!src/core/claude/claudeCommandTimeLimit.integration.test.ts",

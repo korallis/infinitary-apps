@@ -48,7 +48,7 @@ Every other model's work goes under the same names, with its model, provider, to
 Settings → **Usage** names where it goes.
 If that place keeps turning Claude's work away, or cannot be reached, that line says so instead.
 A setup your company's administrator manages for the whole computer reaches Claude Code directly, as it always did, and Infinitary sends every other model's work there too, the same way.
-Either kind of setup gets only Claude's work when it sends its usage over gRPC or with certificate files, and Settings → **Usage** then says so.
+Either kind of setup gets only Claude's work when it sends its usage over gRPC, and Settings → **Usage** then says so.
 
 ## Update checks
 

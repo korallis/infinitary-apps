@@ -533,13 +533,15 @@ describe("the company's Claude Code setup as a destination", () => {
     expect(received).toEqual([]);
   });
 
-  it("sends nothing to a collector that needs a client certificate, which its requests never carry", async () => {
-    const { url, received } = await collector();
+  it("takes the certificate files each signal's setup names, and names every model's work in Usage", async () => {
+    // INF-6710: a collector that needs certificates gets every provider's work, as Claude's own records reach it.
     const needsCertificate = companyReportingFrom({
       CLAUDE_CODE_ENABLE_TELEMETRY: "1",
       OTEL_LOGS_EXPORTER: "otlp",
+      OTEL_METRICS_EXPORTER: "otlp",
       OTEL_EXPORTER_OTLP_PROTOCOL: "http/json",
-      OTEL_EXPORTER_OTLP_ENDPOINT: url.replace("http:", "https:"),
+      OTEL_EXPORTER_OTLP_ENDPOINT: "https://collector.example.com:4318",
+      OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE: "/etc/otel/logs-ca.pem",
       OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/etc/otel/client.pem",
       OTEL_EXPORTER_OTLP_CLIENT_KEY: "/etc/otel/client.key",
     });
@@ -551,13 +553,16 @@ describe("the company's Claude Code setup as a destination", () => {
       email: async () => "dev@example.com",
     });
     await source.refresh();
-    expect(source.destinations()).toEqual([]);
-    const { usage } = home(source.destinations);
-    usage.recordUsage(CODEX_CALL);
-    await usage.usageReporter.flush();
-    expect(received).toEqual([]);
-    // The receiver carries the certificate for Claude's own records.
-    expect(await source.reporting()).toEqual({ host: new URL(url).host, claudeOnly: true });
+    const [destination] = source.destinations();
+    expect(destination?.endpoints).toEqual({
+      logs: "https://collector.example.com:4318/v1/logs",
+      metrics: "https://collector.example.com:4318/v1/metrics",
+    });
+    expect(destination?.certificates).toEqual({
+      logs: { ca: "/etc/otel/logs-ca.pem", cert: "/etc/otel/client.pem", key: "/etc/otel/client.key" },
+      metrics: { cert: "/etc/otel/client.pem", key: "/etc/otel/client.key" },
+    });
+    expect(await source.reporting()).toEqual({ host: "collector.example.com:4318" });
   });
 
   it("sends other providers' calls to a managed setup's collector, which Claude's client reports to", async () => {
