@@ -141,6 +141,93 @@ async function onGitHub(
   };
 }
 
+/**
+ * A reviewed fork pull request on x/y whose story the crew published through
+ * open_change, with the project's saved disclosure set first when given. The
+ * comment stand-in keeps the one comment the story writes and every write.
+ */
+async function publishedForkStory(disclosure?: string) {
+  const at = await onGitHub();
+  if (disclosure !== undefined && at.task.repoId)
+    at.repos.configure(at.task.repoId, { contributorDisclosure: disclosure });
+  at.host.pull = openPull({ title: "Fix typo", headRepo: "contributor/y", headRepoId: 912 });
+  const review = await at.prepare();
+  let comment: { id: number; body: string } | undefined;
+  const writes: string[] = [];
+  const api: ForgeApi = {
+    place: "GitHub",
+    defaultPerPage: 100,
+    route: (method, path) => parseApiRequest(method, path, { owner: "x", name: "y" }),
+    nextPath: () => null,
+    call: async (method, path, body) => {
+      if (method !== "GET") {
+        writes.push(`${method} ${path}`);
+        comment = { id: 41, body: JSON.parse(body ?? "{}").body };
+      }
+      return {
+        status: 200,
+        requestId: null,
+        rateLimit: null,
+        retryAfterSeconds: null,
+        link: null,
+        body: JSON.stringify(method === "GET" ? (comment ? [comment] : []) : comment),
+      };
+    },
+  };
+  Object.assign(at.forge, {
+    api,
+    attachments: {
+      destination: async () => ({
+        host: review.host,
+        projectId: 1,
+        fullName: `${review.owner}/${review.name}`,
+        visibility: "public",
+      }),
+      upload: async () => {
+        throw new Error("The text-only review story has no media to upload.");
+      },
+    },
+  });
+  at.forge.change = null;
+  at.readHead.mockResolvedValue(review.headSha);
+  const draft: ChangePresentationDraft = {
+    title: "fix: correct the typo",
+    base: review.headSha,
+    head: review.headSha,
+    publishable: true,
+    why: ["A word was misspelled."],
+    whatChanged: ["The word is spelled correctly."],
+    before: ["The page showed the typo."],
+    after: ["The page shows the word spelled correctly."],
+    views: [],
+    noPicture: "The change corrects one word.",
+    checked: [{ check: "Source review", result: "The selected version's checks passed." }],
+    verification: [],
+    risk: Object.fromEntries(
+      RISK_DIMENSIONS.map((dimension) => [
+        dimension,
+        { level: "low", why: "This fixture corrects one word." },
+      ]),
+    ) as RiskDeclaration,
+    requiredActions: [],
+    unfinished: [],
+  };
+  const staged = await stageChangePresentation(draft, {
+    taskId: at.task.id,
+    worktree: at.paths,
+    dir: at.paths,
+  });
+  expect(await at.service.publication.preparePresentation(at.task.id, staged)).toContain(
+    "Prepared presentation",
+  );
+  const revision = at.tasks.delivery.changePresentation(at.task.id)?.revisions.at(-1)?.revision;
+  if (revision === undefined) throw new Error("The fork story was not prepared");
+  expect(
+    await at.service.publication.open(at.task.id, { title: draft.title, presentation: revision }),
+  ).toContain("Published the crew's story in a comment");
+  return { at, review, writes, comment: () => comment?.body };
+}
+
 describe("preparing a review of a pull request named by its number", () => {
   it("refuses, storing nothing, a number, project, host or pull request it cannot review", async () => {
     const { service, task, host, reviews, forge } = await onGitHub();
@@ -381,86 +468,8 @@ describe("reviewed contributor changes", () => {
   it.each(["ordinary", "numbered"] as const)(
     "the %s merge that republishes a moved review story keeps the project's disclosure line",
     async (route) => {
-      const at = await onGitHub();
-      at.host.pull = openPull({ title: "Fix typo", headRepo: "contributor/y", headRepoId: 912 });
-      const review = await at.prepare();
-      let comment: { id: number; body: string } | undefined;
-      const writes: string[] = [];
-      const api: ForgeApi = {
-        place: "GitHub",
-        defaultPerPage: 100,
-        route: (method, path) => parseApiRequest(method, path, { owner: "x", name: "y" }),
-        nextPath: () => null,
-        call: async (method, path, body) => {
-          if (method !== "GET") {
-            writes.push(`${method} ${path}`);
-            comment = { id: 41, body: JSON.parse(body ?? "{}").body };
-          }
-          return {
-            status: 200,
-            requestId: null,
-            rateLimit: null,
-            retryAfterSeconds: null,
-            link: null,
-            body: JSON.stringify(method === "GET" ? (comment ? [comment] : []) : comment),
-          };
-        },
-      };
-      Object.assign(at.forge, {
-        api,
-        attachments: {
-          destination: async () => ({
-            host: review.host,
-            projectId: 1,
-            fullName: `${review.owner}/${review.name}`,
-            visibility: "public",
-          }),
-          upload: async () => {
-            throw new Error("The text-only review story has no media to upload.");
-          },
-        },
-      });
-      at.forge.change = null;
-      at.readHead.mockResolvedValue(review.headSha);
-      const draft: ChangePresentationDraft = {
-        title: "fix: correct the typo",
-        base: review.headSha,
-        head: review.headSha,
-        publishable: true,
-        why: ["A word was misspelled."],
-        whatChanged: ["The word is spelled correctly."],
-        before: ["The page showed the typo."],
-        after: ["The page shows the word spelled correctly."],
-        views: [],
-        noPicture: "The change corrects one word.",
-        checked: [{ check: "Source review", result: "The selected version's checks passed." }],
-        verification: [],
-        risk: Object.fromEntries(
-          RISK_DIMENSIONS.map((dimension) => [
-            dimension,
-            { level: "low", why: "This fixture corrects one word." },
-          ]),
-        ) as RiskDeclaration,
-        requiredActions: [],
-        unfinished: [],
-      };
-      const staged = await stageChangePresentation(draft, {
-        taskId: at.task.id,
-        worktree: at.paths,
-        dir: at.paths,
-      });
-      expect(await at.service.publication.preparePresentation(at.task.id, staged)).toContain(
-        "Prepared presentation",
-      );
-      const revision = at.tasks.delivery.changePresentation(at.task.id)?.revisions.at(-1)?.revision;
-      if (revision === undefined) throw new Error("The fork story was not prepared");
-      expect(
-        await at.service.publication.open(at.task.id, {
-          title: draft.title,
-          presentation: revision,
-        }),
-      ).toContain("Published the crew's story in a comment");
-      expect(comment?.body).toContain(DEFAULT_CONTRIBUTOR_DISCLOSURE);
+      const { at, review, comment, writes } = await publishedForkStory();
+      expect(comment()).toContain(DEFAULT_CONTRIBUTOR_DISCLOSURE);
       // The contributor pushes past the published story, and the crew reviews
       // that version: the merge finds the story behind it.
       const MOVED = "c3f7e1d05b9a8f7e6d5c4b3a2918f7e6d5c4b3a2";
@@ -479,9 +488,25 @@ describe("reviewed contributor changes", () => {
         `POST /repos/x/y/issues/${review.number}/comments`,
         "PATCH /repos/x/y/issues/comments/41",
       ]);
-      expect(comment?.body).toContain(DEFAULT_CONTRIBUTOR_DISCLOSURE);
+      expect(comment()).toContain(DEFAULT_CONTRIBUTOR_DISCLOSURE);
     },
   );
+  // The captain's per-project ask: "default disclosure on, but user can
+  // either turn it off or edit the disclosure line". The project's saved
+  // setting decides the line open_change posts.
+  it("a project's own saved line replaces the default in the posted review comment", async () => {
+    const own = "_Reviewed with help from an AI crewmate._";
+    const { comment } = await publishedForkStory(own);
+    expect(comment()).toContain(`<!-- infinitary-story:ab12cd34:start -->\n\n${own}\n\n# `);
+    expect(comment()).not.toContain(DEFAULT_CONTRIBUTOR_DISCLOSURE);
+  });
+  it("a project with the disclosure turned off posts its review comment with no line", async () => {
+    const { comment } = await publishedForkStory("");
+    expect(comment()).toContain(
+      "<!-- infinitary-story:ab12cd34:start -->\n\n# fix: correct the typo",
+    );
+    expect(comment()).not.toContain(DEFAULT_CONTRIBUTOR_DISCLOSURE);
+  });
   // Accepted naming boundary: fork merge paths add no conventional-title wording rule.
   it.each(["ordinary", "numbered"] as const)(
     "the %s fork path accepts the request's unchanged wording",
