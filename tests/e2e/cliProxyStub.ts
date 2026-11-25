@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { createServer, request, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { starterFor } from "./starters";
 
 /**
  * A CLI proxy on this computer, as CLIProxyAPI 8 answers its management
@@ -27,7 +28,10 @@ const MANAGEMENT_KEY = "stub-management-key";
 const CLIENT_KEY = "sk-stub-client";
 
 /** The models the stand-in lists, under the owners the proxy names. */
-export const CLI_PROXY_MODELS = { claude: "claude-opus-5-5", chatgpt: "gpt-5.5" } as const;
+export const CLI_PROXY_MODELS = {
+  claude: starterFor("anthropic-claude", "high"),
+  chatgpt: starterFor("openai-codex", "high"),
+} as const;
 
 function credentials(now: number, claudeUsed: number) {
   const inSeconds = (hours: number) => String(Math.floor((now + hours * 3600_000) / 1000));

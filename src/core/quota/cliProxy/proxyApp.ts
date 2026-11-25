@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { readFile, readlink } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { hostEnv } from "../../hostEnv";
+import { hostPlatformProfile } from "../../platform";
 import { encodedCommand, windowsPowerShell } from "../../storage/ownerOnly";
 
 /**
@@ -222,7 +223,7 @@ export type FindProxyListeners = () => Promise<ProxyListener[]>;
  * process with its address family, and `ps` its program's path.
  */
 export const findProxyListeners: FindProxyListeners = async () => {
-  if (process.platform === "win32") {
+  if (hostPlatformProfile().windows) {
     // i18n-exempt: a PowerShell command, never shown
     const script = `Get-CimInstance Win32_Process -Filter "Name='${PROXY_PROGRAM}.exe'" | ForEach-Object { $p = $_; Get-NetTCPConnection -State Listen -OwningProcess $p.ProcessId -ErrorAction SilentlyContinue | ForEach-Object { "$($p.ExecutablePath)\t$($_.LocalAddress)\t$($_.LocalPort)" } }`;
     const lines = await run(windowsPowerShell(), [
