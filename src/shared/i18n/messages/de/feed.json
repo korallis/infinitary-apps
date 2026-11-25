@@ -68,6 +68,8 @@
   "feedDropped": "Aufgegeben: {sentence}",
   "feedFailed": "Fehlgeschlagen: {problem}",
   "feedFinished": "Abgeschlossen",
+  "feedFirstMateLoginRemoved": "Du hast {label} entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Ab seinem nächsten Zug und nach einem Neustart läuft dein Erster Offizier mit einer anderen Anmeldung.",
+  "feedFirstMateLoginRemovedNoOther": "Du hast {label} entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Dein Erster Offizier braucht eine andere Anmeldung, um zu laufen.",
   "feedFirstMateProblem": "Erster Offizier · Problem: {problem}",
   "feedFirstMateSaid": "Erster Offizier: {text}",
   "feedFirstMateSet": "Erster Offizier · {text}",

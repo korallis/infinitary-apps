@@ -76,6 +76,8 @@
   "feedDropped": "أُسقطت: {sentence}",
   "feedFailed": "فشل: {problem}",
   "feedFinished": "انتهت",
+  "feedFirstMateLoginRemoved": "أزلت {label}، وهو تسجيل دخول Claude الذي كان نائب القبطان يعمل عليه. من دوره التالي، وبعد إعادة التشغيل، يعمل نائب القبطان على تسجيل دخول آخر.",
+  "feedFirstMateLoginRemovedNoOther": "أزلت {label}، وهو تسجيل دخول Claude الذي كان نائب القبطان يعمل عليه. يحتاج نائب القبطان إلى تسجيل دخول آخر ليعمل.",
   "feedFirstMateProblem": "نائب القبطان · مشكلة: {problem}",
   "feedFirstMateSaid": "نائب القبطان: {text}",
   "feedFirstMateSet": "نائب القبطان · {text}",

@@ -1130,6 +1130,8 @@
 "feedDropped" = "Écartée : %1$@";
 "feedFailed" = "Échec : %1$@";
 "feedFinished" = "Terminée";
+"feedFirstMateLoginRemoved" = "Vous avez retiré %1$@, la connexion Claude qu’utilisait votre second. Dès son prochain tour, et après un redémarrage, votre second fonctionne avec une autre connexion.";
+"feedFirstMateLoginRemovedNoOther" = "Vous avez retiré %1$@, la connexion Claude qu’utilisait votre second. Votre second a besoin d’une autre connexion pour fonctionner.";
 "feedFirstMateProblem" = "Second · problème : %1$@";
 "feedFirstMateSaid" = "Second : %1$@";
 "feedFirstMateSet" = "Second · %1$@";

@@ -1223,6 +1223,8 @@
   {"said":{"m":"feedDropped","a":{"sentence":"‹sentence›"}},"words":"Dropped: ‹sentence›"},
   {"said":{"m":"feedFailed","a":{"problem":"‹problem›"}},"words":"Failed: ‹problem›"},
   {"said":{"m":"feedFinished"},"words":"Finished"},
+  {"said":{"m":"feedFirstMateLoginRemoved","a":{"label":"‹label›"}},"words":"You removed ‹label›, the Claude login your first mate was running on. From its next turn, and after a restart, your first mate runs on another login."},
+  {"said":{"m":"feedFirstMateLoginRemovedNoOther","a":{"label":"‹label›"}},"words":"You removed ‹label›, the Claude login your first mate was running on. Your first mate needs another login to run."},
   {"said":{"m":"feedFirstMateProblem","a":{"problem":"‹problem›"}},"words":"First mate · problem: ‹problem›"},
   {"said":{"m":"feedFirstMateSaid","a":{"text":"‹text›"}},"words":"First mate: ‹text›"},
   {"said":{"m":"feedFirstMateSet","a":{"text":"‹text›"}},"words":"First mate · ‹text›"},

@@ -20,6 +20,8 @@ import { CLAUDE_MODEL_PROVIDER } from "../claude/claudeQueryCore";
 import { readClaudeStore } from "../claude/claudeQuota";
 import { acquireSessionLease, resetStoreLeasesForTest } from "../claude/claudeStoreLease";
 import { claudeLoginDirs, createClaudeSessionFactory } from "../claude/session";
+import type { CoreServices } from "../coreServices";
+import { accountHandlers } from "../dispatcher/accountHandlers";
 import { absentKeychain } from "../host";
 import { createAccountStore } from "../models/accountStore";
 import { claudeListReader } from "../models/clientLists";
@@ -626,6 +628,47 @@ describe("further Claude logins", () => {
     const onFirst = await seatOn(first.id);
     expect(onFirst.binding).toMatchObject({ backend: "claude", accountId: first.id });
     expect(onFirst.env.CLAUDE_CONFIG_DIR).toBe(undefined);
+  });
+
+  // The captain's choice on the review: removing the Claude login the first
+  // mate runs on says so then, before any restart moves the seat.
+  it("says at removal that the first mate moves when its Claude login is removed, and nothing for any other login", async () => {
+    const run = boot(home);
+    const first = await run.add();
+    const second = await run.add();
+    const third = await run.add();
+    const notes: string[] = [];
+    let seatedOn: string | undefined = second.id;
+    const handlers = accountHandlers(
+      {
+        vault: run.vault,
+        settings: run.settings,
+        firstmate: { boundAccount: () => seatedOn },
+        servedModels: { forget: () => {} },
+        firstRun: { reconcile: () => {} },
+        broadcastEvent: (event: { type: string; text?: string }) => {
+          if (event.type === "firstmate_note" && event.text) notes.push(event.text);
+        },
+      } as unknown as CoreServices,
+      () => {},
+    );
+
+    await handlers["inf:accounts:remove"](third.id, undefined);
+    expect(notes, "the first mate was not on that login").toEqual([]);
+
+    await handlers["inf:accounts:remove"](second.id, undefined);
+    expect(notes).toEqual([
+      `You removed ${second.label}, the Claude login your first mate was running on. From its next turn, and after a restart, your first mate runs on another login.`,
+    ]);
+
+    // Chosen for the first mate in Settings, though no session is open on it.
+    seatedOn = undefined;
+    run.settings.setFirstmateAccount(first.id);
+    await handlers["inf:accounts:remove"](first.id, undefined);
+    expect(notes[1]).toBe(
+      `You removed ${first.label}, the Claude login your first mate was running on. Your first mate needs another login to run.`,
+    );
+    expect(run.vault.list()).toEqual([]);
   });
 
   // Plan item 6: the first mate's seat accepts both bindings.

@@ -70,6 +70,8 @@
   "feedDropped": "Abandonada: {sentence}",
   "feedFailed": "Falló: {problem}",
   "feedFinished": "Terminada",
+  "feedFirstMateLoginRemoved": "Quitaste {label}, el inicio de sesión de Claude que usaba tu primer oficial. Desde su próximo turno, y después de reiniciar, tu primer oficial funciona con otro inicio de sesión.",
+  "feedFirstMateLoginRemovedNoOther": "Quitaste {label}, el inicio de sesión de Claude que usaba tu primer oficial. Tu primer oficial necesita otro inicio de sesión para funcionar.",
   "feedFirstMateProblem": "Primer oficial · problema: {problem}",
   "feedFirstMateSaid": "Primer oficial: {text}",
   "feedFirstMateSet": "Primer oficial · {text}",

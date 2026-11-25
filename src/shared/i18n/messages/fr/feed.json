@@ -70,6 +70,8 @@
   "feedDropped": "Écartée : {sentence}",
   "feedFailed": "Échec : {problem}",
   "feedFinished": "Terminée",
+  "feedFirstMateLoginRemoved": "Vous avez retiré {label}, la connexion Claude qu’utilisait votre second. Dès son prochain tour, et après un redémarrage, votre second fonctionne avec une autre connexion.",
+  "feedFirstMateLoginRemovedNoOther": "Vous avez retiré {label}, la connexion Claude qu’utilisait votre second. Votre second a besoin d’une autre connexion pour fonctionner.",
   "feedFirstMateProblem": "Second · problème : {problem}",
   "feedFirstMateSaid": "Second : {text}",
   "feedFirstMateSet": "Second · {text}",

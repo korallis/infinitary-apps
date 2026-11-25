@@ -1130,6 +1130,8 @@
 "feedDropped" = "중단함: %1$@";
 "feedFailed" = "실패: %1$@";
 "feedFinished" = "끝남";
+"feedFirstMateLoginRemoved" = "일등항해사가 쓰던 Claude 로그인(%1$@)을 제거했어요. 다음 차례부터, 그리고 다시 시작한 뒤에도 일등항해사는 다른 로그인으로 실행돼요.";
+"feedFirstMateLoginRemovedNoOther" = "일등항해사가 쓰던 Claude 로그인(%1$@)을 제거했어요. 일등항해사가 실행되려면 다른 로그인이 필요해요.";
 "feedFirstMateProblem" = "일등항해사 · 문제: %1$@";
 "feedFirstMateSaid" = "일등항해사: %1$@";
 "feedFirstMateSet" = "일등항해사 · %1$@";

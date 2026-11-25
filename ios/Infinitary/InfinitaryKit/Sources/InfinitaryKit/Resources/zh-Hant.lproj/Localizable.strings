@@ -1130,6 +1130,8 @@
 "feedDropped" = "已放棄：%1$@";
 "feedFailed" = "失敗：%1$@";
 "feedFinished" = "已完成";
+"feedFirstMateLoginRemoved" = "你移除了 %1$@，也就是你的大副一直在用的 Claude 登入。從下一輪開始，以及重新啟動之後，你的大副會改用另一個登入執行。";
+"feedFirstMateLoginRemovedNoOther" = "你移除了 %1$@，也就是你的大副一直在用的 Claude 登入。你的大副需要另一個登入才能執行。";
 "feedFirstMateProblem" = "大副 · 問題：%1$@";
 "feedFirstMateSaid" = "大副：%1$@";
 "feedFirstMateSet" = "大副 · %1$@";

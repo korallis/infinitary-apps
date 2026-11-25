@@ -1130,6 +1130,8 @@
 "feedDropped" = "Abandonada: %1$@";
 "feedFailed" = "Falló: %1$@";
 "feedFinished" = "Terminada";
+"feedFirstMateLoginRemoved" = "Quitaste %1$@, el inicio de sesión de Claude que usaba tu primer oficial. Desde su próximo turno, y después de reiniciar, tu primer oficial funciona con otro inicio de sesión.";
+"feedFirstMateLoginRemovedNoOther" = "Quitaste %1$@, el inicio de sesión de Claude que usaba tu primer oficial. Tu primer oficial necesita otro inicio de sesión para funcionar.";
 "feedFirstMateProblem" = "Primer oficial · problema: %1$@";
 "feedFirstMateSaid" = "Primer oficial: %1$@";
 "feedFirstMateSet" = "Primer oficial · %1$@";

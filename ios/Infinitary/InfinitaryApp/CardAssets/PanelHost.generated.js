@@ -39587,6 +39587,62 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Finished`;
   }
+  function feedFirstMateLoginRemoved(input2) {
+    const label = input2.label;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أزلت ${label}، وهو تسجيل دخول Claude الذي كان نائب القبطان يعمل عليه. من دوره التالي، وبعد إعادة التشغيل، يعمل نائب القبطان على تسجيل دخول آخر.`;
+      case "de":
+        return `Du hast ${label} entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Ab seinem nächsten Zug und nach einem Neustart läuft dein Erster Offizier mit einer anderen Anmeldung.`;
+      case "es":
+        return `Quitaste ${label}, el inicio de sesión de Claude que usaba tu primer oficial. Desde su próximo turno, y después de reiniciar, tu primer oficial funciona con otro inicio de sesión.`;
+      case "fr":
+        return `Vous avez retiré ${label}, la connexion Claude qu’utilisait votre second. Dès son prochain tour, et après un redémarrage, votre second fonctionne avec une autre connexion.`;
+      case "ja":
+        return `一等航海士が使っていた Claude のログイン「${label}」を削除しました。次のターンから、また再起動後も、一等航海士は別のログインで動きます。`;
+      case "ko":
+        return `일등항해사가 쓰던 Claude 로그인(${label})을 제거했어요. 다음 차례부터, 그리고 다시 시작한 뒤에도 일등항해사는 다른 로그인으로 실행돼요.`;
+      case "pt-BR":
+        return `Você removeu ${label}, o login do Claude que seu imediato usava. A partir do próximo turno dele, e depois de reiniciar, seu imediato roda com outro login.`;
+      case "zh-Hans":
+        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登录。从下一轮开始，以及重新启动之后，你的大副会改用另一个登录运行。`;
+      case "zh-Hant":
+        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登入。從下一輪開始，以及重新啟動之後，你的大副會改用另一個登入執行。`;
+      case "en-XA":
+        return `[Ýöû ŕéɱöṽéð ${label}, ţĥé Çļáûðé ļöĝîñ ýöûŕ ƒîŕšţ ɱáţé ŵáš ŕûññîñĝ öñ. Ƒŕöɱ îţš ñéẋţ ţûŕñ, áñð áƒţéŕ á ŕéšţáŕţ, ýöûŕ ƒîŕšţ ɱáţé ŕûñš öñ áñöţĥéŕ ļöĝîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You removed ‬${label}‮, the Claude login your first mate was running on. From its next turn, and after a restart, your first mate runs on another login.‬`;
+    }
+    return `You removed ${label}, the Claude login your first mate was running on. From its next turn, and after a restart, your first mate runs on another login.`;
+  }
+  function feedFirstMateLoginRemovedNoOther(input2) {
+    const label = input2.label;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أزلت ${label}، وهو تسجيل دخول Claude الذي كان نائب القبطان يعمل عليه. يحتاج نائب القبطان إلى تسجيل دخول آخر ليعمل.`;
+      case "de":
+        return `Du hast ${label} entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Dein Erster Offizier braucht eine andere Anmeldung, um zu laufen.`;
+      case "es":
+        return `Quitaste ${label}, el inicio de sesión de Claude que usaba tu primer oficial. Tu primer oficial necesita otro inicio de sesión para funcionar.`;
+      case "fr":
+        return `Vous avez retiré ${label}, la connexion Claude qu’utilisait votre second. Votre second a besoin d’une autre connexion pour fonctionner.`;
+      case "ja":
+        return `一等航海士が使っていた Claude のログイン「${label}」を削除しました。一等航海士が動くには別のログインが必要です。`;
+      case "ko":
+        return `일등항해사가 쓰던 Claude 로그인(${label})을 제거했어요. 일등항해사가 실행되려면 다른 로그인이 필요해요.`;
+      case "pt-BR":
+        return `Você removeu ${label}, o login do Claude que seu imediato usava. Seu imediato precisa de outro login para rodar.`;
+      case "zh-Hans":
+        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登录。你的大副需要另一个登录才能运行。`;
+      case "zh-Hant":
+        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登入。你的大副需要另一個登入才能執行。`;
+      case "en-XA":
+        return `[Ýöû ŕéɱöṽéð ${label}, ţĥé Çļáûðé ļöĝîñ ýöûŕ ƒîŕšţ ɱáţé ŵáš ŕûññîñĝ öñ. Ýöûŕ ƒîŕšţ ɱáţé ñééðš áñöţĥéŕ ļöĝîñ ţö ŕûñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You removed ‬${label}‮, the Claude login your first mate was running on. Your first mate needs another login to run.‬`;
+    }
+    return `You removed ${label}, the Claude login your first mate was running on. Your first mate needs another login to run.`;
+  }
   function feedFirstMateProblem(input2) {
     const problem = input2.problem;
     switch (currentLanguage()) {
@@ -113736,6 +113792,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedDropped,
     feedFailed,
     feedFinished,
+    feedFirstMateLoginRemoved,
+    feedFirstMateLoginRemovedNoOther,
     feedFirstMateProblem,
     feedFirstMateSaid,
     feedFirstMateSet,
@@ -117345,6 +117403,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedDropped": ["sentence"],
     "feedFailed": ["problem"],
     "feedFinished": [],
+    "feedFirstMateLoginRemoved": ["label"],
+    "feedFirstMateLoginRemovedNoOther": ["label"],
     "feedFirstMateProblem": ["problem"],
     "feedFirstMateSaid": ["text"],
     "feedFirstMateSet": ["text"],
