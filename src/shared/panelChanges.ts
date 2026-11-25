@@ -110,6 +110,7 @@ export const PANEL_CHANGES = {
   "custom-connection-file": true,
   "project-batch-answer": true,
   "cost-limit": true,
+  "summary-point": true,
   notifications: true,
   runbook: true,
   "runbook-copy": true,

@@ -65792,7 +65792,7 @@
         "prefixItems": [
           {
             "minItems": 1,
-            "maxItems": 10,
+            "maxItems": 11,
             "type": "array",
             "items": {
               "type": "string",
@@ -65805,6 +65805,7 @@
                 "ambient-music",
                 "notifications",
                 "cost-limit",
+                "summary-point",
                 "personal-resources",
                 "panels-switch"
               ]
@@ -80324,6 +80325,7 @@
                       "custom-connection-file",
                       "project-batch-answer",
                       "cost-limit",
+                      "summary-point",
                       "notifications",
                       "runbook",
                       "runbook-copy",
@@ -80900,6 +80902,7 @@
                       "custom-connection-file",
                       "project-batch-answer",
                       "cost-limit",
+                      "summary-point",
                       "notifications",
                       "runbook",
                       "runbook-copy",
@@ -104362,6 +104365,7 @@
                       "custom-connection-file",
                       "project-batch-answer",
                       "cost-limit",
+                      "summary-point",
                       "notifications",
                       "runbook",
                       "runbook-copy",
@@ -104938,6 +104942,7 @@
                       "custom-connection-file",
                       "project-batch-answer",
                       "cost-limit",
+                      "summary-point",
                       "notifications",
                       "runbook",
                       "runbook-copy",

@@ -6485,6 +6485,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "custom-connection-file": true,
     "project-batch-answer": true,
     "cost-limit": true,
+    "summary-point": true,
     notifications: true,
     runbook: true,
     "runbook-copy": true,
@@ -132396,6 +132397,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     "ambient-music",
     "notifications",
     "cost-limit",
+    "summary-point",
     "personal-resources",
     "panels-switch"
   ];

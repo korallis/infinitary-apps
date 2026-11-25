@@ -95,6 +95,7 @@ A number (150,000, 200,000, 300,000 or 500,000) is a ceiling that wins over pric
 The first mate's seat and a crewmate at home read the setting at every prompt, so a changed point reaches a conversation already open at its next message; a Claude session takes it when it next attaches.
 A crewmate's open on a computer that runs work carries the rule as it stands (`compaction`, `summary-point.md`), and a computer or home without that change keeps the app's own rule.
 The row is a native select, one Tab stop whose arrows and first letters pick a point; it is chosen now and then, so it adds no command (`docs/keyboard.md`, "A new feature"), and the phone shows no such row.
+The first mate changes it when asked through the `summary-point` action line (`src/shared/summaryPointActions.ts`), whose current value is the point and the price steps the row names.
 Pi recomputes its reserve at every prompt boundary: the larger of its existing model budget and `contextWindow` less the lower of the two limits.
 A smaller model keeps its earlier trigger, including the custom connection and local model budgets.
 Pi's own compactor observes usage after a response and compacts when that count exceeds its trigger; this is not a hard per-request input cap.

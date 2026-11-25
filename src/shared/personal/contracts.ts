@@ -903,11 +903,10 @@ export type PanelKnowledgeDirectionRead =
 // --- the app's settings ---------------------------------------------------------
 
 /**
- * The app settings a panel may read through `settings.current`, by their
- * action catalog names, each with the value it delivers. Any other setting
- * is unreadable: the host refuses the read, the panel's console says so, and
- * the listener is never called. That differs from a read the manifest does
- * not declare, which throws at the call.
+ * The app settings a panel may read through `settings.current`, by their action catalog names, each
+ * with the value it delivers. Any other setting is unreadable: the host refuses the read, the panel's
+ * console says so, and the listener is never called. That differs from a read the manifest does not
+ * declare, which throws at the call.
  */
 export type PanelSettingValues = {
   theme: { theme: "dark" | "light" };
@@ -921,6 +920,7 @@ export type PanelSettingValues = {
   notifications: { enabled: boolean };
   /** The app's per-task cost limit, in estimated US dollars, or none. */
   "cost-limit": { limit: { usd: number } | { none: true } };
+  "summary-point": { point: "automatic" | "model" | 150000 | 200000 | 300000 | 500000 };
   "personal-resources": { enabled: boolean };
   /** Whether the captain's own panels are on. */
   "panels-switch": { enabled: boolean };
@@ -1393,8 +1393,7 @@ export type PanelTasks = {
   pin: (taskId: string, pinned: boolean) => Promise<PanelMoveResult>;
 };
 
-/** An app setting a panel may change (`manifest.json` `"actions"`): a line of the app's
- * action catalog, the same one the first mate changes it through. */
+/** An app setting a panel may change (`manifest.json` `"actions"`): a line of the app's action catalog, the same one the first mate changes it through. */
 export type PanelChangeSetting =
   | "account-pause"
   | "account-prefer"
@@ -1448,6 +1447,7 @@ export type PanelChangeSetting =
   | "show-in-dock"
   | "show-whats-new"
   | "start-at-login"
+  | "summary-point"
   | "theme"
   | "update-channel"
   | "update-check"

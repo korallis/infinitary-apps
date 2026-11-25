@@ -17,6 +17,7 @@ export const PANEL_SETTING_NAMES = [
   "ambient-music",
   "notifications",
   "cost-limit",
+  "summary-point",
   "personal-resources",
   "panels-switch",
 ] as const;

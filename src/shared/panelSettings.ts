@@ -12,6 +12,7 @@ import {
   themeValue,
   washValue,
 } from "./settingValues";
+import type { SummaryPointView } from "./summaryPoint";
 
 /**
  * Why an action catalog line has no panel value, so `settings.current`
@@ -52,6 +53,7 @@ const readable = {
   "ambient-music": { value: (c) => ({ ...ambientMusicValue(c), ...ambientPausedValue(c) }) },
   notifications: { value: enabledValue },
   "cost-limit": { value: costLimitValue },
+  "summary-point": { value: (c) => ({ point: (c as SummaryPointView).point }) },
   "personal-resources": { value: enabledValue },
   "panels-switch": { value: panelsSwitchValue },
 } satisfies Record<PanelSettingName, PanelSetting>;

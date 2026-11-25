@@ -77,6 +77,7 @@ import {
 import type { SharingView } from "./sharing";
 import { showLines } from "./showActions";
 import { type DeviceSignIns, signInPlace } from "./signIns";
+import { summaryPointLines } from "./summaryPointActions";
 import { tagLines } from "./tagActions";
 import type { ProjectView } from "./tasks";
 import { signInsUnansweredInEnglish, workSetupWordsInEnglish } from "./workSetupWords";
@@ -1708,6 +1709,7 @@ const actionLines = {
   ...ambientLines,
   ...handoverLines,
   ...showLines,
+  ...summaryPointLines,
   ...settingsActs,
 } as const satisfies Record<string, ActionLine>;
 export type ActionName = keyof typeof actionLines;
