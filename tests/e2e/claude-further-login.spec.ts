@@ -23,6 +23,9 @@ const CLAUDE = "anthropic-claude";
 
 test("Settings adds another Claude login in its own folder and removes it again", async () => {
   const userDataDir = scratchDir("infinitary-e2e-");
+  // The launcher's throwaway home is not the home Windows reads, so the
+  // Claude Code folder is named too: no start reads the computer's own.
+  const homeDir = scratchDir("infinitary-e2e-home-");
   seedAccountStore(userDataDir, CLAUDE, FIRST);
   seedAccountRegistry(userDataDir, [
     {
@@ -37,7 +40,9 @@ test("Settings adds another Claude login in its own folder and removes it again"
   const app = await launchSignedInClaude(FIRST, {
     withMockProvider: true,
     userDataDir,
+    homeDir,
     env: {
+      CLAUDE_CONFIG_DIR: join(homeDir, ".claude"),
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-"), {
         email: "second@example.invalid",
       }),

@@ -282,6 +282,9 @@ export class AccountVault {
     private readonly options: AccountVaultOptions,
   ) {
     this.registry = this.loadRegistry();
+    // An unread registry says nothing of what it holds, so the mark stands.
+    if (!this.registryUnread)
+      options.furtherLoginsHeld?.(this.registry.accounts.some((entry) => entry.ownLogin));
     this.now = options.now ?? Date.now;
     this.pi = options.pi ?? new PiAccountBackend();
     for (const account of this.registry.accounts) {

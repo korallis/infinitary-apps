@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,6 +24,7 @@ import { absentKeychain } from "../host";
 import { createAccountStore } from "../models/accountStore";
 import { claudeListReader } from "../models/clientLists";
 import { Flagship } from "../orchestrator/flagship";
+import { seatSessionSpec } from "../orchestrator/seat";
 import { appPathsFor } from "../paths";
 import { AccountVault } from "../pi/accountVault";
 import type { AuthInteractionBridge } from "../pi/piAuth";
@@ -90,9 +91,12 @@ function boot(home: string) {
     },
   });
   const held: { held: boolean; accounts: number }[] = [];
+  // The vault says what its registry holds once as it opens, before `vault`
+  // is assigned: that first word finds no saved account.
+  let opened: AccountVault | undefined;
   const vault: AccountVault = AccountVault.create(paths, {
     backends: [claude],
-    furtherLoginsHeld: (now) => held.push({ held: now, accounts: vault.list().length }),
+    furtherLoginsHeld: (now) => held.push({ held: now, accounts: opened?.list().length ?? 0 }),
     modelsForAccount: ({ providerId }) =>
       providerId === CLAUDE_PROVIDER_ID ? claudeAvailableModels() : [],
   });
@@ -105,9 +109,11 @@ function boot(home: string) {
     auth: { catalogModels: () => [] } as never,
     broadcast: () => {},
   });
+  opened = vault;
+  const settings = new SettingsStore(db);
   const flagship = new Flagship({
     vault,
-    settings: new SettingsStore(db),
+    settings,
     quota: homeQuota.quota,
     baseRuntime: { kind: "base" } as never,
     decisions: { recordAccount: () => 1 },
@@ -115,8 +121,42 @@ function boot(home: string) {
   const add = () => vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
   const folderOf = (accountId: string) =>
     claudeLoginFolder(join(paths.accountsDir, CLAUDE_PROVIDER_ID, accountId));
-  return { paths, client, storesRead, usageAsks, held, vault, homeQuota, flagship, add, folderOf };
+  return {
+    paths,
+    client,
+    storesRead,
+    usageAsks,
+    held,
+    vault,
+    homeQuota,
+    flagship,
+    settings,
+    add,
+    folderOf,
+  };
 }
+
+/** The app's own account store over `paths`, as a start opens it. */
+function openStore(paths: ReturnType<typeof appPathsFor>, home: string) {
+  return createAccountStore(paths, {
+    backends: [
+      new ClaudeAuthBackend({
+        furtherLogins: true,
+        run: standInClient().run,
+        available: () => true,
+        configDir: () => join(home, ".claude"),
+        readStore: (dir, options) => readClaudeStore(dir, { ...options, keychain: absentKeychain }),
+      }),
+    ],
+    packaged: false,
+    claudeConfigDir: () => join(home, ".claude"),
+    claudeList: { read: async () => [], clientVersion: async () => undefined },
+    rail: "home",
+  }).vault;
+}
+
+const revisionIn = (folder: string) =>
+  JSON.parse(readFileSync(join(folder, "saved-data-format.json"), "utf8")).revision;
 
 describe("further Claude logins", () => {
   let home: string;
@@ -247,24 +287,26 @@ describe("further Claude logins", () => {
       windowId: "five_hour",
       resetsAt,
     });
-    await run.homeQuota.quota.refresh("demand");
+    // Each reading moves the login's own row as it arrives: no pass is
+    // asked, so no other account's sensor is.
+    const asksBefore = run.usageAsks.length;
+    const firstRowBefore = rowOf(first.id);
     expect(rowOf(second.id)?.windows).toMatchObject([
       { id: "five_hour", percentRemaining: 0, resetsAtMs: resetsAt },
     ]);
-
-    // An ordinary reading moves the meter as it arrives, with no pass asked.
     run.homeQuota.recordClaudeRateLimit(second.id, {
       status: "allowed",
       windowId: "seven_day",
       utilization: 0.4,
       resetsAt: START + 100 * HOUR,
     });
-    await vi.waitFor(() =>
-      expect(rowOf(second.id)?.windows).toMatchObject([
-        { id: "five_hour" },
-        { id: "seven_day", percentRemaining: 60 },
-      ]),
-    );
+    expect(rowOf(second.id)?.windows).toMatchObject([
+      { id: "five_hour" },
+      { id: "seven_day", percentRemaining: 60 },
+    ]);
+    await Promise.resolve();
+    expect(run.usageAsks.length, "the usage address was not asked again").toBe(asksBefore);
+    expect(rowOf(first.id), "the first login's row is as it was read").toEqual(firstRowBefore);
 
     vi.setSystemTime(resetsAt + 60_000);
     await run.homeQuota.quota.refresh("demand");
@@ -446,17 +488,19 @@ describe("further Claude logins", () => {
   it("says a further login is held before its record is saved, and that none is left after the last is removed", async () => {
     const run = boot(home);
     const first = await run.add();
-    expect(run.held, "the first login marks nothing").toEqual([]);
+    expect(run.held, "an empty folder and the first login hold none").toEqual([
+      { held: false, accounts: 0 },
+    ]);
     const second = await run.add();
     const third = await run.add();
-    expect(run.held).toEqual([
+    expect(run.held.slice(1)).toEqual([
       { held: true, accounts: 1 },
       { held: true, accounts: 2 },
     ]);
     await run.vault.remove(second.id);
     await run.vault.remove(third.id);
     await run.vault.remove(first.id);
-    expect(run.held.slice(2)).toEqual([
+    expect(run.held.slice(3)).toEqual([
       { held: true, accounts: 2 },
       { held: false, accounts: 1 },
       { held: false, accounts: 0 },
@@ -465,22 +509,7 @@ describe("further Claude logins", () => {
 
   it("marks the saved-data folder as revision 2 while it holds a further login, and as revision 1 again once it is removed", async () => {
     const paths = appPathsFor(scratchDir("claude-further-logins-marked-"));
-    const { vault } = createAccountStore(paths, {
-      backends: [
-        new ClaudeAuthBackend({
-          furtherLogins: true,
-          run: standInClient().run,
-          available: () => true,
-          configDir: () => join(home, ".claude"),
-          readStore: (dir, options) =>
-            readClaudeStore(dir, { ...options, keychain: absentKeychain }),
-        }),
-      ],
-      packaged: false,
-      claudeConfigDir: () => join(home, ".claude"),
-      claudeList: { read: async () => [], clientVersion: async () => undefined },
-      rail: "home",
-    });
+    const vault = openStore(paths, home);
     const marker = join(paths.userData, "saved-data-format.json");
     await vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
     expect(existsSync(marker), "the first login marks nothing").toBe(false);
@@ -488,6 +517,104 @@ describe("further Claude logins", () => {
     expect(JSON.parse(readFileSync(marker, "utf8"))).toEqual({ schemaVersion: 1, revision: 2 });
     await vault.remove(second.id);
     expect(JSON.parse(readFileSync(marker, "utf8"))).toEqual({ schemaVersion: 1, revision: 1 });
+  });
+
+  // The captain's choice on the review, at a start: the marker follows the
+  // account records only when they were read.
+  it("keeps the folder marked at a start that cannot read the account records, and unmarks one whose records hold no further login", async () => {
+    const paths = appPathsFor(scratchDir("claude-further-logins-unread-"));
+    const vault = openStore(paths, home);
+    await vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
+    const second = await vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
+    const registry = join(paths.accountsDir, "registry.json");
+    const saved = readFileSync(registry, "utf8");
+
+    writeFileSync(registry, saved.slice(0, saved.length / 2));
+    expect(openStore(paths, home).list(), "the cut-short records read as none").toEqual([]);
+    expect(revisionIn(paths.userData)).toBe(2);
+
+    writeFileSync(registry, saved);
+    expect(
+      openStore(paths, home)
+        .list()
+        .map((account) => account.id),
+    ).toContain(second.id);
+    expect(revisionIn(paths.userData)).toBe(2);
+
+    // A start that ended after the mark and before the record was saved.
+    const records = JSON.parse(saved) as { accounts: { id: string }[] };
+    records.accounts = records.accounts.filter((account) => account.id !== second.id);
+    writeFileSync(registry, JSON.stringify(records));
+    expect(openStore(paths, home).list()).toHaveLength(1);
+    expect(revisionIn(paths.userData)).toBe(1);
+  });
+
+  // The copy a run from source keeps holds the marker and no account
+  // records, so its marker moves with the folder's.
+  it("marks the copy a run from source kept along with the folder, and makes no copy of its own", async () => {
+    const paths = appPathsFor(scratchDir("claude-further-logins-kept-"));
+    const vault = openStore(paths, home);
+    await vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
+    const kept = join(paths.userData, "before-source-run");
+    const second = await vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
+    expect(existsSync(kept), "no copy is made where none was kept").toBe(false);
+    await vault.remove(second.id);
+
+    mkdirSync(kept, { recursive: true });
+    writeFileSync(join(kept, "firstmate.db"), "");
+    writeFileSync(
+      join(kept, "saved-data-format.json"),
+      `${JSON.stringify({ schemaVersion: 1, revision: 1 })}\n`,
+    );
+    const third = await vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
+    expect(revisionIn(kept), "copied back, it still blocks an older version").toBe(2);
+    expect(revisionIn(paths.userData)).toBe(2);
+    await vault.remove(third.id);
+    expect(revisionIn(kept)).toBe(1);
+    expect(revisionIn(paths.userData)).toBe(1);
+  });
+
+  // Plan item 6 on the real factory: the first mate's own session opens on
+  // the login the seat resolves, through the seat's binding and session spec.
+  it("opens the first mate's session in the folder of the further login it is seated on", async () => {
+    const run = boot(home);
+    const first = await run.add();
+    const second = await run.add();
+    const scripted = scriptedClaudeQuery({
+      onInput: (_message, emit) =>
+        emit({ type: "result", subtype: "success", is_error: false, result: "aye" }),
+    });
+    const factory = createClaudeSessionFactory({
+      ...claudeLoginDirs(run.vault),
+      env: () => ({ PATH: "/usr/bin", HOME: home }),
+      clock: { now: () => Date.now(), register: () => () => {} },
+      checkClient: async () => ({ state: "ready", executable: "/usr/local/bin/claude" }),
+      resolveWorkSettings: async () => ({ effective: {}, provenance: {}, sources: [] }),
+      query: scripted.factory,
+    });
+    const seatOn = async (accountId: string) => {
+      run.settings.setFirstmateAccount(accountId);
+      const binding = await run.flagship.resolveBinding(CLAUDE_MODEL_PROVIDER);
+      const session = await factory.open(
+        seatSessionSpec({
+          paths: run.paths,
+          binding,
+          model: { provider: CLAUDE_MODEL_PROVIDER, id: "claude-haiku-4-5" },
+          tools: [],
+        }),
+      );
+      await session.prompt("Report.");
+      session.dispose();
+      return { binding, env: scripted.harness().options.env ?? {} };
+    };
+
+    const further = await seatOn(second.id);
+    expect(further.binding).toMatchObject({ backend: "claude", accountId: second.id });
+    expect(further.env.CLAUDE_CONFIG_DIR).toBe(run.folderOf(second.id));
+
+    const onFirst = await seatOn(first.id);
+    expect(onFirst.binding).toMatchObject({ backend: "claude", accountId: first.id });
+    expect(onFirst.env.CLAUDE_CONFIG_DIR).toBe(undefined);
   });
 
   // Plan item 6: the first mate's seat accepts both bindings.

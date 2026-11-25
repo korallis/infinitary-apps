@@ -1,6 +1,7 @@
 import {
   type ModelsCatalogView,
   modelsCatalogViewSchema,
+  type QuotaProviderView,
   type QuotaSnapshotView,
   quotaSnapshotViewSchema,
 } from "@shared/quota";
@@ -113,6 +114,28 @@ export class QuotaService {
     const catalog = rebuilt?.success ? rebuilt.data : this.latestCatalog;
     if (catalog) this.latestCatalog = markCredits(catalog, this.latestSnapshot.providers);
     this.options.broadcast(this.latestSnapshot);
+  }
+
+  /**
+   * One account's row as its sessions just reported it (a further Claude
+   * login's pushed reading, docs/quota.md) replaces that account's in the
+   * last snapshot, fetching nothing and asking no other account's sensor.
+   * False, changing nothing, while there is no snapshot to lay it in.
+   */
+  publishProvider(view: QuotaProviderView): boolean {
+    const latest = this.latestSnapshot;
+    if (!latest) return false;
+    const same = (provider: QuotaProviderView) =>
+      provider.provider === view.provider && provider.accountId === view.accountId;
+    this.latestSnapshot = {
+      ...latest,
+      providers: latest.providers.some(same)
+        ? latest.providers.map((provider) => (same(provider) ? view : provider))
+        : [...latest.providers, view],
+    };
+    this.restamp();
+    this.snapshots.record(this.latestSnapshot);
+    return true;
   }
 
   start(): void {

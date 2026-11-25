@@ -14,7 +14,9 @@ The first Claude login marks nothing: a folder that never held a further login s
 
 The way back to an older build is to remove every added Claude login in Settings first.
 Removing the last one marks the folder revision 1 again, and the older build opens it; each removal signs that login out in its folder and deletes the folder, so nothing of it is left for the older build to meet.
-A start also sets the marker from the records it finds, so a start that ended between the mark and the record corrects itself.
+Work saved on a removed login moves to another account at its next resume and says so, in this build or an older one, as work saved on any removed account does (`reselectForResume`, `src/core/routing/accountRouter.ts`); a build from before further logins never runs it on the default login without that notice.
+A start also sets the marker from the account records, so a start that ended between the mark and the record corrects itself; a start that cannot read the records leaves the marker as it is, since unread records may hold a further login.
+The copy a run from source keeps ("A run from source") holds the marker and no account records, so its marker is raised and lowered with the folder's (`markKeptCopyFurtherLogins`, `src/core/storage/sourceRunCopy.ts`): copied back while a further login is held, it still refuses the older build.
 No database migration is involved.
 
 ## Contribution routes
@@ -54,6 +56,7 @@ A build changes how the record is saved when it has a database migration the rec
 A folder with no record yet keeps no copy.
 The copy is made beside its place and moved there whole, so a start that ends partway keeps the older copy and the next start copies again; while a build changes nothing in how the record is saved, no later run from source copies again.
 The run says in its terminal where the copy is and that going back means quitting Infinitary and copying those files back into the folder.
+The copy's marker stays at revision 2 while the folder holds a further Claude login, whose record the copy does not carry ("Further Claude logins").
 A run that cannot keep the copy quits without opening the record.
 A window beside a command's run opens no record of its own and keeps no copy.
 

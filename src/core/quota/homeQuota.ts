@@ -210,6 +210,25 @@ export function startHomeQuota(options: {
       }
     }
   };
+  // The rows of the logins measured only by what their sessions push.
+  const pushedOnlyViews = (now: number, only?: string) =>
+    pushedOnlyProviderViews(
+      vault.list().flatMap((account) => {
+        const entry = quotaEntryForPiProvider(account.providerId);
+        if (!entry?.sensed || !account.enabled || !pushedOnly(vault, account)) return [];
+        if (only !== undefined && account.id !== only) return [];
+        return [
+          {
+            accountId: account.id,
+            accountLabel: account.label,
+            quotaId: entry.quotaId,
+            providerLabel: entry.label,
+          },
+        ];
+      }),
+      (accountId) => pushedQuota.windowsFor(accountId),
+      now,
+    );
   // Dev/e2e can point the quota sensor at fixture files instead of live APIs.
   const fixtureDir = options.standIns.quotaFixtureDir;
   const quotaRefresh: QuotaRefresh = fixtureDir
@@ -330,22 +349,7 @@ export function startHomeQuota(options: {
             (accountId) => pushedQuota.windowsFor(accountId),
             now,
           ),
-          ...pushedOnlyProviderViews(
-            vault.list().flatMap((account) => {
-              const entry = quotaEntryForPiProvider(account.providerId);
-              if (!entry?.sensed || !account.enabled || !pushedOnly(vault, account)) return [];
-              return [
-                {
-                  accountId: account.id,
-                  accountLabel: account.label,
-                  quotaId: entry.quotaId,
-                  providerLabel: entry.label,
-                },
-              ];
-            }),
-            (accountId) => pushedQuota.windowsFor(accountId),
-            now,
-          ),
+          ...pushedOnlyViews(now),
         ],
       });
   const quota = new QuotaService({
@@ -410,18 +414,23 @@ export function startHomeQuota(options: {
       const after = pushedQuota.windowsFor(accountId);
       const creditsAfter = pushedCredits(after, now)?.credits;
       // A further login has no sensor pass: each reading that moves its
-      // window is the only news of it, so it is published as it arrives.
-      const shown = (windows: PushedWindow[]) => {
-        const window = windows.find((entry) => entry.windowId === reading.windowId);
-        return window && [window.status, window.utilization, window.resetsAt].join();
-      };
-      const movedPushedOnly =
-        vault.claudeConfigDir(accountId) !== undefined && shown(before) !== shown(after);
+      // window is the only news of it, so its row alone is published as it
+      // arrives, with no pass over the other accounts' sensors.
+      if (vault.claudeConfigDir(accountId) !== undefined) {
+        const shown = (windows: PushedWindow[]) => {
+          const window = windows.find((entry) => entry.windowId === reading.windowId);
+          return window && [window.status, window.utilization, window.resetsAt].join();
+        };
+        if (shown(before) === shown(after)) return;
+        const [row] = pushedOnlyViews(now, accountId);
+        // Before the first snapshot there is nothing to lay the row in.
+        if (row && !quota.publishProvider(row)) void quota.refresh("pushed");
+        return;
+      }
       // A window that just said no, or just stopped saying it, moves the
       // account's headroom now rather than at the next sensor pass; so does
       // a change in what extra usage can do.
       if (
-        movedPushedOnly ||
         (reading.status === "rejected") !== refusedBefore ||
         creditsBefore?.state !== creditsAfter?.state ||
         Boolean(creditsBefore?.inUse) !== Boolean(creditsAfter?.inUse)

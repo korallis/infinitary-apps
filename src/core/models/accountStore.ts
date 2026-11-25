@@ -5,6 +5,7 @@ import type { AppPaths } from "../paths";
 import { AccountVault, type AccountVaultOptions } from "../pi/accountVault";
 import type { QuotaHttp } from "../quota/http";
 import { markFurtherLoginsFormat } from "../storage/savedDataCompatibility";
+import { markKeptCopyFurtherLogins } from "../storage/sourceRunCopy";
 import { claudeListReader } from "./clientLists";
 import { codexListReader, grokListReader, railVerdict } from "./piAccountLists";
 import { type CatalogAccount, type ServedModel, ServedModels } from "./servedModels";
@@ -69,11 +70,16 @@ export function createAccountStore(
   // board names it before the first allowance read builds the catalog.
   let served: ServedModels | undefined;
   // A folder that holds a further Claude login is marked so a build from
-  // before them refuses it, and unmarked once the last one is removed
+  // before them refuses it, and unmarked once the last one is removed; the
+  // copy a run from source keeps is marked with it, so copying that back
+  // never opens the folder to such a build past a login still held
   // (docs/saved-data-compatibility.md, "Further Claude logins").
   const { userData } = paths;
   const furtherLoginsHeld = userData
-    ? (held: boolean) => markFurtherLoginsFormat(userData, held)
+    ? (held: boolean) => {
+        markFurtherLoginsFormat(userData, held);
+        markKeptCopyFurtherLogins(userData, held);
+      }
     : undefined;
   const vault = AccountVault.create(paths, {
     ...vaultOptions,
@@ -98,8 +104,6 @@ export function createAccountStore(
           },
         }),
   });
-  // A start that ended between the mark and the record leaves the two apart.
-  furtherLoginsHeld?.(vault.list().some((account) => account.ownLogin));
   // The Pi filters honour Pi's own offline switch (e2e sets it) and take
   // a dev/e2e endpoint the way the quota meters do; a packaged app never
   // reads the override.

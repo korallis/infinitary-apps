@@ -91,7 +91,7 @@ Its row holds only the plan windows its own sessions push (`pushedOnlyProviderVi
 - a refused window reads empty until its reset;
 - a reading whose reset has passed reads as refilled, with no reset time, until a session pushes the next one.
 
-Each pushed reading that moves a window is published as it arrives (`recordClaudeRateLimit`), since no sensor pass would bring it.
+Each pushed reading that moves a window is published as it arrives (`recordClaudeRateLimit`), since no sensor pass would bring it: the login's row alone replaces its last one in the snapshot (`QuotaService.publishProvider`), which asks no account's sensor and waits for none.
 The credential resolver refuses such an account before any store read, so the rule does not rest on the sensor's list alone.
 
 ## Typed cut-offs
