@@ -86,7 +86,9 @@ export function accountHandlers(services: CoreServices, emit: CoreEventSink): Ac
           type: "firstmate_note",
           ...firstmateLoginRemovedLine(
             removed.label,
-            services.vault.list().some((account) => account.enabled),
+            // Only another Claude login the seat can stand on now takes it
+            // over unasked; any other account waits for the captain.
+            services.flagship.deriveForProvider(CLAUDE_PROVIDER_ID) !== undefined,
           ),
         });
       return { ok: true as const };

@@ -330,7 +330,7 @@ Each one added beside it is a login of its own (`ownLogin` on its saved record, 
   `claudeListReader` asks the client as the account's login, a further login in its folder under that folder's lease and without the person's gateway settings.
 - **Usage is pushed only** (`docs/quota.md`, "A further Claude login").
 - **Removing it** runs the client's `auth logout` in the folder, holding the folder's lease, and then deletes the folder; a sign-out that fails still deletes it.
-  Removing the Claude login the first mate runs on, the first one or a further one, puts a line in the feed saying the first mate runs on another login from its next turn and after a restart (`firstmateLoginRemovedLine`).
+  Removing the Claude login the first mate runs on, the first one or a further one, puts a line in the feed: the first mate runs on another Claude login from its next turn and after a restart when one can seat it now, and otherwise no other Claude login can run it (`firstmateLoginRemovedLine`).
   The first login's store is never touched.
 - **The first mate may sit on any of them**: `SEAT_BINDINGS.claude` names both bindings.
 

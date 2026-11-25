@@ -1130,8 +1130,8 @@
 "feedDropped" = "Dropped: %1$@";
 "feedFailed" = "Failed: %1$@";
 "feedFinished" = "Finished";
-"feedFirstMateLoginRemoved" = "You removed %1$@, the Claude login your first mate was running on. From its next turn, and after a restart, your first mate runs on another login.";
-"feedFirstMateLoginRemovedNoOther" = "You removed %1$@, the Claude login your first mate was running on. Your first mate needs another login to run.";
+"feedFirstMateLoginRemoved" = "You removed %1$@, the Claude login your first mate was running on. From its next turn, and after a restart, your first mate runs on another Claude login.";
+"feedFirstMateLoginRemovedNoOther" = "You removed %1$@, the Claude login your first mate was running on. No other Claude login can run your first mate now.";
 "feedFirstMateProblem" = "First mate · problem: %1$@";
 "feedFirstMateSaid" = "First mate: %1$@";
 "feedFirstMateSet" = "First mate · %1$@";

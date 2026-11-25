@@ -1130,8 +1130,8 @@
 "feedDropped" = "Aufgegeben: %1$@";
 "feedFailed" = "Fehlgeschlagen: %1$@";
 "feedFinished" = "Abgeschlossen";
-"feedFirstMateLoginRemoved" = "Du hast %1$@ entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Ab seinem nächsten Zug und nach einem Neustart läuft dein Erster Offizier mit einer anderen Anmeldung.";
-"feedFirstMateLoginRemovedNoOther" = "Du hast %1$@ entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Dein Erster Offizier braucht eine andere Anmeldung, um zu laufen.";
+"feedFirstMateLoginRemoved" = "Du hast %1$@ entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Ab seinem nächsten Zug und nach einem Neustart läuft dein Erster Offizier mit einer anderen Claude-Anmeldung.";
+"feedFirstMateLoginRemovedNoOther" = "Du hast %1$@ entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Im Moment kann keine andere Claude-Anmeldung deinen Ersten Offizier ausführen.";
 "feedFirstMateProblem" = "Erster Offizier · Problem: %1$@";
 "feedFirstMateSaid" = "Erster Offizier: %1$@";
 "feedFirstMateSet" = "Erster Offizier · %1$@";

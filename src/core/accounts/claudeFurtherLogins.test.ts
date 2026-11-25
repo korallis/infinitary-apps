@@ -643,6 +643,7 @@ describe("further Claude logins", () => {
       {
         vault: run.vault,
         settings: run.settings,
+        flagship: run.flagship,
         firstmate: { boundAccount: () => seatedOn },
         servedModels: { forget: () => {} },
         firstRun: { reconcile: () => {} },
@@ -658,17 +659,23 @@ describe("further Claude logins", () => {
 
     await handlers["inf:accounts:remove"](second.id, undefined);
     expect(notes).toEqual([
-      `You removed ${second.label}, the Claude login your first mate was running on. From its next turn, and after a restart, your first mate runs on another login.`,
+      `You removed ${second.label}, the Claude login your first mate was running on. From its next turn, and after a restart, your first mate runs on another Claude login.`,
     ]);
 
-    // Chosen for the first mate in Settings, though no session is open on it.
+    // Chosen for the first mate in Settings, though no session is open on
+    // it; the one login left is switched on but signed out, so nothing can
+    // take the first mate over and the line promises no move.
+    const fourth = await run.add();
+    run.client.signedIn.delete(run.folderOf(fourth.id));
+    vi.setSystemTime(START + HOUR);
+    expect((await run.vault.status(fourth.id, { refresh: true })).connected).toBe(false);
+    expect(run.vault.get(fourth.id)?.enabled).toBe(true);
     seatedOn = undefined;
     run.settings.setFirstmateAccount(first.id);
     await handlers["inf:accounts:remove"](first.id, undefined);
     expect(notes[1]).toBe(
-      `You removed ${first.label}, the Claude login your first mate was running on. Your first mate needs another login to run.`,
+      `You removed ${first.label}, the Claude login your first mate was running on. No other Claude login can run your first mate now.`,
     );
-    expect(run.vault.list()).toEqual([]);
   });
 
   // Plan item 6: the first mate's seat accepts both bindings.
