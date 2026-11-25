@@ -173,7 +173,7 @@ export const REVERSE_MIGRATION_66 = `
 `;
 /** Migration 65's live attachment, undone: the `cards` column. */
 export const REVERSE_MIGRATION_65 = "ALTER TABLE cards DROP COLUMN attachment_json;\n";
-/** A project's line saying a crewmate wrote it (docs/forge.md, "Saying a crewmate wrote it"), the newest project column, undone first. */
+/** A project's line saying a crewmate wrote it (docs/forge.md, "Disclosing AI assistance"), the newest project column, undone first. */
 export const REVERSE_PROJECT_CONTRIBUTOR_DISCLOSURE =
   "ALTER TABLE repos DROP COLUMN contributor_disclosure;\n";
 /** A batched project's batch gap (docs/forge.md, "The batch gap"), undone after the later disclosure line. */

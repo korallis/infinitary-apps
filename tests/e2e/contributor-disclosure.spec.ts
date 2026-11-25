@@ -17,7 +17,7 @@ import { focusOn, pressKey } from "./windowKeys";
  * the keyboard like every control.
  *
  * A project on GitHub, served by a disposable GitHub with the app's real
- * sign-in. The captain opens its page by keys, finds Say a crewmate wrote it
+ * sign-in. The captain opens its page by keys, finds Disclose AI assistance
  * on with the default line, writes the project's own line and saves it with
  * Enter, turns it off with Space, then on again, which goes back to the
  * default line. The completion signal is the saved project record

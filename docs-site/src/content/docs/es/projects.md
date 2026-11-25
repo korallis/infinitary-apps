@@ -1,5 +1,5 @@
 ---
-source: d80bcd26e6bed993
+source: 78921eba14c3d91d
 title: Proyectos
 description: Cómo agregar un proyecto a Infinitary, centrar la ventana en uno, elegir cómo se fusionan sus cambios y quitarlo.
 ---
@@ -108,7 +108,7 @@ Desactívalo, y el trabajo que supera las comprobaciones puede fusionarse sin pr
 
 **Cuidado** define con qué minuciosidad se comprueba el trabajo: **Rápido**, **Predeterminado** o **Cuidadoso**.
 
-**Decir que lo escribió un tripulante** está activado en un proyecto cuyos cambios pasan por solicitudes de incorporación de cambios.
+**Indicar la ayuda de IA** está activado en un proyecto cuyos cambios pasan por solicitudes de incorporación de cambios.
 Cuando un tripulante revisa la solicitud de incorporación de cambios de otra persona, el comentario que publica empieza con una línea que dice que lo escribió un tripulante de Infinitary.
 Cambia la línea y pulsa **Guardar**, o desactiva el interruptor para no incluirla.
 

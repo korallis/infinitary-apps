@@ -66,11 +66,11 @@ export const PROJECT_POLICY_WORDS = {
   get checksOff() {
     return m.settingsProjectsRequireChecksOff();
   },
-  /** The Say a crewmate wrote it row's name and its switch's (docs/forge.md, "Saying a crewmate wrote it"). */
+  /** The Disclose AI assistance row's name and its switch's (docs/forge.md, "Disclosing AI assistance"). */
   get disclosureTitle() {
     return m.settingsProjectsDisclosure();
   },
-  /** What the Say a crewmate wrote it row says under its name, on or off. */
+  /** What the Disclose AI assistance row says under its name, on or off. */
   disclosure: (on: boolean) =>
     on ? m.settingsProjectsDisclosureOn() : m.settingsProjectsDisclosureOff(),
   /** The name of the field holding the project's line. */

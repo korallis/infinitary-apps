@@ -10204,110 +10204,110 @@ ${events}` : prompt;
   function settingsProjectsDisclosure() {
     switch (currentLanguage()) {
       case "ar":
-        return `الإفصاح عن أن فرد الطاقم كتبه`;
+        return `الإفصاح عن مساعدة الذكاء الاصطناعي`;
       case "de":
-        return `Sagen, dass ein Crewmitglied es geschrieben hat`;
+        return `KI-Unterstützung offenlegen`;
       case "es":
-        return `Decir que lo escribió un tripulante`;
+        return `Indicar la ayuda de IA`;
       case "fr":
-        return `Dire qu’un équipier l’a écrit`;
+        return `Signaler l’aide de l’IA`;
       case "ja":
-        return `乗組員が書いたことを示す`;
+        return `AI の支援を明示する`;
       case "ko":
-        return `선원이 작성했다고 밝히기`;
+        return `AI 도움 밝히기`;
       case "pt-BR":
-        return `Dizer que um tripulante escreveu`;
+        return `Informar a ajuda de IA`;
       case "zh-Hans":
-        return `说明由船员撰写`;
+        return `说明 AI 协助`;
       case "zh-Hant":
-        return `說明由船員撰寫`;
+        return `說明 AI 協助`;
       case "en-XA":
-        return `[Šáý á çŕéŵɱáţé ŵŕöţé îţ ~~~~~~~~]`;
+        return `[Ðîšçļöšé ÅÎ áššîšţáñçé ~~~~~~~~]`;
       case "ar-XB":
-        return `‮Say a crewmate wrote it‬`;
+        return `‮Disclose AI assistance‬`;
     }
-    return `Say a crewmate wrote it`;
+    return `Disclose AI assistance`;
   }
   function settingsProjectsDisclosureLine() {
     switch (currentLanguage()) {
       case "ar":
-        return `السطر الذي يذكر أن فرد الطاقم كتبه`;
+        return `سطر الإفصاح`;
       case "de":
-        return `Zeile, die sagt, dass ein Crewmitglied es geschrieben hat`;
+        return `Offenlegungszeile`;
       case "es":
-        return `Línea que dice que lo escribió un tripulante`;
+        return `Línea de aviso`;
       case "fr":
-        return `Ligne qui dit qu’un équipier l’a écrit`;
+        return `Ligne de mention`;
       case "ja":
-        return `乗組員が書いたことを示す行`;
+        return `明示する行`;
       case "ko":
-        return `선원이 작성했다고 밝히는 줄`;
+        return `밝히는 줄`;
       case "pt-BR":
-        return `Linha que diz que um tripulante escreveu`;
+        return `Linha de aviso`;
       case "zh-Hans":
-        return `说明由船员撰写的那一行`;
+        return `说明行`;
       case "zh-Hant":
-        return `說明由船員撰寫的那一行`;
+        return `說明行`;
       case "en-XA":
-        return `[Ļîñé ţĥáţ šáýš á çŕéŵɱáţé ŵŕöţé îţ ~~~~~~~~~~~~]`;
+        return `[Ðîšçļöšûŕé ļîñé ~~~~~]`;
       case "ar-XB":
-        return `‮Line that says a crewmate wrote it‬`;
+        return `‮Disclosure line‬`;
     }
-    return `Line that says a crewmate wrote it`;
+    return `Disclosure line`;
   }
   function settingsProjectsDisclosureOff() {
     switch (currentLanguage()) {
       case "ar":
-        return `ما ينشره الطاقم على طلب سحب شخص آخر لا يذكر أن فرد الطاقم كتبه.`;
+        return `عندما يراجع فرد من الطاقم طلب سحب فتحه شخص آخر في هذا المشروع، لا يذكر تعليقه أن الذكاء الاصطناعي ساعد في كتابته.`;
       case "de":
-        return `Was die Crew zum Pull Request einer anderen Person schreibt, sagt nicht, dass ein Crewmitglied es geschrieben hat.`;
+        return `Wenn ein Crewmitglied einen Pull Request prüft, den eine andere Person in diesem Projekt geöffnet hat, sagt sein Kommentar nicht, dass KI beim Schreiben geholfen hat.`;
       case "es":
-        return `Lo que la tripulación publica en la solicitud de incorporación de cambios de otra persona no dice que lo escribió un tripulante.`;
+        return `Cuando un tripulante revisa una solicitud de incorporación de cambios que otra persona abrió en este proyecto, su comentario no dice que la IA ayudó a escribirlo.`;
       case "fr":
-        return `Ce que l’équipage publie sur la demande de tirage d’une autre personne ne dit pas qu’un équipier l’a écrit.`;
+        return `Quand un équipier relit une demande de tirage qu’une autre personne a ouverte sur ce projet, son commentaire ne dit pas que l’IA a aidé à l’écrire.`;
       case "ja":
-        return `ほかの人のプルリクエストに乗組員が投稿する内容には、乗組員が書いたことを示しません。`;
+        return `ほかの人がこのプロジェクトで開いたプルリクエストを乗組員がレビューしても、そのコメントには AI が書くのを手伝ったことを示しません。`;
       case "ko":
-        return `선원들이 다른 사람의 끌어오기 요청에 올리는 글에는 선원이 작성했다는 말이 없어요.`;
+        return `다른 사람이 이 프로젝트에 연 끌어오기 요청을 선원이 검토해도, 남기는 댓글에 AI가 작성을 도왔다는 말이 없어요.`;
       case "pt-BR":
-        return `O que a tripulação publica na solicitação de pull de outra pessoa não diz que um tripulante escreveu.`;
+        return `Quando um tripulante revisa uma solicitação de pull que outra pessoa abriu neste projeto, o comentário dele não diz que a IA ajudou a escrever.`;
       case "zh-Hans":
-        return `船员们在他人的拉取请求上发布的内容不会说明由船员撰写。`;
+        return `船员审阅他人在此项目中打开的拉取请求时，所发评论不会说明有 AI 协助撰写。`;
       case "zh-Hant":
-        return `船員在他人的 pull request 上發布的內容不會說明由船員撰寫。`;
+        return `船員審閱他人在此專案中開啟的 pull request 時，所發留言不會說明有 AI 協助撰寫。`;
       case "en-XA":
-        return `[Ŵĥáţ ţĥé çŕéŵ þöšţš öñ šöɱéöñé éļšé'š þûļļ ŕéǫûéšţ ðöéš ñöţ šáý á çŕéŵɱáţé ŵŕöţé îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ŵĥéñ á çŕéŵɱáţé ŕéṽîéŵš á þûļļ ŕéǫûéšţ šöɱéöñé éļšé öþéñéð öñ ţĥîš þŕöĵéçţ, îţš çöɱɱéñţ ðöéš ñöţ šáý ÅÎ ĥéļþéð ŵŕîţé îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮What the crew posts on someone else's pull request does not say a crewmate wrote it.‬`;
+        return `‮When a crewmate reviews a pull request someone else opened on this project, its comment does not say AI helped write it.‬`;
     }
-    return `What the crew posts on someone else's pull request does not say a crewmate wrote it.`;
+    return `When a crewmate reviews a pull request someone else opened on this project, its comment does not say AI helped write it.`;
   }
   function settingsProjectsDisclosureOn() {
     switch (currentLanguage()) {
       case "ar":
-        return `ما ينشره الطاقم على طلب سحب شخص آخر يبدأ بهذا السطر.`;
+        return `عندما يراجع فرد من الطاقم طلب سحب فتحه شخص آخر في هذا المشروع، يبدأ تعليقه بهذا السطر.`;
       case "de":
-        return `Was die Crew zum Pull Request einer anderen Person schreibt, beginnt mit dieser Zeile.`;
+        return `Wenn ein Crewmitglied einen Pull Request prüft, den eine andere Person in diesem Projekt geöffnet hat, beginnt sein Kommentar mit dieser Zeile.`;
       case "es":
-        return `Lo que la tripulación publica en la solicitud de incorporación de cambios de otra persona empieza con esta línea.`;
+        return `Cuando un tripulante revisa una solicitud de incorporación de cambios que otra persona abrió en este proyecto, su comentario empieza con esta línea.`;
       case "fr":
-        return `Ce que l’équipage publie sur la demande de tirage d’une autre personne commence par cette ligne.`;
+        return `Quand un équipier relit une demande de tirage qu’une autre personne a ouverte sur ce projet, son commentaire commence par cette ligne.`;
       case "ja":
-        return `ほかの人のプルリクエストに乗組員が投稿する内容は、この行から始まります。`;
+        return `ほかの人がこのプロジェクトで開いたプルリクエストを乗組員がレビューすると、そのコメントはこの行から始まります。`;
       case "ko":
-        return `선원들이 다른 사람의 끌어오기 요청에 올리는 글은 이 줄로 시작해요.`;
+        return `다른 사람이 이 프로젝트에 연 끌어오기 요청을 선원이 검토하면, 남기는 댓글이 이 줄로 시작해요.`;
       case "pt-BR":
-        return `O que a tripulação publica na solicitação de pull de outra pessoa começa com esta linha.`;
+        return `Quando um tripulante revisa uma solicitação de pull que outra pessoa abriu neste projeto, o comentário dele começa com esta linha.`;
       case "zh-Hans":
-        return `船员们在他人的拉取请求上发布的内容以这一行开头。`;
+        return `船员审阅他人在此项目中打开的拉取请求时，所发评论以这一行开头。`;
       case "zh-Hant":
-        return `船員在他人的 pull request 上發布的內容以這一行開頭。`;
+        return `船員審閱他人在此專案中開啟的 pull request 時，所發留言以這一行開頭。`;
       case "en-XA":
-        return `[Ŵĥáţ ţĥé çŕéŵ þöšţš öñ šöɱéöñé éļšé'š þûļļ ŕéǫûéšţ öþéñš ŵîţĥ ţĥîš ļîñé. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ŵĥéñ á çŕéŵɱáţé ŕéṽîéŵš á þûļļ ŕéǫûéšţ šöɱéöñé éļšé öþéñéð öñ ţĥîš þŕöĵéçţ, îţš çöɱɱéñţ öþéñš ŵîţĥ ţĥîš ļîñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮What the crew posts on someone else's pull request opens with this line.‬`;
+        return `‮When a crewmate reviews a pull request someone else opened on this project, its comment opens with this line.‬`;
     }
-    return `What the crew posts on someone else's pull request opens with this line.`;
+    return `When a crewmate reviews a pull request someone else opened on this project, its comment opens with this line.`;
   }
   function settingsProjectsLocalCareful() {
     switch (currentLanguage()) {
@@ -17173,8 +17173,8 @@ ${events}` : prompt;
      */
     batchGap: batchGapSchema.nullable().optional(),
     /**
-     * Settings → Projects' Say a crewmate wrote it (docs/forge.md, "Saying a
-     * crewmate wrote it"): the line that opens what the crew posts to an
+     * Settings → Projects' Disclose AI assistance (docs/forge.md, "Disclosing AI
+     * assistance"): the line that opens what the crew posts to an
      * outside contributor, an empty string to post none, or null for the
      * default line.
      */
@@ -17247,8 +17247,8 @@ ${events}` : prompt;
     batchGap: batchGapSchema.optional(),
     /**
      * The project's own line opening what the crew posts to an outside
-     * contributor, or an empty string for none (docs/forge.md, "Saying a
-     * crewmate wrote it"); absent, the default line.
+     * contributor, or an empty string for none (docs/forge.md, "Disclosing AI
+     * assistance"); absent, the default line.
      */
     contributorDisclosure: contributorDisclosureSchema.optional(),
     /**
@@ -19051,11 +19051,11 @@ ${events}` : prompt;
     get checksOff() {
       return settingsProjectsRequireChecksOff();
     },
-    /** The Say a crewmate wrote it row's name and its switch's (docs/forge.md, "Saying a crewmate wrote it"). */
+    /** The Disclose AI assistance row's name and its switch's (docs/forge.md, "Disclosing AI assistance"). */
     get disclosureTitle() {
       return settingsProjectsDisclosure();
     },
-    /** What the Say a crewmate wrote it row says under its name, on or off. */
+    /** What the Disclose AI assistance row says under its name, on or off. */
     disclosure: (on) => on ? settingsProjectsDisclosureOn() : settingsProjectsDisclosureOff(),
     /** The name of the field holding the project's line. */
     get disclosureLine() {

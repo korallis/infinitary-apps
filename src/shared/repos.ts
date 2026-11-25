@@ -341,8 +341,8 @@ export const repoPolicyPatchSchema = z
      */
     batchGap: batchGapSchema.nullable().optional(),
     /**
-     * Settings → Projects' Say a crewmate wrote it (docs/forge.md, "Saying a
-     * crewmate wrote it"): the line that opens what the crew posts to an
+     * Settings → Projects' Disclose AI assistance (docs/forge.md, "Disclosing AI
+     * assistance"): the line that opens what the crew posts to an
      * outside contributor, an empty string to post none, or null for the
      * default line.
      */
@@ -441,8 +441,8 @@ export const repoViewSchema = z.object({
   batchGap: batchGapSchema.optional(),
   /**
    * The project's own line opening what the crew posts to an outside
-   * contributor, or an empty string for none (docs/forge.md, "Saying a
-   * crewmate wrote it"); absent, the default line.
+   * contributor, or an empty string for none (docs/forge.md, "Disclosing AI
+   * assistance"); absent, the default line.
    */
   contributorDisclosure: contributorDisclosureSchema.optional(),
   /**

@@ -448,7 +448,7 @@ export interface Forge {
   readonly storyInComment?: boolean;
   /**
    * The line that opens a contributor change's story comment, from its
-   * project's setting (docs/forge.md, "Saying a crewmate wrote it");
+   * project's setting (docs/forge.md, "Disclosing AI assistance");
    * undefined posts none.
    */
   readonly storyDisclosure?: string;

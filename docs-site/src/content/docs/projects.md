@@ -107,7 +107,7 @@ Turn it off, and work that passes the checks may merge without asking you.
 
 **Rigor** sets how thoroughly work is checked: **Quick**, **Default** or **Careful**.
 
-**Say a crewmate wrote it** is on for a project whose changes go through pull requests.
+**Disclose AI assistance** is on for a project whose changes go through pull requests.
 When a crewmate reviews someone else's pull request, the comment it posts opens with a line saying an Infinitary crewmate wrote it.
 Change the line and press **Save**, or turn the switch off to leave it out.
 

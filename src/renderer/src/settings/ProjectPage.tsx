@@ -1023,7 +1023,7 @@ function BatchGapPicker({
 }
 
 /**
- * Say a crewmate wrote it (docs/forge.md, "Saying a crewmate wrote it"): the
+ * Disclose AI assistance (docs/forge.md, "Disclosing AI assistance"): the
  * switch turns the line off, or back on with the default line; the field
  * replaces the line with the project's own, saved by its own Save.
  */

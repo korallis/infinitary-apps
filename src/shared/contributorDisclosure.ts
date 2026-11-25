@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * The line that opens what the crew posts to an outside contributor
- * (docs/forge.md, "Saying a crewmate wrote it"), unless the project turns it
+ * (docs/forge.md, "Disclosing AI assistance"), unless the project turns it
  * off or writes its own in Settings → Projects. It is posted where the
  * project lives, in the project's own words, so it is not translated.
  */
