@@ -44,6 +44,26 @@ describe("readProxySettings", () => {
     expect(readProxySettings(tables)?.clientKey).toBe("sk-client-one");
   });
 
+  // The review's finding: a remark is quoted text, so braces, commas or
+  // key-like words inside it never stand in for the key or hide the list.
+  it("reads the key field alone when a remark holds braces or key-like text", () => {
+    const tables = SETTINGS.replace(
+      'api-keys = ["sk-client-one", "sk-client-two"]',
+      'api-keys = [{ remark = "old, key = \\"sk-remark\\" }", key = "sk-client-one" }, { key = "sk-client-two", remark = "{Codex}" }]',
+    );
+    expect(readProxySettings(tables)?.clientKey).toBe("sk-client-one");
+  });
+
+  it("reads no client key when a table in the list has no key", () => {
+    const tables = SETTINGS.replace(
+      'api-keys = ["sk-client-one", "sk-client-two"]',
+      `api-keys = [{ remark = "old, key = 'sk-remark', retired" }, { key = "sk-client-two", remark = "Codex" }]`,
+    );
+    const read = readProxySettings(tables);
+    expect(read?.key).toBe("Mk7q2Vz9Lp4X");
+    expect(read?.clientKey).toBe(undefined);
+  });
+
   it("refuses a proxy set to listen on another computer's address", () => {
     expect(readProxySettings(SETTINGS.replace('host = ""', 'host = "192.168.1.20"'))).toBe(
       undefined,

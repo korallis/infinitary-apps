@@ -93,9 +93,10 @@ const STRING = String.raw`"(?:[^"\\]|\\.)*"|'[^']*'`;
 const SCALAR = new RegExp(String.raw`^(-?\d+|${STRING})\s*(?:#.*)?$`);
 const ARRAY = new RegExp(String.raw`^\[\s*((?:(?:${STRING})\s*,?\s*)*)\]\s*(?:#.*)?$`);
 const ITEM = new RegExp(STRING, "g");
-const TABLE_ARRAY = /^\[\s*((?:\{[^{}]*\}\s*,?\s*)*)\]\s*(?:#.*)?$/;
-const TABLE = /\{([^{}]*)\}/g;
-const TABLE_KEY = new RegExp(String.raw`(?:^|,)\s*key\s*=\s*(${STRING})\s*(?:,|$)`);
+const STRING_AT = new RegExp(`^(?:${STRING})`);
+const BARE_KEY_AT = /^[A-Za-z0-9_-]+/;
+const NUMBER_AT = /^-?\d+/;
+const BOOLEAN_AT = /^(?:true|false)\b/;
 
 function tomlValue(text: string): TomlValue | undefined {
   const scalar = SCALAR.exec(text);
@@ -103,17 +104,7 @@ function tomlValue(text: string): TomlValue | undefined {
     if (/^-?\d+$/.test(scalar[1])) return Number(scalar[1]);
     return tomlString(scalar[1]);
   }
-  const tables = TABLE_ARRAY.exec(text);
-  if (tables?.[1] !== undefined) {
-    const keys: string[] = [];
-    for (const table of tables[1].matchAll(TABLE)) {
-      const key = TABLE_KEY.exec(table[1] ?? "")?.[1];
-      const value = key === undefined ? undefined : tomlString(key);
-      if (value === undefined) return undefined;
-      keys.push(value);
-    }
-    return keys;
-  }
+  if (/^\[\s*\{/.test(text)) return keyTables(text);
   const array = ARRAY.exec(text);
   if (array?.[1] === undefined) return undefined;
   const items: string[] = [];
@@ -123,6 +114,53 @@ function tomlValue(text: string): TomlValue | undefined {
     items.push(value);
   }
   return items;
+}
+
+/**
+ * A one-line array of inline tables, read token by token so that a quoted
+ * value is only ever a value: braces, commas or `key = ` inside a remark are
+ * part of that remark. Each table must hold exactly one `key` string; it reads
+ * as that string. Any other shape reads as nothing.
+ */
+function keyTables(text: string): string[] | undefined {
+  let rest = text.slice(1).trimStart();
+  const keys: string[] = [];
+  while (!rest.startsWith("]")) {
+    if (!rest.startsWith("{")) return undefined;
+    rest = rest.slice(1).trimStart();
+    let key: string | undefined;
+    let fields = 0;
+    while (!rest.startsWith("}")) {
+      if (fields > 0) {
+        if (!rest.startsWith(",")) return undefined;
+        rest = rest.slice(1).trimStart();
+      }
+      const quotedName = STRING_AT.exec(rest)?.[0];
+      const bareName = quotedName === undefined ? BARE_KEY_AT.exec(rest)?.[0] : undefined;
+      const nameToken = quotedName ?? bareName;
+      if (nameToken === undefined) return undefined;
+      const name = quotedName !== undefined ? tomlString(quotedName) : bareName;
+      rest = rest.slice(nameToken.length).trimStart();
+      if (!rest.startsWith("=")) return undefined;
+      rest = rest.slice(1).trimStart();
+      const quoted = STRING_AT.exec(rest)?.[0];
+      const valueToken = quoted ?? NUMBER_AT.exec(rest)?.[0] ?? BOOLEAN_AT.exec(rest)?.[0];
+      if (valueToken === undefined) return undefined;
+      if (name === "key") {
+        const value = quoted === undefined ? undefined : tomlString(quoted);
+        if (value === undefined || key !== undefined) return undefined;
+        key = value;
+      }
+      rest = rest.slice(valueToken.length).trimStart();
+      fields += 1;
+    }
+    if (key === undefined) return undefined;
+    keys.push(key);
+    rest = rest.slice(1).trimStart();
+    if (rest.startsWith(",")) rest = rest.slice(1).trimStart();
+  }
+  rest = rest.slice(1).trimStart();
+  return rest === "" || rest.startsWith("#") ? keys : undefined;
 }
 
 function tomlString(text: string): string | undefined {
