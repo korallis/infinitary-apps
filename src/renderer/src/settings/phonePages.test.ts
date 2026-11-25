@@ -1,6 +1,7 @@
 import type { AccountView } from "@shared/accounts";
 import { automationRuleSchema, automationRunSchema, eventsWords } from "@shared/automation";
 import * as m from "@shared/i18n/messages.generated";
+import { quotaSnapshotViewSchema } from "@shared/quota";
 import { deviceSignInsSchema } from "@shared/signIns";
 import { describe, expect, it } from "vitest";
 import { automationRulePage, intelligencePage } from "./phonePages";
@@ -196,5 +197,91 @@ describe("the phone's page of an event rule that says what it waits for", () => 
       `${WAITS_FOR}. ${m.automationWaitsForNote()}`,
     );
     expect(review?.save).toMatchObject({ enable: true, spec: { waitsFor: WAITS_FOR } });
+  });
+});
+
+/**
+ * The captain's ask: the phone shows a CLI proxy's pooled Claude and ChatGPT
+ * usage as the computer's Settings does (docs/quota.md, "A proxy's pooled
+ * logins"). Fixture: a custom connection to the proxy, with the two pooled
+ * rows the home sends for it, parsed by the published schema.
+ */
+describe("the phone's row of a connection to a proxy's pools", () => {
+  const pooled = (
+    kind: "claude" | "chatgpt",
+    percent: number | undefined,
+    logins: number,
+    credits?: { state: "available"; balance: string },
+  ) => ({
+    provider: "fm-custom-0123456789abcdef",
+    label: kind === "claude" ? "Claude" : "ChatGPT",
+    accountId: "acct_proxy",
+    status: "ok",
+    stale: false,
+    windows:
+      percent === undefined ? [] : [{ id: "weekly", label: "weekly", percentRemaining: percent }],
+    pool: {
+      kind,
+      logins,
+      read: percent === undefined ? 0 : logins,
+      unread: percent === undefined ? logins : 0,
+      spent: 0,
+      switchedOff: 0,
+      signInEnded: 0,
+      signInSoon: 0,
+    },
+    ...(credits ? { credits } : {}),
+  });
+  const rowOf = (rows: ReturnType<typeof pooled>[]) =>
+    intelligencePage({
+      accounts: [account("acct_proxy", "Proxy", { providerId: "fm-custom-0123456789abcdef" })],
+      snapshot: quotaSnapshotViewSchema.parse({
+        generatedAt: new Date(NOW).toISOString(),
+        fetchedAt: NOW,
+        providers: rows,
+      }),
+      providers,
+      devices: [],
+      firstmateAccount: null,
+      home: "Studio",
+      now: NOW,
+    }).groups[0]?.rows[0];
+
+  it("shows each pool's meters under its name, and how its logins stand", () => {
+    const snapshot = quotaSnapshotViewSchema.parse({
+      generatedAt: new Date(NOW).toISOString(),
+      fetchedAt: NOW,
+      providers: [pooled("claude", 40, 3), pooled("chatgpt", 70, 2)],
+    });
+    const { groups } = intelligencePage({
+      accounts: [account("acct_proxy", "Proxy", { providerId: "fm-custom-0123456789abcdef" })],
+      snapshot,
+      providers,
+      devices: [],
+      firstmateAccount: null,
+      home: "Studio",
+      now: NOW,
+    });
+    const row = groups[0]?.rows[0];
+    expect(row?.meters.map((meter) => [meter.label, meter.text])).toEqual([
+      ["Claude weekly", "40%"],
+      ["ChatGPT weekly", "70%"],
+    ]);
+    expect(row?.state?.text).toBe(
+      "Claude: 3 accounts pooled in your proxy app · ChatGPT: 2 accounts pooled in your proxy app",
+    );
+  });
+
+  // The review's finding: with the ChatGPT row first and none of its logins
+  // read yet, each pool still says how it stands, and the ChatGPT pool's
+  // credits are told as on the computer.
+  it("says each pool's standing and its credits whichever pool comes first", () => {
+    const row = rowOf([
+      pooled("chatgpt", undefined, 2, { state: "available", balance: "15.00" }),
+      pooled("claude", 40, 3),
+    ]);
+    expect(row?.state?.text).toBe(
+      "ChatGPT: 2 accounts pooled in your proxy app · 2 not read yet · Credits: 15 left · change it on chatgpt.com · Claude: 3 accounts pooled in your proxy app",
+    );
   });
 });

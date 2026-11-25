@@ -1,5 +1,5 @@
 import type { CutOff } from "@shared/authFailure";
-import type { QuotaSnapshotView, QuotaWindowView } from "@shared/quota";
+import { type QuotaSnapshotView, type QuotaWindowView, quotaRowOf } from "@shared/quota";
 
 /**
  * What a provider's refusal of a spent allowance (xAI's 402, which names no
@@ -19,7 +19,7 @@ export function spentAllowanceOf(
   accountId: string,
   now: number,
 ): SpentAllowance | undefined {
-  const view = snapshot?.providers.find((entry) => entry.accountId === accountId);
+  const view = quotaRowOf(snapshot?.providers, accountId);
   if (!view || view.status !== "ok") return undefined;
   let limiting: QuotaWindowView | undefined;
   for (const window of view.windows) {
@@ -92,7 +92,7 @@ export function sensedLeftOf(
   snapshot: QuotaSnapshotView | null | undefined,
   accountId: string,
 ): number | undefined {
-  const view = snapshot?.providers.find((entry) => entry.accountId === accountId);
+  const view = quotaRowOf(snapshot?.providers, accountId);
   return view?.status === "ok" ? lowestLeft(view.windows) : undefined;
 }
 

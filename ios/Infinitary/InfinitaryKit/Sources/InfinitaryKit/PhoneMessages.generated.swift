@@ -4052,6 +4052,13 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsPaused`() -> String { PhoneWords.format("settingsSubscriptionsPaused", []) }
     public static func `settingsSubscriptionsPersonalResourcesDescription`(`computer`: String, `computers`: String) -> String { PhoneWords.format("settingsSubscriptionsPersonalResourcesDescription", [`computer`, `computers`]) }
     public static func `settingsSubscriptionsPersonalResourcesTitle`() -> String { PhoneWords.format("settingsSubscriptionsPersonalResourcesTitle", []) }
+    public static func `settingsSubscriptionsPoolAccounts`(`count`: Int) -> String { PhoneWords.format("settingsSubscriptionsPoolAccounts", [`count`]) }
+    public static func `settingsSubscriptionsPoolSignInBy`(`count`: Int, `time`: String) -> String { PhoneWords.format("settingsSubscriptionsPoolSignInBy", [`count`, `time`]) }
+    public static func `settingsSubscriptionsPoolSignedOut`(`count`: Int) -> String { PhoneWords.format("settingsSubscriptionsPoolSignedOut", [`count`]) }
+    public static func `settingsSubscriptionsPoolSpent`(`count`: Int, `time`: String) -> String { PhoneWords.format("settingsSubscriptionsPoolSpent", [`count`, `time`]) }
+    public static func `settingsSubscriptionsPoolSwitchedOff`(`count`: Int) -> String { PhoneWords.format("settingsSubscriptionsPoolSwitchedOff", [`count`]) }
+    public static func `settingsSubscriptionsPoolUnread`(`count`: Int) -> String { PhoneWords.format("settingsSubscriptionsPoolUnread", [`count`]) }
+    public static func `settingsSubscriptionsPoolUsage`() -> String { PhoneWords.format("settingsSubscriptionsPoolUsage", []) }
     public static func `settingsSubscriptionsReading`() -> String { PhoneWords.format("settingsSubscriptionsReading", []) }
     public static func `settingsSubscriptionsRefresh`() -> String { PhoneWords.format("settingsSubscriptionsRefresh", []) }
     public static func `settingsSubscriptionsRefreshing`() -> String { PhoneWords.format("settingsSubscriptionsRefreshing", []) }
@@ -8756,6 +8763,13 @@ extension PhoneWords {
         "settingsSubscriptionsPaused": [],
         "settingsSubscriptionsPersonalResourcesDescription": ["computer", "computers"],
         "settingsSubscriptionsPersonalResourcesTitle": [],
+        "settingsSubscriptionsPoolAccounts": ["count"],
+        "settingsSubscriptionsPoolSignInBy": ["count", "time"],
+        "settingsSubscriptionsPoolSignedOut": ["count"],
+        "settingsSubscriptionsPoolSpent": ["count", "time"],
+        "settingsSubscriptionsPoolSwitchedOff": ["count"],
+        "settingsSubscriptionsPoolUnread": ["count"],
+        "settingsSubscriptionsPoolUsage": [],
         "settingsSubscriptionsReading": [],
         "settingsSubscriptionsRefresh": [],
         "settingsSubscriptionsRefreshing": [],
@@ -9563,6 +9577,12 @@ extension PhoneWords {
         "settingsProjectsTagsCheckProgress": "total",
         "settingsProjectsTagsRemoveQuestion": "count",
         "settingsProjectsTagsTasks": "count",
+        "settingsSubscriptionsPoolAccounts": "count",
+        "settingsSubscriptionsPoolSignInBy": "count",
+        "settingsSubscriptionsPoolSignedOut": "count",
+        "settingsSubscriptionsPoolSpent": "count",
+        "settingsSubscriptionsPoolSwitchedOff": "count",
+        "settingsSubscriptionsPoolUnread": "count",
         "settingsSubscriptionsSavedResets": "count",
         "settingsUsageCostMissingTokens": "count",
         "settingsUsageCostMissingUsd": "count",

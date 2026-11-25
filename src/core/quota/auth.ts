@@ -1,4 +1,5 @@
-import { servedProviderOf } from "@shared/quota";
+import { isCustomApiProvider } from "@shared/customApi";
+import { type QuotaPoolKind, servedProviderOf } from "@shared/quota";
 import type { ProviderOutcome } from "./outcome";
 
 /**
@@ -77,6 +78,11 @@ export type QuotaCatalogModel = {
   provider: string;
   id: string;
   name: string;
+  /**
+   * A custom connection's model a CLI proxy serves from one of its pools:
+   * its catalog row reads the connection's row of that pool.
+   */
+  pool?: QuotaPoolKind;
 };
 
 /**
@@ -107,4 +113,12 @@ export function quotaEntryForPiProvider(
   piId: string,
 ): (typeof QUOTA_PROVIDERS)[number] | undefined {
   return QUOTA_PROVIDERS.find((entry) => entry.piId === piId);
+}
+
+/**
+ * The provider id a Pi provider's quota rows carry: its sensed quota id, or
+ * a custom connection's own id, whose rows are a CLI proxy's pools.
+ */
+export function quotaRowProviderOf(piId: string): string | undefined {
+  return quotaEntryForPiProvider(piId)?.quotaId ?? (isCustomApiProvider(piId) ? piId : undefined);
 }

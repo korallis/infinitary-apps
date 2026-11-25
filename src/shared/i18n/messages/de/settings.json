@@ -1343,6 +1343,37 @@
   "settingsSubscriptionsPaused": "pausiert",
   "settingsSubscriptionsPersonalResourcesDescription": "Neue Unterhaltungen von Crewmitgliedern verwenden die globalen Anweisungen und Skills auf dem {computer}, auf dem dein erster Offizier lebt, samt den Skills der Agenten-Plugins, die du dort eingeschaltet hast. Andere {computers}, die Arbeit ausführen, behalten eine Kopie, die nur nach einer Änderung neu gesendet wird. Die Crew-Regeln bestimmen die Lieferung; deine Datei leitet Stil und Urteil.",
   "settingsSubscriptionsPersonalResourcesTitle": "Globale Anweisungen und Skills",
+  "settingsSubscriptionsPoolAccounts": {
+    "plural": "count",
+    "one": "{count} Konto in deiner Proxy-App gebündelt",
+    "other": "{count} Konten in deiner Proxy-App gebündelt"
+  },
+  "settingsSubscriptionsPoolSignInBy": {
+    "plural": "count",
+    "one": "{count} muss bis {time} neu angemeldet werden",
+    "other": "{count} müssen bis {time} neu angemeldet werden"
+  },
+  "settingsSubscriptionsPoolSignedOut": {
+    "plural": "count",
+    "one": "{count} muss in deiner Proxy-App neu angemeldet werden",
+    "other": "{count} müssen in deiner Proxy-App neu angemeldet werden"
+  },
+  "settingsSubscriptionsPoolSpent": {
+    "plural": "count",
+    "one": "{count} aufgebraucht bis {time}",
+    "other": "{count} aufgebraucht bis {time}"
+  },
+  "settingsSubscriptionsPoolSwitchedOff": {
+    "plural": "count",
+    "one": "{count} ausgeschaltet",
+    "other": "{count} ausgeschaltet"
+  },
+  "settingsSubscriptionsPoolUnread": {
+    "plural": "count",
+    "one": "{count} noch nicht gelesen",
+    "other": "{count} noch nicht gelesen"
+  },
+  "settingsSubscriptionsPoolUsage": "Gebündelte Nutzung",
   "settingsSubscriptionsReading": "wird gelesen …",
   "settingsSubscriptionsRefresh": "Aktualisieren",
   "settingsSubscriptionsRefreshing": "Aktualisieren …",

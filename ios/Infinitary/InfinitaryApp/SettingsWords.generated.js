@@ -12131,6 +12131,572 @@ ${events}` : prompt;
     }
     return `paused`;
   }
+  function settingsSubscriptionsPoolAccounts(input) {
+    const count = formatNumber(input.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input.count)) {
+          case "zero":
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+          case "one":
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+          case "two":
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+          case "few":
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+          case "many":
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+          default:
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} Konto in deiner Proxy-App gebündelt`;
+          default:
+            return `${count} Konten in deiner Proxy-App gebündelt`;
+        }
+      case "es":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} cuenta agrupada en tu app de proxy`;
+          case "many":
+            return `${count} de cuentas agrupadas en tu app de proxy`;
+          default:
+            return `${count} cuentas agrupadas en tu app de proxy`;
+        }
+      case "fr":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} compte regroupé dans votre app proxy`;
+          case "many":
+            return `${count} de comptes regroupés dans votre app proxy`;
+          default:
+            return `${count} comptes regroupés dans votre app proxy`;
+        }
+      case "ja":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `プロキシアプリで ${count} 件のアカウントをまとめて使用中`;
+        }
+      case "ko":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `프록시 앱에 계정 ${count}개가 합쳐져 있음`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} conta agrupada no seu app de proxy`;
+          case "many":
+            return `${count} de contas agrupadas no seu app de proxy`;
+          default:
+            return `${count} contas agrupadas no seu app de proxy`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `代理应用中合并了 ${count} 个账户`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `代理 App 中合併了 ${count} 個帳號`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `[${count} áççöûñţ þööļéð îñ ýöûŕ þŕöẋý áþþ ~~~~~~~~~~~]`;
+          default:
+            return `[${count} áççöûñţš þööļéð îñ ýöûŕ þŕöẋý áþþ ~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `${count}‮ account pooled in your proxy app‬`;
+          default:
+            return `${count}‮ accounts pooled in your proxy app‬`;
+        }
+    }
+    switch (pluralCategory(input.count)) {
+      case "one":
+        return `${count} account pooled in your proxy app`;
+      default:
+        return `${count} accounts pooled in your proxy app`;
+    }
+  }
+  function settingsSubscriptionsPoolSignInBy(input) {
+    const count = formatNumber(input.count);
+    const time2 = input.time;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input.count)) {
+          case "zero":
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+          case "one":
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+          case "two":
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+          case "few":
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+          case "many":
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+          default:
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} muss bis ${time2} neu angemeldet werden`;
+          default:
+            return `${count} müssen bis ${time2} neu angemeldet werden`;
+        }
+      case "es":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} debe volver a iniciar sesión antes de ${time2}`;
+          case "many":
+            return `${count} deben volver a iniciar sesión antes de ${time2}`;
+          default:
+            return `${count} deben volver a iniciar sesión antes de ${time2}`;
+        }
+      case "fr":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} doit se reconnecter avant ${time2}`;
+          case "many":
+            return `${count} doivent se reconnecter avant ${time2}`;
+          default:
+            return `${count} doivent se reconnecter avant ${time2}`;
+        }
+      case "ja":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 件は ${time2} までに再度サインインが必要`;
+        }
+      case "ko":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count}개는 ${time2}까지 다시 로그인해야 함`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} precisa fazer login de novo até ${time2}`;
+          case "many":
+            return `${count} precisam fazer login de novo até ${time2}`;
+          default:
+            return `${count} precisam fazer login de novo até ${time2}`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 个需要在 ${time2} 前重新登录`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 個需要在 ${time2} 前重新登入`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `[${count} ñééðš šîĝñîñĝ îñ áĝáîñ ƀý ${time2} ~~~~~~~~~]`;
+          default:
+            return `[${count} ñééð šîĝñîñĝ îñ áĝáîñ ƀý ${time2} ~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `${count}‮ needs signing in again by ‬${time2}`;
+          default:
+            return `${count}‮ need signing in again by ‬${time2}`;
+        }
+    }
+    switch (pluralCategory(input.count)) {
+      case "one":
+        return `${count} needs signing in again by ${time2}`;
+      default:
+        return `${count} need signing in again by ${time2}`;
+    }
+  }
+  function settingsSubscriptionsPoolSignedOut(input) {
+    const count = formatNumber(input.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input.count)) {
+          case "zero":
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+          case "one":
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+          case "two":
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+          case "few":
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+          case "many":
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+          default:
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} muss in deiner Proxy-App neu angemeldet werden`;
+          default:
+            return `${count} müssen in deiner Proxy-App neu angemeldet werden`;
+        }
+      case "es":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} debe volver a iniciar sesión en tu app de proxy`;
+          case "many":
+            return `${count} deben volver a iniciar sesión en tu app de proxy`;
+          default:
+            return `${count} deben volver a iniciar sesión en tu app de proxy`;
+        }
+      case "fr":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} doit se reconnecter dans votre app proxy`;
+          case "many":
+            return `${count} doivent se reconnecter dans votre app proxy`;
+          default:
+            return `${count} doivent se reconnecter dans votre app proxy`;
+        }
+      case "ja":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 件はプロキシアプリで再度サインインが必要`;
+        }
+      case "ko":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count}개는 프록시 앱에서 다시 로그인해야 함`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} precisa fazer login de novo no seu app de proxy`;
+          case "many":
+            return `${count} precisam fazer login de novo no seu app de proxy`;
+          default:
+            return `${count} precisam fazer login de novo no seu app de proxy`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 个需要在代理应用中重新登录`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 個需要在代理 App 中重新登入`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `[${count} ñééðš šîĝñîñĝ îñ áĝáîñ îñ ýöûŕ þŕöẋý áþþ ~~~~~~~~~~~~~~]`;
+          default:
+            return `[${count} ñééð šîĝñîñĝ îñ áĝáîñ îñ ýöûŕ þŕöẋý áþþ ~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `${count}‮ needs signing in again in your proxy app‬`;
+          default:
+            return `${count}‮ need signing in again in your proxy app‬`;
+        }
+    }
+    switch (pluralCategory(input.count)) {
+      case "one":
+        return `${count} needs signing in again in your proxy app`;
+      default:
+        return `${count} need signing in again in your proxy app`;
+    }
+  }
+  function settingsSubscriptionsPoolSpent(input) {
+    const count = formatNumber(input.count);
+    const time2 = input.time;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input.count)) {
+          case "zero":
+            return `مستنفدة حتى ${time2}: ${count}`;
+          case "one":
+            return `مستنفدة حتى ${time2}: ${count}`;
+          case "two":
+            return `مستنفدة حتى ${time2}: ${count}`;
+          case "few":
+            return `مستنفدة حتى ${time2}: ${count}`;
+          case "many":
+            return `مستنفدة حتى ${time2}: ${count}`;
+          default:
+            return `مستنفدة حتى ${time2}: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} aufgebraucht bis ${time2}`;
+          default:
+            return `${count} aufgebraucht bis ${time2}`;
+        }
+      case "es":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} agotada hasta ${time2}`;
+          case "many":
+            return `${count} agotadas hasta ${time2}`;
+          default:
+            return `${count} agotadas hasta ${time2}`;
+        }
+      case "fr":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} épuisé jusqu’à ${time2}`;
+          case "many":
+            return `${count} épuisés jusqu’à ${time2}`;
+          default:
+            return `${count} épuisés jusqu’à ${time2}`;
+        }
+      case "ja":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 件は ${time2} まで使い切り`;
+        }
+      case "ko":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count}개 ${time2}까지 소진됨`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} esgotada até ${time2}`;
+          case "many":
+            return `${count} esgotadas até ${time2}`;
+          default:
+            return `${count} esgotadas até ${time2}`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 个已用完，${time2} 恢复`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 個已用完，${time2} 恢復`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `[${count} šþéñţ ûñţîļ ${time2} ~~~~~]`;
+          default:
+            return `[${count} šþéñţ ûñţîļ ${time2} ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `${count}‮ spent until ‬${time2}`;
+          default:
+            return `${count}‮ spent until ‬${time2}`;
+        }
+    }
+    switch (pluralCategory(input.count)) {
+      case "one":
+        return `${count} spent until ${time2}`;
+      default:
+        return `${count} spent until ${time2}`;
+    }
+  }
+  function settingsSubscriptionsPoolSwitchedOff(input) {
+    const count = formatNumber(input.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input.count)) {
+          case "zero":
+            return `متوقفة: ${count}`;
+          case "one":
+            return `متوقفة: ${count}`;
+          case "two":
+            return `متوقفة: ${count}`;
+          case "few":
+            return `متوقفة: ${count}`;
+          case "many":
+            return `متوقفة: ${count}`;
+          default:
+            return `متوقفة: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} ausgeschaltet`;
+          default:
+            return `${count} ausgeschaltet`;
+        }
+      case "es":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} desactivada`;
+          case "many":
+            return `${count} desactivadas`;
+          default:
+            return `${count} desactivadas`;
+        }
+      case "fr":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} désactivé`;
+          case "many":
+            return `${count} désactivés`;
+          default:
+            return `${count} désactivés`;
+        }
+      case "ja":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 件はオフ`;
+        }
+      case "ko":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count}개 꺼짐`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} desativada`;
+          case "many":
+            return `${count} desativadas`;
+          default:
+            return `${count} desativadas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 个已关闭`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 個已關閉`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `[${count} šŵîţçĥéð öƒƒ ~~~~~]`;
+          default:
+            return `[${count} šŵîţçĥéð öƒƒ ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `${count}‮ switched off‬`;
+          default:
+            return `${count}‮ switched off‬`;
+        }
+    }
+    switch (pluralCategory(input.count)) {
+      case "one":
+        return `${count} switched off`;
+      default:
+        return `${count} switched off`;
+    }
+  }
+  function settingsSubscriptionsPoolUnread(input) {
+    const count = formatNumber(input.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input.count)) {
+          case "zero":
+            return `لم تُقرأ بعد: ${count}`;
+          case "one":
+            return `لم تُقرأ بعد: ${count}`;
+          case "two":
+            return `لم تُقرأ بعد: ${count}`;
+          case "few":
+            return `لم تُقرأ بعد: ${count}`;
+          case "many":
+            return `لم تُقرأ بعد: ${count}`;
+          default:
+            return `لم تُقرأ بعد: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} noch nicht gelesen`;
+          default:
+            return `${count} noch nicht gelesen`;
+        }
+      case "es":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} sin leer todavía`;
+          case "many":
+            return `${count} sin leer todavía`;
+          default:
+            return `${count} sin leer todavía`;
+        }
+      case "fr":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} pas encore lu`;
+          case "many":
+            return `${count} pas encore lus`;
+          default:
+            return `${count} pas encore lus`;
+        }
+      case "ja":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 件はまだ読み取っていません`;
+        }
+      case "ko":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count}개 아직 읽지 않음`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} ainda não lida`;
+          case "many":
+            return `${count} ainda não lidas`;
+          default:
+            return `${count} ainda não lidas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 个尚未读取`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 個尚未讀取`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `[${count} ñöţ ŕéáð ýéţ ~~~~~]`;
+          default:
+            return `[${count} ñöţ ŕéáð ýéţ ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `${count}‮ not read yet‬`;
+          default:
+            return `${count}‮ not read yet‬`;
+        }
+    }
+    switch (pluralCategory(input.count)) {
+      case "one":
+        return `${count} not read yet`;
+      default:
+        return `${count} not read yet`;
+    }
+  }
   function settingsSubscriptionsReading() {
     switch (currentLanguage()) {
       case "ar":
@@ -14396,6 +14962,328 @@ ${events}` : prompt;
   function catalogEntry(id) {
     return PROVIDER_CATALOG.find((entry) => entry.id === id);
   }
+  const crewSpeedSchema = _enum(["standard", "fast", "ultrafast"]);
+  object({
+    requested: crewSpeedSchema,
+    sent: crewSpeedSchema,
+    /** Only a provider reply can confirm service. */
+    confirmed: string().optional(),
+    reason: string().optional()
+  });
+  const reasoningSchema = object({
+    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "default"]),
+    lower: _enum(["quick", "capped"]).optional()
+  });
+  const slotSchema = _enum(["premium", "high", "medium", "low"]);
+  const slotMembershipSchema = union([slotSchema, array(slotSchema)]).transform((value) => Array.isArray(value) ? value : [value]);
+  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh"]);
+  const reasoningCapabilitiesSchema = object({
+    levels: array(reasoningChoiceSchema),
+    fixed: _enum(["off", "default"]).optional()
+  });
+  const reasoningOverridesSchema = record(
+    string(),
+    partialRecord(slotSchema, reasoningChoiceSchema)
+  );
+  object({
+    version: literal(1),
+    /** offering → slots. An absent key or an empty array is OFF: never auto-picked, still pinnable. */
+    assignments: record(string(), slotMembershipSchema),
+    /** every offering this install has ever been offered. Seeding only touches keys absent here. */
+    seen: array(string()),
+    /** Choices survive membership changes; absent means inherit. */
+    reasoning: reasoningOverridesSchema.optional(),
+    /** Per offering, shared by every account; absent means Standard. */
+    speed: record(string(), crewSpeedSchema).optional(),
+    /**
+     * offering → when it arrived as announced news (epoch ms), for the board's
+     * "new" mark. Saved, so a later catalog read or a restart keeps the mark
+     * until the person changes the model's levels or it has had a week.
+     */
+    arrived: record(string(), number()).optional()
+  });
+  record(string(), array(string()));
+  const servedStartersSchema = object({
+    schema: literal(1),
+    starters: record(string(), record(string(), array(slotSchema)))
+  });
+  object({
+    starters: servedStartersSchema.shape.starters.nullable(),
+    checkedAt: number()
+  });
+  const slotModelViewSchema = object({
+    /** Pi provider id serving this model (never the quota id). */
+    provider: string(),
+    providerLabel: string(),
+    id: string(),
+    label: string(),
+    /** empty = off (in no slot); may carry more than one. */
+    slots: array(slotSchema),
+    reasoningCapabilities: reasoningCapabilitiesSchema.optional(),
+    speed: crewSpeedSchema.optional(),
+    /** Union of fresh account capabilities, not a promise about a routed account. */
+    speeds: array(crewSpeedSchema).optional(),
+    reasoning: partialRecord(
+      slotSchema,
+      object({
+        chosen: reasoningChoiceSchema.optional(),
+        effective: reasoningSchema.optional()
+      })
+    ).optional(),
+    /**
+     * Arrived as announced news after this install had already seen the
+     * provider's catalog, within the last week and with its levels untouched since.
+     */
+    isNew: boolean().optional(),
+    /** The computer the model runs on, when it is not this Mac's. */
+    place: string().min(1).max(64).optional()
+  });
+  object({
+    /** The listed rows (docs/model-lists.md): what the board shows. */
+    models: array(slotModelViewSchema),
+    /**
+     * Everything else the signed-in accounts serve, for the "use a model by
+     * name" controls. Never rows on the board; choosing one keeps it, which
+     * lists it from then on.
+     */
+    byName: array(slotModelViewSchema).default([]),
+    /**
+     * True when nothing currently available is assigned, so routing is running
+     * off the starter map (or the whole signed-in pool). The surface says so.
+     */
+    usingDefaults: boolean()
+  });
+  const quotaWindowViewSchema = object({
+    id: string(),
+    label: string(),
+    percentRemaining: number().optional(),
+    /**
+     * Pace vocabulary: "ahead" is usage ahead of the reset
+     * clock (burning faster than linear - conserve), "behind" is usage behind
+     * the clock (allowance on track to go unused).
+     */
+    pace: _enum(["ahead", "on_pace", "behind", "unknown"]).optional(),
+    resetText: string().optional(),
+    /**
+     * The trusted cycle evidence: the window's own reset
+     * instant and cycle length, when the vendor supplied them. Everything
+     * derived - pace, runway, spend priority - is recomputed from these at
+     * read time rather than persisted, so a stored snapshot never carries a
+     * stale projection.
+     */
+    resetsAtMs: number().optional(),
+    startsAtMs: number().optional(),
+    windowSeconds: number().optional()
+  });
+  const QUOTA_CREDIT_STATES = ["available", "spent", "off", "unknown"];
+  const quotaCreditsViewSchema = object({
+    state: _enum(QUOTA_CREDIT_STATES),
+    /** The share of a monthly spend limit used, 0–100, where the provider gives one (Claude). */
+    usedPercent: number().optional(),
+    /** The balance left, in the provider's own words (ChatGPT's "15.00"). */
+    balance: string().optional(),
+    /** The provider says the credits have no limit. */
+    unlimited: boolean().optional(),
+    /** The provider says this account is answering on credits right now. */
+    inUse: boolean().optional()
+  });
+  const quotaSavedResetsViewSchema = object({
+    available: number().int().nonnegative(),
+    applicable: number().int().nonnegative().optional()
+  });
+  const SAVED_RESETS_PAGE = {
+    codex: "https://chatgpt.com/settings/usage"
+  };
+  const QUOTA_POOL_KINDS = ["claude", "chatgpt"];
+  const QUOTA_POOL_NAMES = {
+    claude: "Claude",
+    chatgpt: "ChatGPT"
+  };
+  const quotaPoolViewSchema = object({
+    kind: _enum(QUOTA_POOL_KINDS),
+    logins: number().int().nonnegative(),
+    /** Serving logins whose limits were read: they make the pooled windows. */
+    read: number().int().nonnegative(),
+    /** Serving logins nothing has read yet. */
+    unread: number().int().nonnegative(),
+    /** Logins whose allowance is spent until they come back. */
+    spent: number().int().nonnegative(),
+    /** The earliest moment a spent login serves again. */
+    backAtMs: number().optional(),
+    /** Logins switched off in the proxy. */
+    switchedOff: number().int().nonnegative(),
+    /** Logins whose sign-in ended in the proxy: they cannot serve. */
+    signInEnded: number().int().nonnegative(),
+    /** Serving logins the proxy says need signing in again there. */
+    signInSoon: number().int().nonnegative(),
+    /** The earliest moment one of those stops serving. */
+    signInByMs: number().optional(),
+    /**
+     * The connection's models this pool serves, on a custom connection's row:
+     * the row measures those models alone (`rowMeasuresModel`). Absent on a
+     * Claude account's row, which measures every model of its account.
+     */
+    models: array(string()).optional()
+  });
+  const POOL_CREDITS_PROVIDER = {
+    claude: "claude",
+    chatgpt: "codex"
+  };
+  const quotaProviderViewSchema = object({
+    /** Quota provider id: codex, grok, claude, copilot. */
+    provider: string(),
+    label: string(),
+    /**
+     * The vault account these windows belong to (broker phase 2). Absent only
+     * in legacy fixtures/snapshots, which render as a single unnamed account.
+     */
+    accountId: string().optional(),
+    /** The account's user label ("Personal", "Work #2"). */
+    accountLabel: string().optional(),
+    plan: string().optional(),
+    /** Provider-reported identity (an email or org), when the fetch knows it. */
+    account: string().optional(),
+    /**
+     * What the sensor actually established, kept distinct so the surface can
+     * say it (quota reliability, 2026-09-04):
+     * - `ok` a real reading,
+     * - `auth_required` the terminal re-auth state (CD-3): reached only from
+     *   proof - a lapsed refresh token (`refresh_token_lapsed`) or a vendor
+     *   rejection that SURVIVED a real renewal (`rejected_after_renewal`).
+     *   The ONLY status that may say "sign in again", raise the re-auth card,
+     *   or clear a recovered card. Transient failures never take this shape,
+     * - `rate_limited` the vendor asked us to back off (`retryAfter` when given),
+     * - `unavailable` we could not find out this time (network, timeout, a
+     *   non-2xx, an unreadable store, a renewal that could not run). Transient
+     *   by assumption; last-known-good survives it,
+     * - `not_measured` Infinitary does not read a usage window for this sign-in.
+     *   NOT a claim that the credential cannot expose one,
+     * - `skipped` the account was not sensed on this pass.
+     * `error` remains only so older persisted snapshots still parse.
+     */
+    status: _enum([
+      "ok",
+      "auth_required",
+      "rate_limited",
+      "unavailable",
+      "not_measured",
+      "error",
+      "skipped"
+    ]),
+    stale: boolean(),
+    /**
+     * When these windows were actually measured. Present whenever a row is
+     * carried forward, so a stale card can state its age instead of borrowing
+     * the new snapshot's fetch time.
+     */
+    measuredAt: number().optional(),
+    /**
+     * A sanitized machine reason for a non-ok status: a code from our own
+     * vocabulary, never provider text, never a header, never a URL.
+     */
+    reason: string().optional(),
+    /** RFC 9110 Retry-After, as the vendor sent it, when it sent one. */
+    retryAfter: string().optional(),
+    windows: array(quotaWindowViewSchema),
+    /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
+    credits: quotaCreditsViewSchema.optional(),
+    savedResets: quotaSavedResetsViewSchema.optional(),
+    /**
+     * The account's Keep going on credits switch is on, as the vault holds it
+     * (`answersOnCredits`). Absent is off.
+     */
+    keepGoingOnCredits: boolean().optional(),
+    /**
+     * The row is a CLI proxy's pool of logins (`quotaPoolViewSchema`): its
+     * windows are the pooled share left, and the logins' standing rides here.
+     * The proxy's own sign-ins never make the row `auth_required`.
+     */
+    pool: quotaPoolViewSchema.optional(),
+    /**
+     * The row reads a CLI proxy, whether or not the proxy answered: a reading
+     * it could not refresh keeps only the proxy's own last reading of the same
+     * pool, never another source's (`mergeStaleProviders`).
+     */
+    fromProxy: literal(true).optional(),
+    /**
+     * Disclosed uncertainty, in the user's words, for a row with no window.
+     * The surface renders it instead of a silent blank, and it is never a
+     * substitute for a real window. It says what Infinitary did or did not do -
+     * never that a credential is incapable of exposing usage, which no test
+     * here has established.
+     */
+    detail: string().optional()
+  });
+  const KEYCHAIN_VALUE_FAILURES = [
+    "keychain_locked",
+    "keychain_access_denied",
+    "keychain_prompt_timeout",
+    "keychain_unavailable",
+    "keychain_unreadable",
+    "keychain_needs_grant",
+    "keychain_no_interactive_session",
+    "keychain_read_incomplete"
+  ];
+  function isKeychainValueFailure(reason) {
+    return reason !== void 0 && KEYCHAIN_VALUE_FAILURES.includes(reason);
+  }
+  const quotaSnapshotViewSchema = object({
+    generatedAt: string(),
+    fetchedAt: number(),
+    providers: array(quotaProviderViewSchema)
+  });
+  const catalogModelViewSchema = object({
+    /** Quota provider id. */
+    provider: string(),
+    id: string(),
+    label: string(),
+    effectivePercentRemaining: number().optional(),
+    paceStatus: _enum(["ahead", "on_pace", "behind", "unknown"]).optional(),
+    /**
+     * The per-scope selection signal: positive means paid
+     * allowance is on track to reach reset unused (spend here first), zero is
+     * exact utilization, negative is overdrawn against the reset clock.
+     * Absent means unmeasurable - never rendered or ranked as zero.
+     */
+    spendPriority: number().optional(),
+    /**
+     * Whether every window bounding this scope is projected, at its observed
+     * burn, to last until its reset (INF-898): true lasts, false runs out
+     * first (or is spent). Absent means the runway is unknown.
+     */
+    lastsThroughReset: boolean().optional(),
+    /**
+     * Every allowance serving this model is spent, and an account serving it
+     * answers on credits (`answersOnCredits`): the model still routes, in the
+     * last band, after every included allowance. Absent is not on credits.
+     */
+    onCredits: boolean().optional()
+  });
+  object({
+    generatedAt: string(),
+    models: array(catalogModelViewSchema)
+  });
+  const modelPinSchema = object({ provider: string(), id: string() });
+  object({ provider: string(), id: string() });
+  object({
+    // Kept on the wire for older paired views; the home always reports true.
+    dynamicRouting: boolean(),
+    pins: array(modelPinSchema),
+    dormantPins: array(modelPinSchema).optional()
+  });
+  const QUOTA_TO_PI_PROVIDER = {
+    codex: "openai-codex",
+    grok: "xai",
+    claude: "anthropic-claude",
+    kimi: "kimi-coding",
+    copilot: "github-copilot"
+  };
+  function allowanceProviderOf(provider) {
+    return Object.keys(QUOTA_TO_PI_PROVIDER).find((id) => QUOTA_TO_PI_PROVIDER[id] === provider);
+  }
+  function isSensedProvider(providerId) {
+    return allowanceProviderOf(providerId) !== void 0;
+  }
   const batchChangeSchema = object({
     taskId: string(),
     branch: string(),
@@ -16011,14 +16899,6 @@ ${events}` : prompt;
     return cutOff;
   }
   const machineLoginOutcomeSchema = _enum(["signed-out", "kept", "not-signed-out"]);
-  const crewSpeedSchema = _enum(["standard", "fast", "ultrafast"]);
-  object({
-    requested: crewSpeedSchema,
-    sent: crewSpeedSchema,
-    /** Only a provider reply can confirm service. */
-    confirmed: string().optional(),
-    reason: string().optional()
-  });
   const customFileWarningSchema = _enum([
     /** `apiKey`: the key is typed on each computer instead. */
     "key",
@@ -16212,273 +17092,6 @@ ${events}` : prompt;
     reachable: boolean(),
     changes: array(forgeChangeRowSchema)
   }).strict();
-  const reasoningSchema = object({
-    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "default"]),
-    lower: _enum(["quick", "capped"]).optional()
-  });
-  const slotSchema = _enum(["premium", "high", "medium", "low"]);
-  const slotMembershipSchema = union([slotSchema, array(slotSchema)]).transform((value) => Array.isArray(value) ? value : [value]);
-  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh"]);
-  const reasoningCapabilitiesSchema = object({
-    levels: array(reasoningChoiceSchema),
-    fixed: _enum(["off", "default"]).optional()
-  });
-  const reasoningOverridesSchema = record(
-    string(),
-    partialRecord(slotSchema, reasoningChoiceSchema)
-  );
-  object({
-    version: literal(1),
-    /** offering → slots. An absent key or an empty array is OFF: never auto-picked, still pinnable. */
-    assignments: record(string(), slotMembershipSchema),
-    /** every offering this install has ever been offered. Seeding only touches keys absent here. */
-    seen: array(string()),
-    /** Choices survive membership changes; absent means inherit. */
-    reasoning: reasoningOverridesSchema.optional(),
-    /** Per offering, shared by every account; absent means Standard. */
-    speed: record(string(), crewSpeedSchema).optional(),
-    /**
-     * offering → when it arrived as announced news (epoch ms), for the board's
-     * "new" mark. Saved, so a later catalog read or a restart keeps the mark
-     * until the person changes the model's levels or it has had a week.
-     */
-    arrived: record(string(), number()).optional()
-  });
-  record(string(), array(string()));
-  const servedStartersSchema = object({
-    schema: literal(1),
-    starters: record(string(), record(string(), array(slotSchema)))
-  });
-  object({
-    starters: servedStartersSchema.shape.starters.nullable(),
-    checkedAt: number()
-  });
-  const slotModelViewSchema = object({
-    /** Pi provider id serving this model (never the quota id). */
-    provider: string(),
-    providerLabel: string(),
-    id: string(),
-    label: string(),
-    /** empty = off (in no slot); may carry more than one. */
-    slots: array(slotSchema),
-    reasoningCapabilities: reasoningCapabilitiesSchema.optional(),
-    speed: crewSpeedSchema.optional(),
-    /** Union of fresh account capabilities, not a promise about a routed account. */
-    speeds: array(crewSpeedSchema).optional(),
-    reasoning: partialRecord(
-      slotSchema,
-      object({
-        chosen: reasoningChoiceSchema.optional(),
-        effective: reasoningSchema.optional()
-      })
-    ).optional(),
-    /**
-     * Arrived as announced news after this install had already seen the
-     * provider's catalog, within the last week and with its levels untouched since.
-     */
-    isNew: boolean().optional(),
-    /** The computer the model runs on, when it is not this Mac's. */
-    place: string().min(1).max(64).optional()
-  });
-  object({
-    /** The listed rows (docs/model-lists.md): what the board shows. */
-    models: array(slotModelViewSchema),
-    /**
-     * Everything else the signed-in accounts serve, for the "use a model by
-     * name" controls. Never rows on the board; choosing one keeps it, which
-     * lists it from then on.
-     */
-    byName: array(slotModelViewSchema).default([]),
-    /**
-     * True when nothing currently available is assigned, so routing is running
-     * off the starter map (or the whole signed-in pool). The surface says so.
-     */
-    usingDefaults: boolean()
-  });
-  const quotaWindowViewSchema = object({
-    id: string(),
-    label: string(),
-    percentRemaining: number().optional(),
-    /**
-     * Pace vocabulary: "ahead" is usage ahead of the reset
-     * clock (burning faster than linear - conserve), "behind" is usage behind
-     * the clock (allowance on track to go unused).
-     */
-    pace: _enum(["ahead", "on_pace", "behind", "unknown"]).optional(),
-    resetText: string().optional(),
-    /**
-     * The trusted cycle evidence: the window's own reset
-     * instant and cycle length, when the vendor supplied them. Everything
-     * derived - pace, runway, spend priority - is recomputed from these at
-     * read time rather than persisted, so a stored snapshot never carries a
-     * stale projection.
-     */
-    resetsAtMs: number().optional(),
-    startsAtMs: number().optional(),
-    windowSeconds: number().optional()
-  });
-  const QUOTA_CREDIT_STATES = ["available", "spent", "off", "unknown"];
-  const quotaCreditsViewSchema = object({
-    state: _enum(QUOTA_CREDIT_STATES),
-    /** The share of a monthly spend limit used, 0–100, where the provider gives one (Claude). */
-    usedPercent: number().optional(),
-    /** The balance left, in the provider's own words (ChatGPT's "15.00"). */
-    balance: string().optional(),
-    /** The provider says the credits have no limit. */
-    unlimited: boolean().optional(),
-    /** The provider says this account is answering on credits right now. */
-    inUse: boolean().optional()
-  });
-  const quotaSavedResetsViewSchema = object({
-    available: number().int().nonnegative(),
-    applicable: number().int().nonnegative().optional()
-  });
-  const SAVED_RESETS_PAGE = {
-    codex: "https://chatgpt.com/settings/usage"
-  };
-  const quotaProviderViewSchema = object({
-    /** Quota provider id: codex, grok, claude, copilot. */
-    provider: string(),
-    label: string(),
-    /**
-     * The vault account these windows belong to (broker phase 2). Absent only
-     * in legacy fixtures/snapshots, which render as a single unnamed account.
-     */
-    accountId: string().optional(),
-    /** The account's user label ("Personal", "Work #2"). */
-    accountLabel: string().optional(),
-    plan: string().optional(),
-    /** Provider-reported identity (an email or org), when the fetch knows it. */
-    account: string().optional(),
-    /**
-     * What the sensor actually established, kept distinct so the surface can
-     * say it (quota reliability, 2026-09-04):
-     * - `ok` a real reading,
-     * - `auth_required` the terminal re-auth state (CD-3): reached only from
-     *   proof - a lapsed refresh token (`refresh_token_lapsed`) or a vendor
-     *   rejection that SURVIVED a real renewal (`rejected_after_renewal`).
-     *   The ONLY status that may say "sign in again", raise the re-auth card,
-     *   or clear a recovered card. Transient failures never take this shape,
-     * - `rate_limited` the vendor asked us to back off (`retryAfter` when given),
-     * - `unavailable` we could not find out this time (network, timeout, a
-     *   non-2xx, an unreadable store, a renewal that could not run). Transient
-     *   by assumption; last-known-good survives it,
-     * - `not_measured` Infinitary does not read a usage window for this sign-in.
-     *   NOT a claim that the credential cannot expose one,
-     * - `skipped` the account was not sensed on this pass.
-     * `error` remains only so older persisted snapshots still parse.
-     */
-    status: _enum([
-      "ok",
-      "auth_required",
-      "rate_limited",
-      "unavailable",
-      "not_measured",
-      "error",
-      "skipped"
-    ]),
-    stale: boolean(),
-    /**
-     * When these windows were actually measured. Present whenever a row is
-     * carried forward, so a stale card can state its age instead of borrowing
-     * the new snapshot's fetch time.
-     */
-    measuredAt: number().optional(),
-    /**
-     * A sanitized machine reason for a non-ok status: a code from our own
-     * vocabulary, never provider text, never a header, never a URL.
-     */
-    reason: string().optional(),
-    /** RFC 9110 Retry-After, as the vendor sent it, when it sent one. */
-    retryAfter: string().optional(),
-    windows: array(quotaWindowViewSchema),
-    /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
-    credits: quotaCreditsViewSchema.optional(),
-    savedResets: quotaSavedResetsViewSchema.optional(),
-    /**
-     * The account's Keep going on credits switch is on, as the vault holds it
-     * (`answersOnCredits`). Absent is off.
-     */
-    keepGoingOnCredits: boolean().optional(),
-    /**
-     * Disclosed uncertainty, in the user's words, for a row with no window.
-     * The surface renders it instead of a silent blank, and it is never a
-     * substitute for a real window. It says what Infinitary did or did not do -
-     * never that a credential is incapable of exposing usage, which no test
-     * here has established.
-     */
-    detail: string().optional()
-  });
-  const KEYCHAIN_VALUE_FAILURES = [
-    "keychain_locked",
-    "keychain_access_denied",
-    "keychain_prompt_timeout",
-    "keychain_unavailable",
-    "keychain_unreadable",
-    "keychain_needs_grant",
-    "keychain_no_interactive_session",
-    "keychain_read_incomplete"
-  ];
-  function isKeychainValueFailure(reason) {
-    return reason !== void 0 && KEYCHAIN_VALUE_FAILURES.includes(reason);
-  }
-  const quotaSnapshotViewSchema = object({
-    generatedAt: string(),
-    fetchedAt: number(),
-    providers: array(quotaProviderViewSchema)
-  });
-  const catalogModelViewSchema = object({
-    /** Quota provider id. */
-    provider: string(),
-    id: string(),
-    label: string(),
-    effectivePercentRemaining: number().optional(),
-    paceStatus: _enum(["ahead", "on_pace", "behind", "unknown"]).optional(),
-    /**
-     * The per-scope selection signal: positive means paid
-     * allowance is on track to reach reset unused (spend here first), zero is
-     * exact utilization, negative is overdrawn against the reset clock.
-     * Absent means unmeasurable - never rendered or ranked as zero.
-     */
-    spendPriority: number().optional(),
-    /**
-     * Whether every window bounding this scope is projected, at its observed
-     * burn, to last until its reset (INF-898): true lasts, false runs out
-     * first (or is spent). Absent means the runway is unknown.
-     */
-    lastsThroughReset: boolean().optional(),
-    /**
-     * Every allowance serving this model is spent, and an account serving it
-     * answers on credits (`answersOnCredits`): the model still routes, in the
-     * last band, after every included allowance. Absent is not on credits.
-     */
-    onCredits: boolean().optional()
-  });
-  object({
-    generatedAt: string(),
-    models: array(catalogModelViewSchema)
-  });
-  const modelPinSchema = object({ provider: string(), id: string() });
-  object({ provider: string(), id: string() });
-  object({
-    // Kept on the wire for older paired views; the home always reports true.
-    dynamicRouting: boolean(),
-    pins: array(modelPinSchema),
-    dormantPins: array(modelPinSchema).optional()
-  });
-  const QUOTA_TO_PI_PROVIDER = {
-    codex: "openai-codex",
-    grok: "xai",
-    claude: "anthropic-claude",
-    kimi: "kimi-coding",
-    copilot: "github-copilot"
-  };
-  function allowanceProviderOf(provider) {
-    return Object.keys(QUOTA_TO_PI_PROVIDER).find((id) => QUOTA_TO_PI_PROVIDER[id] === provider);
-  }
-  function isSensedProvider(providerId) {
-    return allowanceProviderOf(providerId) !== void 0;
-  }
   const savedResetResultSchema = object({
     outcome: _enum(["used", "nothing-to-reset", "none-left"]),
     left: number().int().nonnegative().optional()
@@ -18386,24 +18999,24 @@ ${events}` : prompt;
     } else if (unmeasurableWindowIds.length > 0 || perWindow.length === 0) {
       runway = { status: "unknown" };
     } else {
-      let earliest;
+      let earliest2;
       let anyEarly = false;
       for (const { window, signals } of perWindow) {
         if (signals.kind !== "measured") continue;
         if (signals.confidence === "early") anyEarly = true;
-        if (signals.projectedExhaustedAtMs !== void 0 && window.resetsAtMs !== void 0 && signals.projectedExhaustedAtMs < window.resetsAtMs && (!earliest || signals.projectedExhaustedAtMs < earliest.atMs)) {
-          earliest = {
+        if (signals.projectedExhaustedAtMs !== void 0 && window.resetsAtMs !== void 0 && signals.projectedExhaustedAtMs < window.resetsAtMs && (!earliest2 || signals.projectedExhaustedAtMs < earliest2.atMs)) {
+          earliest2 = {
             atMs: signals.projectedExhaustedAtMs,
             windowId: window.id,
             confidence: signals.confidence
           };
         }
       }
-      runway = earliest ? {
+      runway = earliest2 ? {
         status: "projected_exhaustion",
-        projectedExhaustedAtMs: earliest.atMs,
-        limitingWindowId: earliest.windowId,
-        confidence: earliest.confidence
+        projectedExhaustedAtMs: earliest2.atMs,
+        limitingWindowId: earliest2.windowId,
+        confidence: earliest2.confidence
       } : { status: "through_reset", confidence: anyEarly ? "early" : "established" };
     }
     let spendPriority;
@@ -18591,6 +19204,32 @@ ${events}` : prompt;
     const value = Number(balance);
     return balance.trim() !== "" && Number.isFinite(value) ? formatNumber(value, { maximumFractionDigits: 2 }) : balance;
   }
+  function poolLine(pool, now) {
+    const facts = [settingsSubscriptionsPoolAccounts({ count: pool.logins })];
+    if (pool.unread > 0) facts.push(settingsSubscriptionsPoolUnread({ count: pool.unread }));
+    if (pool.spent > 0)
+      facts.push(
+        settingsSubscriptionsPoolSpent({
+          count: pool.spent,
+          time: pool.backAtMs !== void 0 ? poolTime(pool.backAtMs, now) : ""
+        })
+      );
+    if (pool.signInSoon > 0 && pool.signInByMs !== void 0)
+      facts.push(
+        settingsSubscriptionsPoolSignInBy({
+          count: pool.signInSoon,
+          time: poolTime(pool.signInByMs, now)
+        })
+      );
+    if (pool.signInEnded > 0)
+      facts.push(settingsSubscriptionsPoolSignedOut({ count: pool.signInEnded }));
+    if (pool.switchedOff > 0)
+      facts.push(settingsSubscriptionsPoolSwitchedOff({ count: pool.switchedOff }));
+    return facts.join(" · ");
+  }
+  function poolTime(at, now) {
+    return at - now < 24 * 60 * 60 * 1e3 ? formatTime(at, { hour: "2-digit", minute: "2-digit" }) : formatDateTime(at, { weekday: "short", hour: "2-digit", minute: "2-digit" });
+  }
   function kindCopy(kind) {
     return kind === "api_key" ? API_KEY_LABEL : settingsSubscriptionsKindSubscription();
   }
@@ -18723,7 +19362,9 @@ ${events}` : prompt;
       if (kind === "stale") {
         if (row.detail) view.stateText = row.detail;
       } else {
-        view.stateText = row.detail ?? emptyQuotaText(row.status);
+        view.stateText = row.detail ?? (row.pool ? poolLine(row.pool, now) : emptyQuotaText(row.status));
+        const poolCredits = row.pool ? creditsOf(row, account) : void 0;
+        if (poolCredits) view.credits = poolCredits;
         return account.access ? withHold(view, account, now) : view;
       }
     }
@@ -18740,11 +19381,15 @@ ${events}` : prompt;
     });
     const verdict = verdictFor(kind, row, now);
     if (verdict) view.verdict = verdict;
-    const credits = row ? creditsLine(row.provider, row.credits, account.keepGoingOnCredits === true) : void 0;
+    const credits = row ? creditsOf(row, account) : void 0;
     if (credits) view.credits = credits;
     const savedResets = row ? savedResetsLine(row.provider, row.savedResets) : void 0;
     if (savedResets) view.savedResets = savedResets;
+    if (row?.pool) view.pool = poolLine(row.pool, now);
     return withHold(view, account, now);
+  }
+  function creditsOf(row, account) {
+    return row.pool ? creditsLine(POOL_CREDITS_PROVIDER[row.pool.kind], row.credits) : creditsLine(row.provider, row.credits, account.keepGoingOnCredits === true);
   }
   function withHold(view, account, now) {
     const hold = standingCutOff(account, now);
@@ -19351,8 +19996,33 @@ ${events}` : prompt;
     }
   };
   function accountRow(account, quota, providerName, place, firstmate, now) {
-    const row = quota?.providers.find((entry) => entry.accountId === account.id);
+    const rows = quota?.providers.filter((entry) => entry.accountId === account.id) ?? [];
+    const row = rows[0];
     const view = rowView(account, row, now);
+    const pools = rows.length > 1 && rows.every((entry) => entry.pool) ? rows : void 0;
+    if (pools) {
+      const views = pools.map((entry) => ({ entry, view: rowView(account, entry, now) }));
+      view.meters = views.flatMap(
+        ({ entry, view: each }) => each.meters.map((meter) => ({
+          ...meter,
+          id: `${entry.pool?.kind}:${meter.id}`,
+          label: `${QUOTA_POOL_NAMES[entry.pool?.kind ?? "claude"]} ${meter.label}`
+        }))
+      );
+      const first = rows[0]?.pool;
+      const held = first && view.stateText !== poolLine(first, now) ? view.stateText : void 0;
+      const lines = views.map(
+        ({ entry, view: each }) => [
+          ...entry.pool ? [`${QUOTA_POOL_NAMES[entry.pool.kind]}: ${poolLine(entry.pool, now)}`] : [],
+          ...each.credits ? [each.credits] : []
+        ].join(" · ")
+      );
+      view.stateText = [...held ? [held] : [], ...lines].join(" · ");
+    } else if (row?.pool) {
+      const line = poolLine(row.pool, now);
+      const own2 = view.stateText && view.stateText !== line ? [view.stateText] : [];
+      view.stateText = [...own2, line, ...view.credits ? [view.credits] : []].join(" · ");
+    }
     const stale = view.kind === "stale";
     const saysWhere = view.stateText === SUBSCRIPTIONS_WORDS.claudeFirstRun;
     return {

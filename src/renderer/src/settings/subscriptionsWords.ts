@@ -1,10 +1,11 @@
-import { formatNumber } from "@shared/i18n/format";
+import { formatDateTime, formatNumber, formatTime } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import type { AccountView } from "../../../shared/accounts";
 import { COMPUTER, HERE } from "../../../shared/deviceNames";
 import { API_KEY_LABEL } from "../../../shared/providers";
 import {
   type QuotaCreditsView,
+  type QuotaPoolView,
   type QuotaSavedResetsView,
   SAVED_RESETS_PAGE,
 } from "../../../shared/quota";
@@ -174,4 +175,46 @@ function balanceText(balance: string): string {
   return balance.trim() !== "" && Number.isFinite(value)
     ? formatNumber(value, { maximumFractionDigits: 2 })
     : balance;
+}
+
+/**
+ * A pooled row's one line about its proxy's logins (docs/quota.md, "A
+ * proxy's pooled logins"): how many are pooled, then each count that stops
+ * one serving or leaves it unread. Every sign-in it names is renewed in the
+ * proxy app, so the row offers no Sign in of its own.
+ */
+export function poolLine(pool: QuotaPoolView, now: number): string {
+  const facts = [m.settingsSubscriptionsPoolAccounts({ count: pool.logins })];
+  if (pool.unread > 0) facts.push(m.settingsSubscriptionsPoolUnread({ count: pool.unread }));
+  if (pool.spent > 0)
+    facts.push(
+      m.settingsSubscriptionsPoolSpent({
+        count: pool.spent,
+        time: pool.backAtMs !== undefined ? poolTime(pool.backAtMs, now) : "",
+      }),
+    );
+  if (pool.signInSoon > 0 && pool.signInByMs !== undefined)
+    facts.push(
+      m.settingsSubscriptionsPoolSignInBy({
+        count: pool.signInSoon,
+        time: poolTime(pool.signInByMs, now),
+      }),
+    );
+  if (pool.signInEnded > 0)
+    facts.push(m.settingsSubscriptionsPoolSignedOut({ count: pool.signInEnded }));
+  if (pool.switchedOff > 0)
+    facts.push(m.settingsSubscriptionsPoolSwitchedOff({ count: pool.switchedOff }));
+  return facts.join(" · ");
+}
+
+/** A moment within the day as its clock time, a later one with its weekday. */
+function poolTime(at: number, now: number): string {
+  return at - now < 24 * 60 * 60 * 1000
+    ? formatTime(at, { hour: "2-digit", minute: "2-digit" })
+    : formatDateTime(at, { weekday: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+/** The row of a proxy that did not answer, before it names a pool. */
+export function poolUsageLabel(): string {
+  return m.settingsSubscriptionsPoolUsage();
 }

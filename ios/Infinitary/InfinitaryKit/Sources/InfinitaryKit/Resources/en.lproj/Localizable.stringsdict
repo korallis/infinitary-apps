@@ -2435,6 +2435,102 @@
       <string>%1$ld tasks</string>
     </dict>
   </dict>
+  <key>settingsSubscriptionsPoolAccounts</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld account pooled in your proxy app</string>
+      <key>other</key>
+      <string>%1$ld accounts pooled in your proxy app</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSignInBy</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld needs signing in again by %2$@</string>
+      <key>other</key>
+      <string>%1$ld need signing in again by %2$@</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSignedOut</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld needs signing in again in your proxy app</string>
+      <key>other</key>
+      <string>%1$ld need signing in again in your proxy app</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSpent</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld spent until %2$@</string>
+      <key>other</key>
+      <string>%1$ld spent until %2$@</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSwitchedOff</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld switched off</string>
+      <key>other</key>
+      <string>%1$ld switched off</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolUnread</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld not read yet</string>
+      <key>other</key>
+      <string>%1$ld not read yet</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsSavedResets</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

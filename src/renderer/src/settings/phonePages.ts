@@ -25,7 +25,7 @@ import { hereAs } from "@shared/deviceNames";
 import * as m from "@shared/i18n/messages.generated";
 import type { IntegrationsView } from "@shared/integrations";
 import { catalogEntry, type ProviderView } from "@shared/providers";
-import type { QuotaSnapshotView } from "@shared/quota";
+import { QUOTA_POOL_NAMES, type QuotaSnapshotView } from "@shared/quota";
 import { hostTakesBatches, projectDeliveryChoices, type RepoView } from "@shared/repos";
 import type { RunbookView } from "@shared/runbooks";
 import { runbooksSummary } from "@shared/runbookWords";
@@ -70,7 +70,7 @@ import {
   projectsSummary,
   runsOnWhere,
 } from "./projectsWords";
-import { CREW_PREFERRED_MARK, SUBSCRIPTIONS_WORDS } from "./subscriptionsWords";
+import { CREW_PREFERRED_MARK, poolLine, SUBSCRIPTIONS_WORDS } from "./subscriptionsWords";
 import {
   formatAmount,
   formatRecorded,
@@ -208,8 +208,40 @@ function accountRow(
   firstmate: boolean,
   now: number,
 ): PhoneAccountRow {
-  const row = quota?.providers.find((entry) => entry.accountId === account.id);
+  const rows = quota?.providers.filter((entry) => entry.accountId === account.id) ?? [];
+  const row = rows[0];
   const view = rowView(account, row, now);
+  // A connection to a CLI proxy has a row per pool it serves: the phone shows
+  // each pool's meters under its name, and how each pool's logins stand,
+  // with its credits, as the state, whichever pool comes first.
+  const pools = rows.length > 1 && rows.every((entry) => entry.pool) ? rows : undefined;
+  if (pools) {
+    const views = pools.map((entry) => ({ entry, view: rowView(account, entry, now) }));
+    view.meters = views.flatMap(({ entry, view: each }) =>
+      each.meters.map((meter) => ({
+        ...meter,
+        id: `${entry.pool?.kind}:${meter.id}`,
+        label: `${QUOTA_POOL_NAMES[entry.pool?.kind ?? "claude"]} ${meter.label}`,
+      })),
+    );
+    // A state that is not the first pool's own line (a hold on the
+    // connection, or why it was not read) leads.
+    const first = rows[0]?.pool;
+    const held = first && view.stateText !== poolLine(first, now) ? view.stateText : undefined;
+    const lines = views.map(({ entry, view: each }) =>
+      [
+        ...(entry.pool
+          ? [`${QUOTA_POOL_NAMES[entry.pool.kind]}: ${poolLine(entry.pool, now)}`]
+          : []),
+        ...(each.credits ? [each.credits] : []),
+      ].join(" · "),
+    );
+    view.stateText = [...(held ? [held] : []), ...lines].join(" · ");
+  } else if (row?.pool) {
+    const line = poolLine(row.pool, now);
+    const own = view.stateText && view.stateText !== line ? [view.stateText] : [];
+    view.stateText = [...own, line, ...(view.credits ? [view.credits] : [])].join(" · ");
+  }
   const stale = view.kind === "stale";
   // The first-run sentence already says where to sign in; every other waiting row gets the line.
   const saysWhere = view.stateText === SUBSCRIPTIONS_WORDS.claudeFirstRun;

@@ -2739,6 +2739,114 @@
       <string>%1$ld tarefas</string>
     </dict>
   </dict>
+  <key>settingsSubscriptionsPoolAccounts</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld conta agrupada no seu app de proxy</string>
+      <key>many</key>
+      <string>%1$ld de contas agrupadas no seu app de proxy</string>
+      <key>other</key>
+      <string>%1$ld contas agrupadas no seu app de proxy</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSignInBy</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld precisa fazer login de novo até %2$@</string>
+      <key>many</key>
+      <string>%1$ld precisam fazer login de novo até %2$@</string>
+      <key>other</key>
+      <string>%1$ld precisam fazer login de novo até %2$@</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSignedOut</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld precisa fazer login de novo no seu app de proxy</string>
+      <key>many</key>
+      <string>%1$ld precisam fazer login de novo no seu app de proxy</string>
+      <key>other</key>
+      <string>%1$ld precisam fazer login de novo no seu app de proxy</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSpent</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld esgotada até %2$@</string>
+      <key>many</key>
+      <string>%1$ld esgotadas até %2$@</string>
+      <key>other</key>
+      <string>%1$ld esgotadas até %2$@</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSwitchedOff</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld desativada</string>
+      <key>many</key>
+      <string>%1$ld desativadas</string>
+      <key>other</key>
+      <string>%1$ld desativadas</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolUnread</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld ainda não lida</string>
+      <key>many</key>
+      <string>%1$ld ainda não lidas</string>
+      <key>other</key>
+      <string>%1$ld ainda não lidas</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsSavedResets</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

@@ -344,6 +344,17 @@
   color: var(--fg-2);
   min-width: 0;
 }
+.fm-custom-pools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+}
+.fm-custom-pool-name {
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+  min-width: 4.5em;
+}
 .fm-custom-tag {
   font-family: var(--font-mono);
   font-size: var(--text-xs);

@@ -1463,6 +1463,61 @@
   "settingsSubscriptionsPaused": "متوقف مؤقتًا",
   "settingsSubscriptionsPersonalResourcesDescription": "تستخدم محادثات أفراد الطاقم الجديدة التعليمات والمهارات العامة على {computer} الذي يقيم عليه نائب القبطان، ومعها مهارات إضافات الوكلاء التي شغّلتها هناك. تحتفظ {computers} الأخرى التي تشغّل العمل بنسخة، لا تُرسل من جديد إلا عند تغيّرها. قواعد الطاقم تحكم التسليم؛ وملفك يوجّه الأسلوب والتقدير.",
   "settingsSubscriptionsPersonalResourcesTitle": "التعليمات والمهارات العامة",
+  "settingsSubscriptionsPoolAccounts": {
+    "plural": "count",
+    "zero": "حسابات مجمّعة في تطبيق الوكيل: {count}",
+    "one": "حسابات مجمّعة في تطبيق الوكيل: {count}",
+    "two": "حسابات مجمّعة في تطبيق الوكيل: {count}",
+    "few": "حسابات مجمّعة في تطبيق الوكيل: {count}",
+    "many": "حسابات مجمّعة في تطبيق الوكيل: {count}",
+    "other": "حسابات مجمّعة في تطبيق الوكيل: {count}"
+  },
+  "settingsSubscriptionsPoolSignInBy": {
+    "plural": "count",
+    "zero": "تحتاج إلى تسجيل الدخول من جديد قبل {time}: {count}",
+    "one": "تحتاج إلى تسجيل الدخول من جديد قبل {time}: {count}",
+    "two": "تحتاج إلى تسجيل الدخول من جديد قبل {time}: {count}",
+    "few": "تحتاج إلى تسجيل الدخول من جديد قبل {time}: {count}",
+    "many": "تحتاج إلى تسجيل الدخول من جديد قبل {time}: {count}",
+    "other": "تحتاج إلى تسجيل الدخول من جديد قبل {time}: {count}"
+  },
+  "settingsSubscriptionsPoolSignedOut": {
+    "plural": "count",
+    "zero": "تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: {count}",
+    "one": "تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: {count}",
+    "two": "تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: {count}",
+    "few": "تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: {count}",
+    "many": "تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: {count}",
+    "other": "تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: {count}"
+  },
+  "settingsSubscriptionsPoolSpent": {
+    "plural": "count",
+    "zero": "مستنفدة حتى {time}: {count}",
+    "one": "مستنفدة حتى {time}: {count}",
+    "two": "مستنفدة حتى {time}: {count}",
+    "few": "مستنفدة حتى {time}: {count}",
+    "many": "مستنفدة حتى {time}: {count}",
+    "other": "مستنفدة حتى {time}: {count}"
+  },
+  "settingsSubscriptionsPoolSwitchedOff": {
+    "plural": "count",
+    "zero": "متوقفة: {count}",
+    "one": "متوقفة: {count}",
+    "two": "متوقفة: {count}",
+    "few": "متوقفة: {count}",
+    "many": "متوقفة: {count}",
+    "other": "متوقفة: {count}"
+  },
+  "settingsSubscriptionsPoolUnread": {
+    "plural": "count",
+    "zero": "لم تُقرأ بعد: {count}",
+    "one": "لم تُقرأ بعد: {count}",
+    "two": "لم تُقرأ بعد: {count}",
+    "few": "لم تُقرأ بعد: {count}",
+    "many": "لم تُقرأ بعد: {count}",
+    "other": "لم تُقرأ بعد: {count}"
+  },
+  "settingsSubscriptionsPoolUsage": "الاستخدام المجمّع",
   "settingsSubscriptionsReading": "جارٍ القراءة…",
   "settingsSubscriptionsRefresh": "تحديث",
   "settingsSubscriptionsRefreshing": "جارٍ التحديث...",

@@ -13196,6 +13196,79 @@
                                   "keepGoingOnCredits": {
                                     "type": "boolean"
                                   },
+                                  "pool": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "claude",
+                                          "chatgpt"
+                                        ]
+                                      },
+                                      "logins": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "read": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "unread": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "spent": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "backAtMs": {
+                                        "type": "number"
+                                      },
+                                      "switchedOff": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInEnded": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInSoon": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInByMs": {
+                                        "type": "number"
+                                      },
+                                      "models": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "logins",
+                                      "read",
+                                      "unread",
+                                      "spent",
+                                      "switchedOff",
+                                      "signInEnded",
+                                      "signInSoon"
+                                    ]
+                                  },
+                                  "fromProxy": {
+                                    "type": "boolean",
+                                    "const": true
+                                  },
                                   "detail": {
                                     "type": "string"
                                   }
@@ -38956,6 +39029,79 @@
                     "keepGoingOnCredits": {
                       "type": "boolean"
                     },
+                    "pool": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "claude",
+                            "chatgpt"
+                          ]
+                        },
+                        "logins": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "read": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "unread": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "spent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "backAtMs": {
+                          "type": "number"
+                        },
+                        "switchedOff": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInEnded": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInSoon": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInByMs": {
+                          "type": "number"
+                        },
+                        "models": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "logins",
+                        "read",
+                        "unread",
+                        "spent",
+                        "switchedOff",
+                        "signInEnded",
+                        "signInSoon"
+                      ]
+                    },
+                    "fromProxy": {
+                      "type": "boolean",
+                      "const": true
+                    },
                     "detail": {
                       "type": "string"
                     }
@@ -39140,6 +39286,79 @@
                     "keepGoingOnCredits": {
                       "type": "boolean"
                     },
+                    "pool": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "claude",
+                            "chatgpt"
+                          ]
+                        },
+                        "logins": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "read": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "unread": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "spent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "backAtMs": {
+                          "type": "number"
+                        },
+                        "switchedOff": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInEnded": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInSoon": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInByMs": {
+                          "type": "number"
+                        },
+                        "models": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "logins",
+                        "read",
+                        "unread",
+                        "spent",
+                        "switchedOff",
+                        "signInEnded",
+                        "signInSoon"
+                      ]
+                    },
+                    "fromProxy": {
+                      "type": "boolean",
+                      "const": true
+                    },
                     "detail": {
                       "type": "string"
                     }
@@ -39323,6 +39542,79 @@
                     },
                     "keepGoingOnCredits": {
                       "type": "boolean"
+                    },
+                    "pool": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "claude",
+                            "chatgpt"
+                          ]
+                        },
+                        "logins": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "read": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "unread": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "spent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "backAtMs": {
+                          "type": "number"
+                        },
+                        "switchedOff": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInEnded": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInSoon": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInByMs": {
+                          "type": "number"
+                        },
+                        "models": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "logins",
+                        "read",
+                        "unread",
+                        "spent",
+                        "switchedOff",
+                        "signInEnded",
+                        "signInSoon"
+                      ]
+                    },
+                    "fromProxy": {
+                      "type": "boolean",
+                      "const": true
                     },
                     "detail": {
                       "type": "string"
@@ -95372,6 +95664,79 @@
                             "keepGoingOnCredits": {
                               "type": "boolean"
                             },
+                            "pool": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "claude",
+                                    "chatgpt"
+                                  ]
+                                },
+                                "logins": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "read": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "unread": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "spent": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "backAtMs": {
+                                  "type": "number"
+                                },
+                                "switchedOff": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "signInEnded": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "signInSoon": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "signInByMs": {
+                                  "type": "number"
+                                },
+                                "models": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "logins",
+                                "read",
+                                "unread",
+                                "spent",
+                                "switchedOff",
+                                "signInEnded",
+                                "signInSoon"
+                              ]
+                            },
+                            "fromProxy": {
+                              "type": "boolean",
+                              "const": true
+                            },
                             "detail": {
                               "type": "string"
                             }
@@ -100361,6 +100726,79 @@
                 },
                 "keepGoingOnCredits": {
                   "type": "boolean"
+                },
+                "pool": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "claude",
+                        "chatgpt"
+                      ]
+                    },
+                    "logins": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "read": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "unread": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "spent": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "backAtMs": {
+                      "type": "number"
+                    },
+                    "switchedOff": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "signInEnded": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "signInSoon": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "signInByMs": {
+                      "type": "number"
+                    },
+                    "models": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "logins",
+                    "read",
+                    "unread",
+                    "spent",
+                    "switchedOff",
+                    "signInEnded",
+                    "signInSoon"
+                  ]
+                },
+                "fromProxy": {
+                  "type": "boolean",
+                  "const": true
                 },
                 "detail": {
                   "type": "string"
@@ -110450,6 +110888,79 @@
                                   "keepGoingOnCredits": {
                                     "type": "boolean"
                                   },
+                                  "pool": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "claude",
+                                          "chatgpt"
+                                        ]
+                                      },
+                                      "logins": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "read": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "unread": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "spent": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "backAtMs": {
+                                        "type": "number"
+                                      },
+                                      "switchedOff": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInEnded": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInSoon": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInByMs": {
+                                        "type": "number"
+                                      },
+                                      "models": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "logins",
+                                      "read",
+                                      "unread",
+                                      "spent",
+                                      "switchedOff",
+                                      "signInEnded",
+                                      "signInSoon"
+                                    ]
+                                  },
+                                  "fromProxy": {
+                                    "type": "boolean",
+                                    "const": true
+                                  },
                                   "detail": {
                                     "type": "string"
                                   }
@@ -112244,6 +112755,79 @@
                                   },
                                   "keepGoingOnCredits": {
                                     "type": "boolean"
+                                  },
+                                  "pool": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "claude",
+                                          "chatgpt"
+                                        ]
+                                      },
+                                      "logins": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "read": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "unread": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "spent": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "backAtMs": {
+                                        "type": "number"
+                                      },
+                                      "switchedOff": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInEnded": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInSoon": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInByMs": {
+                                        "type": "number"
+                                      },
+                                      "models": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "logins",
+                                      "read",
+                                      "unread",
+                                      "spent",
+                                      "switchedOff",
+                                      "signInEnded",
+                                      "signInSoon"
+                                    ]
+                                  },
+                                  "fromProxy": {
+                                    "type": "boolean",
+                                    "const": true
                                   },
                                   "detail": {
                                     "type": "string"
@@ -116504,6 +117088,79 @@
                           },
                           "keepGoingOnCredits": {
                             "type": "boolean"
+                          },
+                          "pool": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "claude",
+                                  "chatgpt"
+                                ]
+                              },
+                              "logins": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "read": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "unread": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "spent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "backAtMs": {
+                                "type": "number"
+                              },
+                              "switchedOff": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "signInEnded": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "signInSoon": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "signInByMs": {
+                                "type": "number"
+                              },
+                              "models": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "logins",
+                              "read",
+                              "unread",
+                              "spent",
+                              "switchedOff",
+                              "signInEnded",
+                              "signInSoon"
+                            ]
+                          },
+                          "fromProxy": {
+                            "type": "boolean",
+                            "const": true
                           },
                           "detail": {
                             "type": "string"

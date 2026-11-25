@@ -3895,6 +3895,7 @@
 "settingsSubscriptionsPaused" = "en pause";
 "settingsSubscriptionsPersonalResourcesDescription" = "Les nouvelles conversations des équipiers utilisent les instructions et compétences globales du %1$@ où vit votre second, avec les compétences des plugins d’agent que vous y avez activés. Les autres %2$@ qui exécutent du travail en gardent une copie, renvoyée seulement quand elle change. Les règles de l’équipage régissent la livraison ; votre fichier guide le style et le jugement.";
 "settingsSubscriptionsPersonalResourcesTitle" = "Instructions et compétences globales";
+"settingsSubscriptionsPoolUsage" = "Usage regroupé";
 "settingsSubscriptionsReading" = "lecture…";
 "settingsSubscriptionsRefresh" = "Actualiser";
 "settingsSubscriptionsRefreshing" = "Actualisation...";

@@ -1313,6 +1313,31 @@
   "settingsSubscriptionsPaused": "已暂停",
   "settingsSubscriptionsPersonalResourcesDescription": "新的船员对话使用你的大副所在 {computer} 上的全局说明和技能，以及你在那里开启的智能体插件的技能。运行工作的其他 {computers} 会保留一份副本，只在内容变化时重新发送。船员规则决定交付方式；你的文件引导风格和判断。",
   "settingsSubscriptionsPersonalResourcesTitle": "全局说明和技能",
+  "settingsSubscriptionsPoolAccounts": {
+    "plural": "count",
+    "other": "代理应用中合并了 {count} 个账户"
+  },
+  "settingsSubscriptionsPoolSignInBy": {
+    "plural": "count",
+    "other": "{count} 个需要在 {time} 前重新登录"
+  },
+  "settingsSubscriptionsPoolSignedOut": {
+    "plural": "count",
+    "other": "{count} 个需要在代理应用中重新登录"
+  },
+  "settingsSubscriptionsPoolSpent": {
+    "plural": "count",
+    "other": "{count} 个已用完，{time} 恢复"
+  },
+  "settingsSubscriptionsPoolSwitchedOff": {
+    "plural": "count",
+    "other": "{count} 个已关闭"
+  },
+  "settingsSubscriptionsPoolUnread": {
+    "plural": "count",
+    "other": "{count} 个尚未读取"
+  },
+  "settingsSubscriptionsPoolUsage": "合并用量",
   "settingsSubscriptionsReading": "正在读取…",
   "settingsSubscriptionsRefresh": "刷新",
   "settingsSubscriptionsRefreshing": "正在刷新...",

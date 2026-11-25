@@ -2739,6 +2739,114 @@
       <string>%1$ld tareas</string>
     </dict>
   </dict>
+  <key>settingsSubscriptionsPoolAccounts</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld cuenta agrupada en tu app de proxy</string>
+      <key>many</key>
+      <string>%1$ld de cuentas agrupadas en tu app de proxy</string>
+      <key>other</key>
+      <string>%1$ld cuentas agrupadas en tu app de proxy</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSignInBy</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld debe volver a iniciar sesión antes de %2$@</string>
+      <key>many</key>
+      <string>%1$ld deben volver a iniciar sesión antes de %2$@</string>
+      <key>other</key>
+      <string>%1$ld deben volver a iniciar sesión antes de %2$@</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSignedOut</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld debe volver a iniciar sesión en tu app de proxy</string>
+      <key>many</key>
+      <string>%1$ld deben volver a iniciar sesión en tu app de proxy</string>
+      <key>other</key>
+      <string>%1$ld deben volver a iniciar sesión en tu app de proxy</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSpent</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld agotada hasta %2$@</string>
+      <key>many</key>
+      <string>%1$ld agotadas hasta %2$@</string>
+      <key>other</key>
+      <string>%1$ld agotadas hasta %2$@</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSwitchedOff</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld desactivada</string>
+      <key>many</key>
+      <string>%1$ld desactivadas</string>
+      <key>other</key>
+      <string>%1$ld desactivadas</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolUnread</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld sin leer todavía</string>
+      <key>many</key>
+      <string>%1$ld sin leer todavía</string>
+      <key>other</key>
+      <string>%1$ld sin leer todavía</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsSavedResets</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

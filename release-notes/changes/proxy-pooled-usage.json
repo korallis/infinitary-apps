@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "proxy-pooled-usage",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "Settings shows the pooled Claude and ChatGPT usage of your CLI proxy",
+      "body": "When Claude Code or a custom connection sends its requests to a CLI proxy on this computer that pools several accounts, Settings shows one set of Claude meters and one set of ChatGPT meters for all of them together, with how many accounts are spent, switched off or need signing in again there. The crew picks and pauses models by those pools.",
+      "picture": {
+        "dark": "proxy-pooled-usage-dark.webp",
+        "light": "proxy-pooled-usage-light.webp",
+        "alt": "A custom connection to a proxy on this computer, showing a Claude pool at 34% of its session and a ChatGPT pool at 88%, each with a line saying how many accounts it pools."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -3895,6 +3895,7 @@
 "settingsSubscriptionsPaused" = "一時停止中";
 "settingsSubscriptionsPersonalResourcesDescription" = "新しい乗組員の会話では、一等航海士がいる %1$@ の全体の指示とスキルと、そこでオンにしたエージェントプラグインのスキルを使います。作業を実行するほかの %2$@ はその写しを持ち、変更されたときだけ送り直されます。届け方は乗組員のルールが決め、あなたのファイルは書き方と判断の指針になります。";
 "settingsSubscriptionsPersonalResourcesTitle" = "全体の指示とスキル";
+"settingsSubscriptionsPoolUsage" = "まとめた使用量";
 "settingsSubscriptionsReading" = "読み取り中…";
 "settingsSubscriptionsRefresh" = "更新";
 "settingsSubscriptionsRefreshing" = "更新中...";

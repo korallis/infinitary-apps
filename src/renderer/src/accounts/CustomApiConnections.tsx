@@ -1,7 +1,7 @@
 import { CUSTOM_READS_PICTURES, CUSTOM_TOKEN_FAILURE, type CustomApiView } from "@shared/customApi";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
-import { Badge, Button, StatusDot } from "../design";
+import { Badge, Button, QuotaMicroMeter, StatusDot } from "../design";
 import { CUSTOM_EXCEPTION_WORDS } from "./customApiFailures";
 import "./customApi.css";
 import {
@@ -11,8 +11,21 @@ import {
 } from "@shared/customApiFile";
 import { HERE } from "@shared/deviceNames";
 import * as m from "@shared/i18n/messages.generated";
+import {
+  POOL_CREDITS_PROVIDER,
+  QUOTA_POOL_NAMES,
+  type QuotaProviderView,
+  type QuotaSnapshotView,
+} from "@shared/quota";
+import { windowSignals } from "@shared/quotaSignals";
 import { type DeviceSignIns, signInPlace } from "@shared/signIns";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
+import {
+  creditsLine,
+  EMPTY_QUOTA_TEXT,
+  poolLine,
+  poolUsageLabel,
+} from "../settings/subscriptionsWords";
 import { useDeviceSignIns } from "../settings/useDeviceSignIns";
 import { CustomApiFileRow, FileApproval, FileConnectionRow, FileWarnings } from "./CustomApiFile";
 import { type FirstmateModel, FirstmateRadio } from "./CustomApiFirstmate";
@@ -231,7 +244,71 @@ export function RemoteCustomConnection({
 }
 
 /** The Settings list: one block per connection, one line per model. */
-export function CustomApiAccountsSection() {
+
+/**
+ * A connection to a CLI proxy's pools (docs/quota.md, "A proxy's pooled
+ * logins"): one line per pool its models are served from, with that pool's
+ * meters and how its logins stand, as an account row in Settings shows them.
+ */
+function PooledUsage({ rows, now }: { rows: readonly QuotaProviderView[]; now: number }) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="fm-custom-pools" data-custom-pools="">
+      {rows.map((row) => (
+        <div
+          className="fm-subs-flow fm-custom-pool"
+          key={row.pool?.kind ?? "unread"}
+          data-custom-pool={row.pool?.kind ?? ""}
+        >
+          <span className="fm-custom-pool-name">
+            {row.pool ? QUOTA_POOL_NAMES[row.pool.kind] : poolUsageLabel()}
+          </span>
+          {row.windows.map((window) => {
+            const signals = windowSignals(window, now);
+            return (
+              <QuotaMicroMeter
+                key={window.id}
+                label={window.label}
+                {...(window.percentRemaining !== undefined
+                  ? { percentRemaining: window.percentRemaining }
+                  : {})}
+                pace={window.pace ?? "unknown"}
+                {...(window.resetText ? { resetText: window.resetText } : {})}
+                {...(signals.kind === "measured"
+                  ? { clockPercent: signals.timeRemainingPercent }
+                  : {})}
+                stale={row.stale}
+              />
+            );
+          })}
+          {row.pool ? (
+            <span className="fm-subs-credits" data-pool="">
+              {poolLine(row.pool, now)}
+            </span>
+          ) : (
+            <span className="fm-subs-state">{EMPTY_QUOTA_TEXT.unread}</span>
+          )}
+          {row.pool && <PoolCredits row={row} />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** A pool's credits, in its vendor's words; the proxy keeps them, so nothing here turns them on. */
+function PoolCredits({ row }: { row: QuotaProviderView }) {
+  const line = row.pool
+    ? creditsLine(POOL_CREDITS_PROVIDER[row.pool.kind], row.credits)
+    : undefined;
+  if (!line) return null;
+  return (
+    <span className="fm-subs-credits" data-credits="">
+      {line}
+    </span>
+  );
+}
+
+export function CustomApiAccountsSection({ quota }: { quota?: QuotaSnapshotView | null }) {
   const [views, setViews] = useState<CustomApiView[]>([]);
   const [providers, setProviders] = useState<Record<string, string>>({});
   const [chosen, setChosen] = useState<FirstmateModel>(null);
@@ -390,6 +467,12 @@ export function CustomApiAccountsSection() {
                 </Button>
               </span>
             </div>
+            <PooledUsage
+              rows={(quota?.providers ?? []).filter(
+                (row) => row.accountId === accountId && (row.pool || row.status === "unavailable"),
+              )}
+              now={Date.now()}
+            />
             <div className="fm-custom-lrow fm-custom-lcols" aria-hidden="true">
               <span>{m.accountsCustomApiColumnModel()}</span>
               <span>{m.accountsCustomApiColumnStatus()}</span>

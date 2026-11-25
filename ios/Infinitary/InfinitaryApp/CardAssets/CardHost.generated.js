@@ -93622,6 +93622,599 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Global instructions and skills`;
   }
+  function settingsSubscriptionsPoolAccounts(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+          case "one":
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+          case "two":
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+          case "few":
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+          case "many":
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+          default:
+            return `حسابات مجمّعة في تطبيق الوكيل: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Konto in deiner Proxy-App gebündelt`;
+          default:
+            return `${count} Konten in deiner Proxy-App gebündelt`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} cuenta agrupada en tu app de proxy`;
+          case "many":
+            return `${count} de cuentas agrupadas en tu app de proxy`;
+          default:
+            return `${count} cuentas agrupadas en tu app de proxy`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} compte regroupé dans votre app proxy`;
+          case "many":
+            return `${count} de comptes regroupés dans votre app proxy`;
+          default:
+            return `${count} comptes regroupés dans votre app proxy`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `プロキシアプリで ${count} 件のアカウントをまとめて使用中`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `프록시 앱에 계정 ${count}개가 합쳐져 있음`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} conta agrupada no seu app de proxy`;
+          case "many":
+            return `${count} de contas agrupadas no seu app de proxy`;
+          default:
+            return `${count} contas agrupadas no seu app de proxy`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `代理应用中合并了 ${count} 个账户`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `代理 App 中合併了 ${count} 個帳號`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} áççöûñţ þööļéð îñ ýöûŕ þŕöẋý áþþ ~~~~~~~~~~~]`;
+          default:
+            return `[${count} áççöûñţš þööļéð îñ ýöûŕ þŕöẋý áþþ ~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ account pooled in your proxy app‬`;
+          default:
+            return `${count}‮ accounts pooled in your proxy app‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} account pooled in your proxy app`;
+      default:
+        return `${count} accounts pooled in your proxy app`;
+    }
+  }
+  function settingsSubscriptionsPoolSignInBy(input2) {
+    const count = formatNumber(input2.count);
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+          case "one":
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+          case "two":
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+          case "few":
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+          case "many":
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+          default:
+            return `تحتاج إلى تسجيل الدخول من جديد قبل ${time2}: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} muss bis ${time2} neu angemeldet werden`;
+          default:
+            return `${count} müssen bis ${time2} neu angemeldet werden`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} debe volver a iniciar sesión antes de ${time2}`;
+          case "many":
+            return `${count} deben volver a iniciar sesión antes de ${time2}`;
+          default:
+            return `${count} deben volver a iniciar sesión antes de ${time2}`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} doit se reconnecter avant ${time2}`;
+          case "many":
+            return `${count} doivent se reconnecter avant ${time2}`;
+          default:
+            return `${count} doivent se reconnecter avant ${time2}`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件は ${time2} までに再度サインインが必要`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count}개는 ${time2}까지 다시 로그인해야 함`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} precisa fazer login de novo até ${time2}`;
+          case "many":
+            return `${count} precisam fazer login de novo até ${time2}`;
+          default:
+            return `${count} precisam fazer login de novo até ${time2}`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个需要在 ${time2} 前重新登录`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個需要在 ${time2} 前重新登入`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ñééðš šîĝñîñĝ îñ áĝáîñ ƀý ${time2} ~~~~~~~~~]`;
+          default:
+            return `[${count} ñééð šîĝñîñĝ îñ áĝáîñ ƀý ${time2} ~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ needs signing in again by ‬${time2}`;
+          default:
+            return `${count}‮ need signing in again by ‬${time2}`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} needs signing in again by ${time2}`;
+      default:
+        return `${count} need signing in again by ${time2}`;
+    }
+  }
+  function settingsSubscriptionsPoolSignedOut(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+          case "one":
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+          case "two":
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+          case "few":
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+          case "many":
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+          default:
+            return `تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} muss in deiner Proxy-App neu angemeldet werden`;
+          default:
+            return `${count} müssen in deiner Proxy-App neu angemeldet werden`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} debe volver a iniciar sesión en tu app de proxy`;
+          case "many":
+            return `${count} deben volver a iniciar sesión en tu app de proxy`;
+          default:
+            return `${count} deben volver a iniciar sesión en tu app de proxy`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} doit se reconnecter dans votre app proxy`;
+          case "many":
+            return `${count} doivent se reconnecter dans votre app proxy`;
+          default:
+            return `${count} doivent se reconnecter dans votre app proxy`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件はプロキシアプリで再度サインインが必要`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count}개는 프록시 앱에서 다시 로그인해야 함`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} precisa fazer login de novo no seu app de proxy`;
+          case "many":
+            return `${count} precisam fazer login de novo no seu app de proxy`;
+          default:
+            return `${count} precisam fazer login de novo no seu app de proxy`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个需要在代理应用中重新登录`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個需要在代理 App 中重新登入`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ñééðš šîĝñîñĝ îñ áĝáîñ îñ ýöûŕ þŕöẋý áþþ ~~~~~~~~~~~~~~]`;
+          default:
+            return `[${count} ñééð šîĝñîñĝ îñ áĝáîñ îñ ýöûŕ þŕöẋý áþþ ~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ needs signing in again in your proxy app‬`;
+          default:
+            return `${count}‮ need signing in again in your proxy app‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} needs signing in again in your proxy app`;
+      default:
+        return `${count} need signing in again in your proxy app`;
+    }
+  }
+  function settingsSubscriptionsPoolSpent(input2) {
+    const count = formatNumber(input2.count);
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `مستنفدة حتى ${time2}: ${count}`;
+          case "one":
+            return `مستنفدة حتى ${time2}: ${count}`;
+          case "two":
+            return `مستنفدة حتى ${time2}: ${count}`;
+          case "few":
+            return `مستنفدة حتى ${time2}: ${count}`;
+          case "many":
+            return `مستنفدة حتى ${time2}: ${count}`;
+          default:
+            return `مستنفدة حتى ${time2}: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} aufgebraucht bis ${time2}`;
+          default:
+            return `${count} aufgebraucht bis ${time2}`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} agotada hasta ${time2}`;
+          case "many":
+            return `${count} agotadas hasta ${time2}`;
+          default:
+            return `${count} agotadas hasta ${time2}`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} épuisé jusqu’à ${time2}`;
+          case "many":
+            return `${count} épuisés jusqu’à ${time2}`;
+          default:
+            return `${count} épuisés jusqu’à ${time2}`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件は ${time2} まで使い切り`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count}개 ${time2}까지 소진됨`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} esgotada até ${time2}`;
+          case "many":
+            return `${count} esgotadas até ${time2}`;
+          default:
+            return `${count} esgotadas até ${time2}`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个已用完，${time2} 恢复`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個已用完，${time2} 恢復`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} šþéñţ ûñţîļ ${time2} ~~~~~]`;
+          default:
+            return `[${count} šþéñţ ûñţîļ ${time2} ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ spent until ‬${time2}`;
+          default:
+            return `${count}‮ spent until ‬${time2}`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} spent until ${time2}`;
+      default:
+        return `${count} spent until ${time2}`;
+    }
+  }
+  function settingsSubscriptionsPoolSwitchedOff(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `متوقفة: ${count}`;
+          case "one":
+            return `متوقفة: ${count}`;
+          case "two":
+            return `متوقفة: ${count}`;
+          case "few":
+            return `متوقفة: ${count}`;
+          case "many":
+            return `متوقفة: ${count}`;
+          default:
+            return `متوقفة: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} ausgeschaltet`;
+          default:
+            return `${count} ausgeschaltet`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} desactivada`;
+          case "many":
+            return `${count} desactivadas`;
+          default:
+            return `${count} desactivadas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} désactivé`;
+          case "many":
+            return `${count} désactivés`;
+          default:
+            return `${count} désactivés`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件はオフ`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count}개 꺼짐`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} desativada`;
+          case "many":
+            return `${count} desativadas`;
+          default:
+            return `${count} desativadas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个已关闭`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個已關閉`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} šŵîţçĥéð öƒƒ ~~~~~]`;
+          default:
+            return `[${count} šŵîţçĥéð öƒƒ ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ switched off‬`;
+          default:
+            return `${count}‮ switched off‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} switched off`;
+      default:
+        return `${count} switched off`;
+    }
+  }
+  function settingsSubscriptionsPoolUnread(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `لم تُقرأ بعد: ${count}`;
+          case "one":
+            return `لم تُقرأ بعد: ${count}`;
+          case "two":
+            return `لم تُقرأ بعد: ${count}`;
+          case "few":
+            return `لم تُقرأ بعد: ${count}`;
+          case "many":
+            return `لم تُقرأ بعد: ${count}`;
+          default:
+            return `لم تُقرأ بعد: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} noch nicht gelesen`;
+          default:
+            return `${count} noch nicht gelesen`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} sin leer todavía`;
+          case "many":
+            return `${count} sin leer todavía`;
+          default:
+            return `${count} sin leer todavía`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} pas encore lu`;
+          case "many":
+            return `${count} pas encore lus`;
+          default:
+            return `${count} pas encore lus`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件はまだ読み取っていません`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count}개 아직 읽지 않음`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} ainda não lida`;
+          case "many":
+            return `${count} ainda não lidas`;
+          default:
+            return `${count} ainda não lidas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个尚未读取`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個尚未讀取`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ñöţ ŕéáð ýéţ ~~~~~]`;
+          default:
+            return `[${count} ñöţ ŕéáð ýéţ ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ not read yet‬`;
+          default:
+            return `${count}‮ not read yet‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} not read yet`;
+      default:
+        return `${count} not read yet`;
+    }
+  }
+  function settingsSubscriptionsPoolUsage() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الاستخدام المجمّع`;
+      case "de":
+        return `Gebündelte Nutzung`;
+      case "es":
+        return `Uso agrupado`;
+      case "fr":
+        return `Usage regroupé`;
+      case "ja":
+        return `まとめた使用量`;
+      case "ko":
+        return `합산 사용량`;
+      case "pt-BR":
+        return `Uso agrupado`;
+      case "zh-Hans":
+        return `合并用量`;
+      case "zh-Hant":
+        return `合併用量`;
+      case "en-XA":
+        return `[Þööļéð ûšáĝé ~~~~]`;
+      case "ar-XB":
+        return `‮Pooled usage‬`;
+    }
+    return `Pooled usage`;
+  }
   function settingsSubscriptionsReading() {
     switch (currentLanguage()) {
       case "ar":
@@ -115445,6 +116038,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsPaused,
     settingsSubscriptionsPersonalResourcesDescription,
     settingsSubscriptionsPersonalResourcesTitle,
+    settingsSubscriptionsPoolAccounts,
+    settingsSubscriptionsPoolSignInBy,
+    settingsSubscriptionsPoolSignedOut,
+    settingsSubscriptionsPoolSpent,
+    settingsSubscriptionsPoolSwitchedOff,
+    settingsSubscriptionsPoolUnread,
+    settingsSubscriptionsPoolUsage,
     settingsSubscriptionsReading,
     settingsSubscriptionsRefresh,
     settingsSubscriptionsRefreshing,
@@ -119056,6 +119656,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsPaused": [],
     "settingsSubscriptionsPersonalResourcesDescription": ["computer", "computers"],
     "settingsSubscriptionsPersonalResourcesTitle": [],
+    "settingsSubscriptionsPoolAccounts": ["count"],
+    "settingsSubscriptionsPoolSignInBy": ["count", "time"],
+    "settingsSubscriptionsPoolSignedOut": ["count"],
+    "settingsSubscriptionsPoolSpent": ["count", "time"],
+    "settingsSubscriptionsPoolSwitchedOff": ["count"],
+    "settingsSubscriptionsPoolUnread": ["count"],
+    "settingsSubscriptionsPoolUsage": [],
     "settingsSubscriptionsReading": [],
     "settingsSubscriptionsRefresh": [],
     "settingsSubscriptionsRefreshing": [],
@@ -133445,6 +134052,33 @@ ${startersHtml()}`;
     available: number().int().nonnegative(),
     applicable: number().int().nonnegative().optional()
   });
+  const QUOTA_POOL_KINDS = ["claude", "chatgpt"];
+  const quotaPoolViewSchema = object({
+    kind: _enum(QUOTA_POOL_KINDS),
+    logins: number().int().nonnegative(),
+    /** Serving logins whose limits were read: they make the pooled windows. */
+    read: number().int().nonnegative(),
+    /** Serving logins nothing has read yet. */
+    unread: number().int().nonnegative(),
+    /** Logins whose allowance is spent until they come back. */
+    spent: number().int().nonnegative(),
+    /** The earliest moment a spent login serves again. */
+    backAtMs: number().optional(),
+    /** Logins switched off in the proxy. */
+    switchedOff: number().int().nonnegative(),
+    /** Logins whose sign-in ended in the proxy: they cannot serve. */
+    signInEnded: number().int().nonnegative(),
+    /** Serving logins the proxy says need signing in again there. */
+    signInSoon: number().int().nonnegative(),
+    /** The earliest moment one of those stops serving. */
+    signInByMs: number().optional(),
+    /**
+     * The connection's models this pool serves, on a custom connection's row:
+     * the row measures those models alone (`rowMeasuresModel`). Absent on a
+     * Claude account's row, which measures every model of its account.
+     */
+    models: array(string()).optional()
+  });
   const quotaProviderViewSchema = object({
     /** Quota provider id: codex, grok, claude, copilot. */
     provider: string(),
@@ -133509,6 +134143,18 @@ ${startersHtml()}`;
      * (`answersOnCredits`). Absent is off.
      */
     keepGoingOnCredits: boolean().optional(),
+    /**
+     * The row is a CLI proxy's pool of logins (`quotaPoolViewSchema`): its
+     * windows are the pooled share left, and the logins' standing rides here.
+     * The proxy's own sign-ins never make the row `auth_required`.
+     */
+    pool: quotaPoolViewSchema.optional(),
+    /**
+     * The row reads a CLI proxy, whether or not the proxy answered: a reading
+     * it could not refresh keeps only the proxy's own last reading of the same
+     * pool, never another source's (`mergeStaleProviders`).
+     */
+    fromProxy: literal(true).optional(),
     /**
      * Disclosed uncertainty, in the user's words, for a row with no window.
      * The surface renders it instead of a silent blank, and it is never a

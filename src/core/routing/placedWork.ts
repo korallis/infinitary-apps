@@ -1,5 +1,5 @@
 import type { CatalogModelView, QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
-import { allowanceProviderOf } from "@shared/quota";
+import { allowanceProviderOf, rowMeasuresModel } from "@shared/quota";
 import {
   allowanceSpent,
   classifyProviderWindows,
@@ -427,7 +427,7 @@ export class PlacedWorkScores {
   ): RankedModel[] {
     return catalog.map((model) => {
       const candidates = rows
-        .filter((row) => row.provider === model.provider)
+        .filter((row) => row.provider === model.provider && rowMeasuresModel(row, model.id))
         .map((row) => ({
           row,
           raw: effectiveFromProvider(row, now, model.id),

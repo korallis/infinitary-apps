@@ -1313,6 +1313,31 @@
   "settingsSubscriptionsPaused": "一時停止中",
   "settingsSubscriptionsPersonalResourcesDescription": "新しい乗組員の会話では、一等航海士がいる {computer} の全体の指示とスキルと、そこでオンにしたエージェントプラグインのスキルを使います。作業を実行するほかの {computers} はその写しを持ち、変更されたときだけ送り直されます。届け方は乗組員のルールが決め、あなたのファイルは書き方と判断の指針になります。",
   "settingsSubscriptionsPersonalResourcesTitle": "全体の指示とスキル",
+  "settingsSubscriptionsPoolAccounts": {
+    "plural": "count",
+    "other": "プロキシアプリで {count} 件のアカウントをまとめて使用中"
+  },
+  "settingsSubscriptionsPoolSignInBy": {
+    "plural": "count",
+    "other": "{count} 件は {time} までに再度サインインが必要"
+  },
+  "settingsSubscriptionsPoolSignedOut": {
+    "plural": "count",
+    "other": "{count} 件はプロキシアプリで再度サインインが必要"
+  },
+  "settingsSubscriptionsPoolSpent": {
+    "plural": "count",
+    "other": "{count} 件は {time} まで使い切り"
+  },
+  "settingsSubscriptionsPoolSwitchedOff": {
+    "plural": "count",
+    "other": "{count} 件はオフ"
+  },
+  "settingsSubscriptionsPoolUnread": {
+    "plural": "count",
+    "other": "{count} 件はまだ読み取っていません"
+  },
+  "settingsSubscriptionsPoolUsage": "まとめた使用量",
   "settingsSubscriptionsReading": "読み取り中…",
   "settingsSubscriptionsRefresh": "更新",
   "settingsSubscriptionsRefreshing": "更新中...",

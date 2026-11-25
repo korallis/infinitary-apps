@@ -1,4 +1,10 @@
-import type { QuotaProviderView, QuotaWindowView } from "./quota";
+import type {
+  QuotaCreditsView,
+  QuotaPoolKind,
+  QuotaPoolView,
+  QuotaProviderView,
+  QuotaWindowView,
+} from "./quota";
 
 /**
  * Derived quota signals: Infinitary's own quota math.
@@ -474,4 +480,132 @@ export function formatDurationShort(ms: number): string {
   if (days > 0) return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
   if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   return `${minutes}m`;
+}
+
+/** One window of one pooled login: what is left of it and when it refills. */
+export type PoolLoginWindow = {
+  id: string;
+  label: string;
+  percentRemaining: number;
+  resetsAtMs?: number;
+};
+
+/**
+ * One login of a CLI proxy, as the pool weighs it at the moment it was read
+ * (docs/quota.md, "A proxy's pooled logins"). `windows` absent is unread.
+ * - `serving` it answers now,
+ * - `spent` its allowance ran out: it weighs zero until `backAtMs`,
+ * - `switched_off` the proxy has it switched off,
+ * - `sign_in_ended` its sign-in ended in the proxy and it cannot serve.
+ */
+export type PoolLogin = {
+  state: "serving" | "spent" | "switched_off" | "sign_in_ended";
+  /** The proxy's own weight for the login; absent weighs one. */
+  weight?: number;
+  backAtMs?: number;
+  /** The proxy says sign in again before this moment, when it stops serving. */
+  signInByMs?: number;
+  windows?: PoolLoginWindow[];
+  credits?: QuotaCreditsView;
+};
+
+export type PoolReading = {
+  windows: QuotaWindowView[];
+  pool: QuotaPoolView;
+  credits?: QuotaCreditsView;
+};
+
+function earliest(values: (number | undefined)[]): number | undefined {
+  const known = values.filter((value): value is number => typeof value === "number");
+  return known.length > 0 ? Math.min(...known) : undefined;
+}
+
+/**
+ * A proxy's logins of one kind as one allowance. For each window, the share
+ * left is the weighted mean of what every serving, read login has left of
+ * it, with each spent login weighing in at zero; a window a read login has
+ * not reported, or whose reset has passed, leaves that login out of it or
+ * counts it full again. Unread, switched-off and sign-in-ended logins are
+ * counted and never weigh as zero: unknown is not empty. The window refills
+ * at the earliest moment a spent login comes back or a read login resets.
+ * Pace stays unknown: the logins' cycles differ, so the pool has no one
+ * cycle to measure it against, and no window carries a cycle length.
+ */
+export function poolReading(
+  kind: QuotaPoolKind,
+  logins: readonly PoolLogin[],
+  nowMs: number,
+  /** The window a pool with every login spent and none read is shown on. */
+  spentWindow: { id: string; label: string },
+): PoolReading {
+  const weightOf = (login: PoolLogin) =>
+    typeof login.weight === "number" && login.weight > 0 ? login.weight : 1;
+  const serving = logins.filter((login) => login.state === "serving");
+  const read = serving.filter((login) => login.windows !== undefined);
+  const spent = logins.filter((login) => login.state === "spent");
+  const soon = serving.filter((login) => login.signInByMs !== undefined);
+  const pool: QuotaPoolView = {
+    kind,
+    logins: logins.length,
+    read: read.length,
+    unread: serving.length - read.length,
+    spent: spent.length,
+    switchedOff: logins.filter((login) => login.state === "switched_off").length,
+    signInEnded: logins.filter((login) => login.state === "sign_in_ended").length,
+    signInSoon: soon.length,
+  };
+  const backAtMs = earliest(spent.map((login) => login.backAtMs));
+  if (backAtMs !== undefined) pool.backAtMs = backAtMs;
+  const signInByMs = earliest(soon.map((login) => login.signInByMs));
+  if (signInByMs !== undefined) pool.signInByMs = signInByMs;
+
+  // The read logins name the windows. Only with no login serving do the
+  // spent logins' last readings name them: a window just the spent logins
+  // reported never shows a serving pool as spent, and an unread serving
+  // login keeps the pool unknown.
+  const namers = read.length > 0 ? read : serving.length === 0 ? spent : [];
+  const labels = new Map<string, string>();
+  for (const login of namers) {
+    for (const window of login.windows ?? []) {
+      if (!labels.has(window.id)) labels.set(window.id, window.label);
+    }
+  }
+  const windows: QuotaWindowView[] = [];
+  for (const [id, label] of labels) {
+    let weighted = 0;
+    let total = 0;
+    const resets: (number | undefined)[] = [];
+    for (const login of read) {
+      const window = login.windows?.find((entry) => entry.id === id);
+      if (!window) continue;
+      const lapsed = window.resetsAtMs !== undefined && window.resetsAtMs <= nowMs;
+      const left = lapsed ? 100 : Math.max(0, Math.min(100, window.percentRemaining));
+      weighted += left * weightOf(login);
+      total += weightOf(login);
+      if (!lapsed) resets.push(window.resetsAtMs);
+    }
+    for (const login of spent) {
+      total += weightOf(login);
+      resets.push(login.backAtMs);
+    }
+    if (total === 0) continue;
+    const resetsAtMs = earliest(resets);
+    windows.push({
+      id,
+      label,
+      percentRemaining: weighted / total,
+      ...(resetsAtMs !== undefined ? { resetsAtMs } : {}),
+    });
+  }
+  // No login serving and one spent: the pool is spent, in one window. An
+  // unread serving login keeps it unknown instead.
+  if (windows.length === 0 && spent.length > 0 && serving.length === 0) {
+    windows.push({
+      ...spentWindow,
+      percentRemaining: 0,
+      ...(backAtMs !== undefined ? { resetsAtMs: backAtMs } : {}),
+    });
+  }
+  const credits = serving.find((login) => login.credits?.state === "available")?.credits;
+  return { windows, pool, ...(credits ? { credits } : {}) };
 }

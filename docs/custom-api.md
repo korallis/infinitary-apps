@@ -165,7 +165,7 @@ A presence-only observer restores missing categories to unknown after normalizat
 When input and output are reported without a total, Pi's context-token calculation supplies the compactor's total before unknown category markers are restored.
 Reported reasoning tokens remain an optional subset of output in the event and saved usage record, never another token or cost category.
 An unmatched id with no stated price, missing counts or missing rates leaves the estimate unavailable; nothing reprices older records.
-Allowance remains unknown.
+Allowance remains unknown, except on a connection whose base address is a CLI proxy on this computer: its Claude and ChatGPT models read that proxy's pooled logins, and the connection's block in Settings shows each pool's meters (`docs/quota.md`, "A proxy's pooled logins").
 
 ## Token commands
 

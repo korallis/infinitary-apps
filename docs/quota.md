@@ -71,7 +71,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 ## Keeping the Claude reading current
 
 - For the first login, health, allowance, identity and login ownership use `readClaudeStore`: one `present`, `absent` or `unreadable` result carrying the access token, advisory expiry and current identity from Claude Code's config.
-  A token command set up for Claude Code comes first: while one is set, health is that access, the allowance is not measured and the store is not read for it (`docs/claude-client.md`, "Access a company set up").
+  A token command set up for Claude Code comes first: while one is set, health is that access, the allowance is not measured and the store is not read for it (`docs/claude-client.md`, "Access a company set up"), unless that access sends its requests to a CLI proxy on this computer, whose Claude pool is then the allowance ("A proxy's pooled logins").
   File credentials and the account config are cached by modification date; a Keychain value is cached only when the item reports its modification date, and is invalidated by a changed item or config.
   Access expiry alone does not discard a cached value, and concurrent equivalent reads share their work.
   Retry and the read around the idle status request bypass the value cache; an explicit permission request never joins a silent read.
@@ -303,3 +303,59 @@ An ambiguous local profile failure says that Infinitary could not use the AWS si
 The sign-in action opens AWS's own sign-in for an existing AWS IAM Identity Center or console profile, or asks for a replacement Bedrock API key.
 Before work resumes after profile sign-in, Infinitary rechecks Claude model access in that account’s region and saves the new list.
 AWS may bill those checks.
+
+## A proxy's pooled logins
+
+A CLI proxy on this computer (EasyCLIProxyAPI, a build of CLIProxyAPI) can hold several Claude logins and several ChatGPT logins and send each request to one of them.
+Infinitary reads such a proxy's own limit readings and shows, routes and pauses by one Claude pool and one ChatGPT pool, never by a single login (`src/core/quota/cliProxy/`).
+
+- **Finding the proxy.**
+  EasyCLIProxyAPI keeps its settings in `config.toml` in its own folder and runs its proxy program, `cli-proxy-api`, from a folder inside it (`cpa-core` in its Windows download).
+  A packaged app asks the system, on every read, which programs named `cli-proxy-api` listen on this computer's TCP ports, and on which address and port (`findProxyListeners`: `Get-NetTCPConnection` on Windows, `lsof` elsewhere, where a wildcard address counts only with the address family `lsof` names for that socket; at most once every five minutes while no proxy runs), and reads `config.toml` beside such a program or in the folder above it (`readProxySettings`): the port, the management key and the first client key, from the top-level lines before any table; EasyCLIProxyAPI writes its client keys as a list of entries with a key and a remark, of which only the key field is read (a remark is quoted text, never syntax; an entry with no key leaves the client key unread), and a plain list of keys reads the same.
+  The settings are used only while that program itself listens on the port they name, and only at the loopback addresses where it listens there (`loopbackOriginOf`): `http://127.0.0.1:<port>` for IPv4 loopback or every IPv4 address, `http://[::1]:<port>` for IPv6 loopback or every IPv6 address; the keys go to the IPv4 one first when it listens on both (`createProxyAppReader`).
+  When both folders hold settings naming a port the program listens on and they differ in that port or their keys, which ones the program uses is not known, and neither is read.
+  Every one of these addresses is written as an address's origin writes it (`loopbackOrigin`), so a proxy on port 80 is `http://127.0.0.1`.
+  A proxy that exited, another program on its port, or a proxy listening only on another interface is never sent a key, and a proxy whose `host` is not this computer is not read.
+  The keys stay in memory: they are never logged, saved or shown, and go only to that loopback address.
+  A development or test run reads no proxy unless `CLI_PROXY_SETTINGS` names a settings file (`proxyAppFor` in `src/core/quota/homeQuota.ts`), so a test never reads the proxy of the computer it runs on.
+- **Only reads.**
+  Every request goes through `guardedProxyHttp`, which refuses before sending anything but `GET /v8/management/credentials` (`/v0/management/auth-files` on a proxy before version 8, after a 404), `GET /v1/models`, and a `POST /v0/management/api-call` that reads one login's usage from Anthropic's or ChatGPT's usage address with no body.
+  The usage queue is never asked, since asking empties it, and nothing that changes the proxy is sent.
+  A redirect answer fails the request instead of being followed (`redirect: "error"`), so no request reaches a route the guard did not check.
+  A reader made with `ask: false` refuses the request tool as well, and only reads what the proxy already holds.
+- **Only when it is used.**
+  The proxy is read only while something in the app sends requests to its port: the Claude account's access for Claude Code, or a custom connection's base address (`uses`); otherwise no request is sent at all.
+- **Each login.**
+  `parseProxyCredentials` keeps each login's pool, state and last limit reading, and drops its email, label, file path, id and id token.
+  A login switched off in the proxy is `switched_off`; one whose renewal fails and whose sign-in has expired is `sign_in_ended`; one on a quota cooldown of the whole login is `spent` until the proxy tries it again; any other serves, with the time it stops serving when the proxy says it needs signing in again.
+  Its reading is the limit headers of its last answer: Anthropic's unified headers (a used fraction and a reset in Unix seconds per window) or ChatGPT's `x-codex-*` headers (a used percent, a reset and the window's length, which names it).
+- **A login the proxy has not read.**
+  A serving login with no reading, in a pool something in the app uses, is asked once through the proxy's request tool, which puts the login's own token in place of `$TOKEN$`, so Infinitary never holds it (`fillUnread`).
+  Its answer stands in until the proxy reads the login itself, and a login that answered is never asked again, even after the proxy loses its own reading; the record is kept for each proxy address and login.
+  A failed ask is tried again no sooner than ten minutes later (`UNREAD_RETRY_MS`), or later when the vendor's or the proxy's `Retry-After` says so.
+- **The pool.**
+  `poolReading` (`src/shared/quotaSignals.ts`) makes each window's share left the mean of every serving, read login's share, weighted by the proxy's own login weight, with each spent login counted at zero.
+  A login whose window already reset counts as full.
+  Unread, switched-off and sign-in-ended logins are counted on the row and never weigh as zero: unknown is not empty.
+  The window refills at the earliest moment a spent login comes back or a read login resets.
+  With no login serving and one spent, the pool reads 0% until the first comes back; with serving logins all unread, it has no window.
+  The row carries the counts as `pool` (`quotaPoolViewSchema`), and the proxy's sign-ins never make it `auth_required`: they are renewed in the proxy app.
+  A pool's credits stay the proxy's: Keep going on credits is never offered on it (`creditsOfferOf`, `answersOnCredits`), and its row says the credits fact in its vendor's words with no switch (`POOL_CREDITS_PROVIDER`).
+- **Where the pools show.**
+  An address in the app is the proxy's only when it names one of those loopback addresses (`addressIsProxy`): IPv4 and IPv6 loopback are told apart, since another program can hold the same port on the other, and `localhost`, which a client may reach on either, counts only when the proxy listens on both.
+  The Claude row whose access for Claude Code sends its requests to the proxy (`ClaudeAccess.address`) reads the Claude pool (`poolOutcome`), with the sessions' current refusals laid over it as on any sensed row (`withRejectedReadings`) and none of a session's usage or credits.
+  Once that access is removed, the row is the pool's no longer: it is unread until the account's own reading comes with the next refresh.
+  A custom connection whose base address is the proxy gets one row per pool its models are served from, under its own provider id, the pool named by the owner the proxy's model list gives each model (`owned_by`: anthropic is Claude, openai is ChatGPT); a model of any other owner belongs to no pool (`proxyConnectionRows`).
+  Each such row names the models it measures (`pool.models`), and every row read through the proxy is marked `fromProxy`.
+  A proxy that did not answer, or whose model list could not be read, gives such a connection one unread row saying why (`models_http_<status>` or `models_unreadable` for the list); the last reading of each pool stays on as stale under its own pool, and never mixes with a reading taken without the proxy (`mergeStaleProviders` keys a proxy's row by its pool).
+  A list that could not be read is not a list with no model of a pool: while it is missing, none of the connection's models is put under a pool, so routing knows nothing of their headroom.
+  Settings shows each pool's meters, a line saying how its logins stand (`poolLine` in `src/renderer/src/settings/subscriptionsWords.ts`) and its credits, on the Claude row and under the connection; the phone shows the same for each pool, in whatever order the rows come.
+- **Routing and pausing.**
+  Each pooled model of a connection has a catalog row that reads its pool's row (`proxyCatalogModels`, `pool` on `QuotaCatalogModel`), so routing weighs its pool's reading instead of admitting it by its level alone, and a spent pool takes its models out as any spent allowance does (`allowanceSpent`).
+  Every decision that reads an account's row for a model reads the row that measures that model (`rowMeasuresModel`, `quotaRowOf` in `src/shared/quota.ts`): the router's ranking, the account selector, a bound computer's check and the first mate's seat, which reads the row of the first mate's model.
+  The first mate's one-line allowance digest names each pool row's pool beside its account (`quotaContextLine`), so a connection's two pools never read as one account.
+  A model of no pool is still admitted by its level alone.
+- **When it is read.**
+  The proxy is read on its own one-minute clock and again after each quota refresh (`localReading` on `QuotaService`), never holding a refresh up.
+  One projection makes every row read through the proxy, all timed at the reading's own moment (`projectProxyRows`, through `rowOfOutcome`): the Claude row, found by its quota id while Claude Code's access is set up and the last ordinary refresh read the account through it, so a fresh reading of the account's own sign-in is never replaced, and each connection's pool rows.
+  It is laid over every refresh until the next reading, and a reading publishes the rows and the catalog only when they change, so an unchanged minute tells no surface; when the last proxy goes, one publish gives the Claude row back to what its access says and takes the connection rows away.

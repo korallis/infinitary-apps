@@ -1343,6 +1343,37 @@
   "settingsSubscriptionsPaused": "paused",
   "settingsSubscriptionsPersonalResourcesDescription": "New crewmate sessions use the global instructions and skills of the {computer} where your first mate lives, with the skills of the agent plugins you turned on there. Other {computers} that run work keep a copy, sent again only when it changes. Crew rules govern delivery; your file guides style and judgment.",
   "settingsSubscriptionsPersonalResourcesTitle": "Global instructions and skills",
+  "settingsSubscriptionsPoolAccounts": {
+    "plural": "count",
+    "one": "{count} account pooled in your proxy app",
+    "other": "{count} accounts pooled in your proxy app"
+  },
+  "settingsSubscriptionsPoolSignInBy": {
+    "plural": "count",
+    "one": "{count} needs signing in again by {time}",
+    "other": "{count} need signing in again by {time}"
+  },
+  "settingsSubscriptionsPoolSignedOut": {
+    "plural": "count",
+    "one": "{count} needs signing in again in your proxy app",
+    "other": "{count} need signing in again in your proxy app"
+  },
+  "settingsSubscriptionsPoolSpent": {
+    "plural": "count",
+    "one": "{count} spent until {time}",
+    "other": "{count} spent until {time}"
+  },
+  "settingsSubscriptionsPoolSwitchedOff": {
+    "plural": "count",
+    "one": "{count} switched off",
+    "other": "{count} switched off"
+  },
+  "settingsSubscriptionsPoolUnread": {
+    "plural": "count",
+    "one": "{count} not read yet",
+    "other": "{count} not read yet"
+  },
+  "settingsSubscriptionsPoolUsage": "Pooled usage",
   "settingsSubscriptionsReading": "reading…",
   "settingsSubscriptionsRefresh": "Refresh",
   "settingsSubscriptionsRefreshing": "Refreshing...",

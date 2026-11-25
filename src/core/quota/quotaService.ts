@@ -52,6 +52,15 @@ export type QuotaServiceOptions = {
    * `restamp`; the catalog is then marked from those rows (`markCredits`).
    */
   stamp?: (snapshot: QuotaSnapshotView) => QuotaSnapshotView;
+  /**
+   * A reading of this computer alone (a CLI proxy's pools), taken on its
+   * own clock between refreshes and never holding one up: each run answers
+   * how it rewrites the last snapshot's rows, or nothing to leave it be.
+   */
+  localReading?: {
+    everyMs: number;
+    run: () => Promise<((snapshot: QuotaSnapshotView) => QuotaSnapshotView) | undefined>;
+  };
   now?: () => number;
 };
 
@@ -63,6 +72,10 @@ export class QuotaService {
   /** The forced refresh waiting on the one in flight, by reason. */
   private readonly followUps = new Map<string, Promise<QuotaSnapshotView | undefined>>();
   private interval: ReturnType<typeof setInterval> | undefined;
+  private localInterval: ReturnType<typeof setInterval> | undefined;
+  private localRunning = false;
+  /** The last local reading's rewrite, laid over each refresh until the next one. */
+  private localRewrite: ((snapshot: QuotaSnapshotView) => QuotaSnapshotView) | undefined;
   private readonly now: () => number;
   private readonly snapshots: QuotaSnapshotStore;
 
@@ -143,10 +156,46 @@ export class QuotaService {
       void this.refresh("interval");
     }, REFRESH_INTERVAL_MS);
     void this.refresh("startup");
+    const local = this.options.localReading;
+    if (local) {
+      this.localInterval = setInterval(() => {
+        void this.readLocal();
+      }, local.everyMs);
+      void this.readLocal();
+    }
   }
 
   stop(): void {
     if (this.interval) clearInterval(this.interval);
+    if (this.localInterval) clearInterval(this.localInterval);
+  }
+
+  /**
+   * One run of the local reading, laid over the last snapshot as a refresh
+   * lays its reading: stale rows kept, switches stamped, the catalog rebuilt
+   * and every surface told - only when the rows it gives differ from the
+   * last snapshot's, so a reading that changes nothing publishes nothing. A
+   * run still going skips the next tick.
+   */
+  async readLocal(): Promise<void> {
+    const local = this.options.localReading;
+    if (!local || this.localRunning) return;
+    this.localRunning = true;
+    try {
+      const rewrite = await local.run();
+      this.localRewrite = rewrite;
+      const latest = this.latestSnapshot;
+      if (!rewrite || !latest) return;
+      const merged = mergeStaleProviders(rewrite(latest), latest, this.now());
+      const next = this.options.stamp?.(merged) ?? merged;
+      if (JSON.stringify(next.providers) === JSON.stringify(latest.providers)) return;
+      this.latestSnapshot = next;
+      this.recatalog();
+    } catch {
+      // A local reading that failed leaves the last snapshot as it was.
+    } finally {
+      this.localRunning = false;
+    }
   }
 
   onWindowFocus(): void {
@@ -204,13 +253,22 @@ export class QuotaService {
     this.refreshing = (async () => {
       try {
         const result = await this.options.refresh(reason);
-        const merged = mergeStaleProviders(result.snapshot, this.latestSnapshot, this.now());
+        const read = this.localRewrite?.(result.snapshot) ?? result.snapshot;
+        const merged = mergeStaleProviders(read, this.latestSnapshot, this.now());
         const snapshot = this.options.stamp?.(merged) ?? merged;
         this.latestSnapshot = snapshot;
-        const catalog = modelsCatalogViewSchema.safeParse(result.catalog);
+        // The refresh's own catalog never saw the local reading's rows.
+        const catalog = modelsCatalogViewSchema.safeParse(
+          this.localRewrite && this.options.catalogFor
+            ? this.options.catalogFor(snapshot)
+            : result.catalog,
+        );
         if (catalog.success) this.latestCatalog = markCredits(catalog.data, snapshot.providers);
         this.snapshots.record(snapshot);
         this.options.broadcast(snapshot);
+        // What a refresh read can change what the local reading reads (a
+        // connection added or moved): it runs again now, not at its next tick.
+        void this.readLocal();
         return this.latestSnapshot;
       } catch {
         return this.latestSnapshot;
@@ -243,33 +301,54 @@ export function mergeStaleProviders(
   now: number = Date.now(),
 ): QuotaSnapshotView {
   if (!previous) return next;
+  // A proxy's row is keyed by its pool, apart from the account's own
+  // reading, so a proxy that did not answer never takes a direct sign-in's
+  // windows and a direct reading never takes the proxy's.
   const keyOf = (provider: QuotaSnapshotView["providers"][number]) =>
-    `${provider.provider}:${provider.accountId ?? ""}`;
+    `${provider.provider}:${provider.accountId ?? ""}:${provider.fromProxy ? `proxy:${provider.pool?.kind ?? ""}` : ""}`;
   const prior = new Map(previous.providers.map((provider) => [keyOf(provider), provider]));
+  const staleFrom = (
+    provider: QuotaSnapshotView["providers"][number],
+    last: QuotaSnapshotView["providers"][number] | undefined,
+  ) => {
+    if (!last || last.windows.length === 0) return undefined;
+    const windows = last.windows.filter((window) => stillApplies(window, now));
+    if (windows.length === 0) return undefined;
+    return {
+      ...last,
+      windows,
+      stale: true,
+      // The row keeps saying WHY it could not be refreshed, and when the
+      // windows it is showing were actually measured.
+      measuredAt: last.measuredAt ?? previous.fetchedAt,
+      ...(provider.reason ? { reason: provider.reason } : {}),
+      ...(provider.retryAfter ? { retryAfter: provider.retryAfter } : {}),
+      ...(provider.detail ? { detail: provider.detail } : {}),
+    };
+  };
   return {
     ...next,
-    providers: next.providers.map((provider) => {
-      if (provider.status === "ok" || provider.status === "auth_required") return provider;
-      if (provider.windows.length > 0) return provider;
+    providers: next.providers.flatMap((provider) => {
+      if (provider.status === "ok" || provider.status === "auth_required") return [provider];
+      if (provider.windows.length > 0) return [provider];
       // A Claude account now on access set up for Claude Code is not
       // measured by decision, not for want of a reading: the subscription's
       // last windows are no longer its allowance.
-      if (provider.reason === CLAUDE_ACCESS_REASON) return provider;
-      const last = prior.get(keyOf(provider));
-      if (!last || last.windows.length === 0) return provider;
-      const windows = last.windows.filter((window) => stillApplies(window, now));
-      if (windows.length === 0) return provider;
-      return {
-        ...last,
-        windows,
-        stale: true,
-        // The row keeps saying WHY it could not be refreshed, and when the
-        // windows it is showing were actually measured.
-        measuredAt: last.measuredAt ?? previous.fetchedAt,
-        ...(provider.reason ? { reason: provider.reason } : {}),
-        ...(provider.retryAfter ? { retryAfter: provider.retryAfter } : {}),
-        ...(provider.detail ? { detail: provider.detail } : {}),
-      };
+      if (provider.reason === CLAUDE_ACCESS_REASON) return [provider];
+      // An unanswered proxy names no pool: its row stands for every pool the
+      // proxy last read for that account, each kept apart.
+      if (provider.fromProxy && !provider.pool) {
+        const kept = previous.providers.flatMap((last) =>
+          last.fromProxy &&
+          last.pool &&
+          last.provider === provider.provider &&
+          last.accountId === provider.accountId
+            ? (staleFrom(provider, last) ?? [])
+            : [],
+        );
+        return kept.length > 0 ? kept : [provider];
+      }
+      return [staleFrom(provider, prior.get(keyOf(provider))) ?? provider];
     }),
   };
 }

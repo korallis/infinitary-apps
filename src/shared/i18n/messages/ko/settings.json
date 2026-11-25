@@ -1307,6 +1307,31 @@
   "settingsSubscriptionsPaused": "일시 정지됨",
   "settingsSubscriptionsPersonalResourcesDescription": "새 선원 대화는 일등항해사가 있는 {computer}의 전역 지침과 스킬, 그리고 거기서 켠 에이전트 플러그인의 스킬을 써요. 작업을 실행하는 다른 {computers}는 사본을 보관하고, 바뀔 때만 다시 받아요. 전달 방식은 선원 규칙이 정하고, 선장님의 파일은 스타일과 판단을 이끌어요.",
   "settingsSubscriptionsPersonalResourcesTitle": "전역 지침과 스킬",
+  "settingsSubscriptionsPoolAccounts": {
+    "plural": "count",
+    "other": "프록시 앱에 계정 {count}개가 합쳐져 있음"
+  },
+  "settingsSubscriptionsPoolSignInBy": {
+    "plural": "count",
+    "other": "{count}개는 {time}까지 다시 로그인해야 함"
+  },
+  "settingsSubscriptionsPoolSignedOut": {
+    "plural": "count",
+    "other": "{count}개는 프록시 앱에서 다시 로그인해야 함"
+  },
+  "settingsSubscriptionsPoolSpent": {
+    "plural": "count",
+    "other": "{count}개 {time}까지 소진됨"
+  },
+  "settingsSubscriptionsPoolSwitchedOff": {
+    "plural": "count",
+    "other": "{count}개 꺼짐"
+  },
+  "settingsSubscriptionsPoolUnread": {
+    "plural": "count",
+    "other": "{count}개 아직 읽지 않음"
+  },
+  "settingsSubscriptionsPoolUsage": "합산 사용량",
   "settingsSubscriptionsReading": "읽는 중…",
   "settingsSubscriptionsRefresh": "새로 고침",
   "settingsSubscriptionsRefreshing": "새로 고치는 중...",
