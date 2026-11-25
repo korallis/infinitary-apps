@@ -1,3 +1,4 @@
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   addressIsProxy,
@@ -107,7 +108,12 @@ describe("addressIsProxy", () => {
 });
 
 describe("createProxyAppReader", () => {
-  const PROGRAM = "C:\\Tools\\EasyCLIProxyAPI\\cli-proxy-api.exe";
+  // The reader finds the settings with the host's path rules, and a Windows
+  // path names no folder on Linux, so the app's folder is in the host's form.
+  const APP = resolve("/Tools/EasyCLIProxyAPI");
+  const APP_SLASHED = APP.replaceAll("\\", "/");
+  const PROGRAM = join(APP, "cli-proxy-api.exe");
+  const CORE = join(APP, "cpa-core", "cli-proxy-api.exe");
 
   // EasyCLIProxyAPI keeps its settings in its own folder and runs the proxy
   // program from `cpa-core` inside it, as its Windows download lays them out.
@@ -116,7 +122,7 @@ describe("createProxyAppReader", () => {
     const reader = createProxyAppReader(
       async () => [
         {
-          program: "C:\\Tools\\EasyCLIProxyAPI\\cpa-core\\cli-proxy-api.exe",
+          program: CORE,
           endpoints: [{ address: "127.0.0.1", port: 8317 }],
         },
       ],
@@ -130,16 +136,12 @@ describe("createProxyAppReader", () => {
       origin: "http://127.0.0.1:8317",
       origins: ["http://127.0.0.1:8317"],
     });
-    expect(reads).toEqual([
-      "C:/Tools/EasyCLIProxyAPI/cpa-core/config.toml",
-      "C:/Tools/EasyCLIProxyAPI/config.toml",
-    ]);
+    expect(reads).toEqual([`${APP_SLASHED}/cpa-core/config.toml`, `${APP_SLASHED}/config.toml`]);
   });
 
   // The review's finding: the key comes from the settings the running proxy
   // uses; two files naming its port with different keys leave that unknown.
   describe("with settings both beside the proxy program and in the folder above", () => {
-    const CORE = "C:\\Tools\\EasyCLIProxyAPI\\cpa-core\\cli-proxy-api.exe";
     const readerWith = (beside: string, above: string, ports = [8317]) =>
       createProxyAppReader(
         async () => [
@@ -190,7 +192,7 @@ describe("createProxyAppReader", () => {
     expect((await reader())?.port).toBe(8317);
     expect((await reader())?.port).toBe(8317);
     expect(finds).toBe(2);
-    expect(reads[0]?.replaceAll("\\", "/")).toBe("C:/Tools/EasyCLIProxyAPI/config.toml");
+    expect(reads[0]?.replaceAll("\\", "/")).toBe(`${APP_SLASHED}/config.toml`);
   });
 
   // The review's finding: the keys go only to a port the proxy itself
