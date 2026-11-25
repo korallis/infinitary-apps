@@ -44,7 +44,9 @@ type TomlValue = string | number | string[];
 /**
  * The top-level `key = value` lines of a TOML file that this reader needs:
  * integers, quoted strings and one-line arrays of quoted strings, before the
- * first table. Anything else is not read.
+ * first table. EasyCLIProxyAPI writes its client keys as a one-line array of
+ * inline tables, each `{ key = "...", remark = "..." }`: such an array reads
+ * as each table's `key`. Anything else is not read.
  */
 export function readProxySettings(text: string): ProxyApp | undefined {
   const values = new Map<string, TomlValue>();
@@ -91,12 +93,26 @@ const STRING = String.raw`"(?:[^"\\]|\\.)*"|'[^']*'`;
 const SCALAR = new RegExp(String.raw`^(-?\d+|${STRING})\s*(?:#.*)?$`);
 const ARRAY = new RegExp(String.raw`^\[\s*((?:(?:${STRING})\s*,?\s*)*)\]\s*(?:#.*)?$`);
 const ITEM = new RegExp(STRING, "g");
+const TABLE_ARRAY = /^\[\s*((?:\{[^{}]*\}\s*,?\s*)*)\]\s*(?:#.*)?$/;
+const TABLE = /\{([^{}]*)\}/g;
+const TABLE_KEY = new RegExp(String.raw`(?:^|,)\s*key\s*=\s*(${STRING})\s*(?:,|$)`);
 
 function tomlValue(text: string): TomlValue | undefined {
   const scalar = SCALAR.exec(text);
   if (scalar?.[1] !== undefined) {
     if (/^-?\d+$/.test(scalar[1])) return Number(scalar[1]);
     return tomlString(scalar[1]);
+  }
+  const tables = TABLE_ARRAY.exec(text);
+  if (tables?.[1] !== undefined) {
+    const keys: string[] = [];
+    for (const table of tables[1].matchAll(TABLE)) {
+      const key = TABLE_KEY.exec(table[1] ?? "")?.[1];
+      const value = key === undefined ? undefined : tomlString(key);
+      if (value === undefined) return undefined;
+      keys.push(value);
+    }
+    return keys;
   }
   const array = ARRAY.exec(text);
   if (array?.[1] === undefined) return undefined;

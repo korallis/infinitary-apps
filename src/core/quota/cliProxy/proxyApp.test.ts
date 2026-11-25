@@ -34,6 +34,16 @@ describe("readProxySettings", () => {
     });
   });
 
+  // The live proof on a real install: EasyCLIProxyAPI writes its client keys
+  // as inline tables with a remark beside each key.
+  it("reads the first client key from the app's list of keys with remarks", () => {
+    const tables = SETTINGS.replace(
+      'api-keys = ["sk-client-one", "sk-client-two"]',
+      'api-keys = [{ key = "sk-client-one", remark = "Claude Code" }, { key = "sk-client-two", remark = "Codex" }]',
+    );
+    expect(readProxySettings(tables)?.clientKey).toBe("sk-client-one");
+  });
+
   it("refuses a proxy set to listen on another computer's address", () => {
     expect(readProxySettings(SETTINGS.replace('host = ""', 'host = "192.168.1.20"'))).toBe(
       undefined,
