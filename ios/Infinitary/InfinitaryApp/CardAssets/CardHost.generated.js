@@ -39390,29 +39390,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const label = input2.label;
     switch (currentLanguage()) {
       case "ar":
-        return `أزلت ${label}، وهو تسجيل دخول Claude الذي كان نائب القبطان يعمل عليه. من دوره التالي، وبعد إعادة التشغيل، يعمل نائب القبطان على تسجيل دخول Claude آخر.`;
+        return `أزلت ${label}، وهو تسجيل دخول Claude الذي كان نائب القبطان يعمل عليه. سيستخدم نائب القبطان تسجيل دخول Claude آخر عند تشغيله في المرة القادمة.`;
       case "de":
-        return `Du hast ${label} entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Ab seinem nächsten Zug und nach einem Neustart läuft dein Erster Offizier mit einer anderen Claude-Anmeldung.`;
+        return `Du hast ${label} entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Dein Erster Offizier nutzt eine andere Claude-Anmeldung, wenn er das nächste Mal läuft.`;
       case "es":
-        return `Quitaste ${label}, el inicio de sesión de Claude que usaba tu primer oficial. Desde su próximo turno, y después de reiniciar, tu primer oficial funciona con otro inicio de sesión de Claude.`;
+        return `Quitaste ${label}, el inicio de sesión de Claude que usaba tu primer oficial. Tu primer oficial usará otro inicio de sesión de Claude la próxima vez que funcione.`;
       case "fr":
-        return `Vous avez retiré ${label}, la connexion Claude qu’utilisait votre second. Dès son prochain tour, et après un redémarrage, votre second fonctionne avec une autre connexion Claude.`;
+        return `Vous avez retiré ${label}, la connexion Claude qu’utilisait votre second. Votre second utilisera une autre connexion Claude la prochaine fois qu’il fonctionnera.`;
       case "ja":
-        return `一等航海士が使っていた Claude のログイン「${label}」を削除しました。次のターンから、また再起動後も、一等航海士は別の Claude のログインで動きます。`;
+        return `一等航海士が使っていた Claude のログイン「${label}」を削除しました。一等航海士は次に動くとき、別の Claude のログインを使います。`;
       case "ko":
-        return `일등항해사가 쓰던 Claude 로그인(${label})을 제거했어요. 다음 차례부터, 그리고 다시 시작한 뒤에도 일등항해사는 다른 Claude 로그인으로 실행돼요.`;
+        return `일등항해사가 쓰던 Claude 로그인(${label})을 제거했어요. 일등항해사는 다음에 실행될 때 다른 Claude 로그인을 사용해요.`;
       case "pt-BR":
-        return `Você removeu ${label}, o login do Claude que seu imediato usava. A partir do próximo turno dele, e depois de reiniciar, seu imediato roda com outro login do Claude.`;
+        return `Você removeu ${label}, o login do Claude que seu imediato usava. Seu imediato usará outro login do Claude na próxima vez que rodar.`;
       case "zh-Hans":
-        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登录。从下一轮开始，以及重新启动之后，你的大副会改用另一个 Claude 登录运行。`;
+        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登录。你的大副下次运行时会改用另一个 Claude 登录。`;
       case "zh-Hant":
-        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登入。從下一輪開始，以及重新啟動之後，你的大副會改用另一個 Claude 登入執行。`;
+        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登入。你的大副下次執行時會改用另一個 Claude 登入。`;
       case "en-XA":
-        return `[Ýöû ŕéɱöṽéð ${label}, ţĥé Çļáûðé ļöĝîñ ýöûŕ ƒîŕšţ ɱáţé ŵáš ŕûññîñĝ öñ. Ƒŕöɱ îţš ñéẋţ ţûŕñ, áñð áƒţéŕ á ŕéšţáŕţ, ýöûŕ ƒîŕšţ ɱáţé ŕûñš öñ áñöţĥéŕ Çļáûðé ļöĝîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ýöû ŕéɱöṽéð ${label}, ţĥé Çļáûðé ļöĝîñ ýöûŕ ƒîŕšţ ɱáţé ŵáš ŕûññîñĝ öñ. Ýöûŕ ƒîŕšţ ɱáţé ŵîļļ ûšé áñöţĥéŕ Çļáûðé ļöĝîñ ŵĥéñ îţ ñéẋţ ŕûñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮You removed ‬${label}‮, the Claude login your first mate was running on. From its next turn, and after a restart, your first mate runs on another Claude login.‬`;
+        return `‮You removed ‬${label}‮, the Claude login your first mate was running on. Your first mate will use another Claude login when it next runs.‬`;
     }
-    return `You removed ${label}, the Claude login your first mate was running on. From its next turn, and after a restart, your first mate runs on another Claude login.`;
+    return `You removed ${label}, the Claude login your first mate was running on. Your first mate will use another Claude login when it next runs.`;
   }
   function feedFirstMateLoginRemovedNoOther(input2) {
     const label = input2.label;

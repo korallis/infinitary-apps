@@ -659,22 +659,40 @@ describe("further Claude logins", () => {
 
     await handlers["inf:accounts:remove"](second.id, undefined);
     expect(notes).toEqual([
-      `You removed ${second.label}, the Claude login your first mate was running on. From its next turn, and after a restart, your first mate runs on another Claude login.`,
+      `You removed ${second.label}, the Claude login your first mate was running on. Your first mate will use another Claude login when it next runs.`,
     ]);
 
-    // Chosen for the first mate in Settings, though no session is open on
-    // it; the one login left is switched on but signed out, so nothing can
-    // take the first mate over and the line promises no move.
+    // Of the two logins left, one is switched on but signed out and the
+    // other is signed in with its allowance spent: the seat falls back to
+    // the spent one and pauses there, so the line names the fallback and
+    // promises no turn.
     const fourth = await run.add();
     run.client.signedIn.delete(run.folderOf(fourth.id));
     vi.setSystemTime(START + HOUR);
     expect((await run.vault.status(fourth.id, { refresh: true })).connected).toBe(false);
     expect(run.vault.get(fourth.id)?.enabled).toBe(true);
-    seatedOn = undefined;
-    run.settings.setFirstmateAccount(first.id);
+    const spent = await run.add();
+    await run.homeQuota.quota.refresh("demand");
+    run.homeQuota.recordClaudeRateLimit(spent.id, {
+      status: "rejected",
+      windowId: "five_hour",
+      resetsAt: START + 3 * HOUR,
+    });
+    seatedOn = first.id;
     await handlers["inf:accounts:remove"](first.id, undefined);
+    expect(run.flagship.pause(spent.id)).toEqual({ class: "no_headroom" });
     expect(notes[1]).toBe(
-      `You removed ${first.label}, the Claude login your first mate was running on. No other Claude login can run your first mate now.`,
+      `You removed ${first.label}, the Claude login your first mate was running on. Your first mate will use another Claude login when it next runs.`,
+    );
+
+    // Chosen for the first mate in Settings, though no session is open on
+    // it; only the signed-out login is left, so nothing can take the first
+    // mate over and the line names no fallback.
+    seatedOn = undefined;
+    run.settings.setFirstmateAccount(spent.id);
+    await handlers["inf:accounts:remove"](spent.id, undefined);
+    expect(notes[2]).toBe(
+      `You removed ${spent.label}, the Claude login your first mate was running on. No other Claude login can run your first mate now.`,
     );
   });
 

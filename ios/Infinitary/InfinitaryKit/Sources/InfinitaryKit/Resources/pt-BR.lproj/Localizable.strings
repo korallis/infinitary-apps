@@ -1130,7 +1130,7 @@
 "feedDropped" = "Abandonada: %1$@";
 "feedFailed" = "Falhou: %1$@";
 "feedFinished" = "Concluída";
-"feedFirstMateLoginRemoved" = "Você removeu %1$@, o login do Claude que seu imediato usava. A partir do próximo turno dele, e depois de reiniciar, seu imediato roda com outro login do Claude.";
+"feedFirstMateLoginRemoved" = "Você removeu %1$@, o login do Claude que seu imediato usava. Seu imediato usará outro login do Claude na próxima vez que rodar.";
 "feedFirstMateLoginRemovedNoOther" = "Você removeu %1$@, o login do Claude que seu imediato usava. Agora nenhum outro login do Claude pode rodar seu imediato.";
 "feedFirstMateProblem" = "Imediato · problema: %1$@";
 "feedFirstMateSaid" = "Imediato: %1$@";

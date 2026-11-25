@@ -70,7 +70,7 @@
   "feedDropped": "Abandonada: {sentence}",
   "feedFailed": "Falhou: {problem}",
   "feedFinished": "Concluída",
-  "feedFirstMateLoginRemoved": "Você removeu {label}, o login do Claude que seu imediato usava. A partir do próximo turno dele, e depois de reiniciar, seu imediato roda com outro login do Claude.",
+  "feedFirstMateLoginRemoved": "Você removeu {label}, o login do Claude que seu imediato usava. Seu imediato usará outro login do Claude na próxima vez que rodar.",
   "feedFirstMateLoginRemovedNoOther": "Você removeu {label}, o login do Claude que seu imediato usava. Agora nenhum outro login do Claude pode rodar seu imediato.",
   "feedFirstMateProblem": "Imediato · problema: {problem}",
   "feedFirstMateSaid": "Imediato: {text}",

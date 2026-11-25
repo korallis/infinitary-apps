@@ -66,7 +66,7 @@
   "feedDropped": "取りやめ：{sentence}",
   "feedFailed": "失敗：{problem}",
   "feedFinished": "完了",
-  "feedFirstMateLoginRemoved": "一等航海士が使っていた Claude のログイン「{label}」を削除しました。次のターンから、また再起動後も、一等航海士は別の Claude のログインで動きます。",
+  "feedFirstMateLoginRemoved": "一等航海士が使っていた Claude のログイン「{label}」を削除しました。一等航海士は次に動くとき、別の Claude のログインを使います。",
   "feedFirstMateLoginRemovedNoOther": "一等航海士が使っていた Claude のログイン「{label}」を削除しました。いま一等航海士を動かせる Claude のログインはほかにありません。",
   "feedFirstMateProblem": "一等航海士 · 問題：{problem}",
   "feedFirstMateSaid": "一等航海士：{text}",

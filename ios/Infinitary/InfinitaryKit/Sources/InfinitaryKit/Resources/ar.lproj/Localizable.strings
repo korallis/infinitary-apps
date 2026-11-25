@@ -1130,7 +1130,7 @@
 "feedDropped" = "أُسقطت: %1$@";
 "feedFailed" = "فشل: %1$@";
 "feedFinished" = "انتهت";
-"feedFirstMateLoginRemoved" = "أزلت %1$@، وهو تسجيل دخول Claude الذي كان نائب القبطان يعمل عليه. من دوره التالي، وبعد إعادة التشغيل، يعمل نائب القبطان على تسجيل دخول Claude آخر.";
+"feedFirstMateLoginRemoved" = "أزلت %1$@، وهو تسجيل دخول Claude الذي كان نائب القبطان يعمل عليه. سيستخدم نائب القبطان تسجيل دخول Claude آخر عند تشغيله في المرة القادمة.";
 "feedFirstMateLoginRemovedNoOther" = "أزلت %1$@، وهو تسجيل دخول Claude الذي كان نائب القبطان يعمل عليه. لا يوجد الآن تسجيل دخول Claude آخر يستطيع تشغيل نائب القبطان.";
 "feedFirstMateProblem" = "نائب القبطان · مشكلة: %1$@";
 "feedFirstMateSaid" = "نائب القبطان: %1$@";
