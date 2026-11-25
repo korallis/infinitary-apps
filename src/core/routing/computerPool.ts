@@ -1,10 +1,10 @@
 import { type AccountView, standingCutOff } from "@shared/accounts";
 import { isCustomApiProvider } from "@shared/customApi";
 import type { ReasoningCapabilities } from "@shared/modelSlots";
-import { servedModelKey } from "@shared/quota";
+import { rowMeasuresModel, servedModelKey } from "@shared/quota";
 import { allowanceSpent } from "@shared/quotaSignals";
 import { type ComputerSignIns, type DeviceSignIns, signInPlace } from "@shared/signIns";
-import { type QuotaCatalogModel, quotaEntryForPiProvider } from "../quota/auth";
+import { type QuotaCatalogModel, quotaRowProviderOf } from "../quota/auth";
 import { buildModelsCatalog, effectiveFromProvider } from "../quota/catalog";
 import type { RoutingPool } from "./router";
 
@@ -46,9 +46,10 @@ export function servesOnComputer(
     ? pool.servedBy.get(`${model.provider}/${model.id}`)?.has(account) === true
     : pool.accounts.get(model.provider) === account;
   if (!listed) return false;
-  const quotaId = quotaEntryForPiProvider(model.provider)?.quotaId;
+  const quotaId = quotaRowProviderOf(model.provider);
   const reading = pool.readings?.find(
-    (row) => row.accountId === account && row.provider === quotaId,
+    (row) =>
+      row.accountId === account && row.provider === quotaId && rowMeasuresModel(row, model.id),
   );
   return !allowanceSpent(effectiveFromProvider(reading, nowMs, model.id));
 }

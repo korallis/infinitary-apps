@@ -11,11 +11,21 @@ import {
 } from "@shared/customApiFile";
 import { HERE } from "@shared/deviceNames";
 import * as m from "@shared/i18n/messages.generated";
-import { QUOTA_POOL_NAMES, type QuotaProviderView, type QuotaSnapshotView } from "@shared/quota";
+import {
+  POOL_CREDITS_PROVIDER,
+  QUOTA_POOL_NAMES,
+  type QuotaProviderView,
+  type QuotaSnapshotView,
+} from "@shared/quota";
 import { windowSignals } from "@shared/quotaSignals";
 import { type DeviceSignIns, signInPlace } from "@shared/signIns";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
-import { EMPTY_QUOTA_TEXT, poolLine, poolUsageLabel } from "../settings/subscriptionsWords";
+import {
+  creditsLine,
+  EMPTY_QUOTA_TEXT,
+  poolLine,
+  poolUsageLabel,
+} from "../settings/subscriptionsWords";
 import { useDeviceSignIns } from "../settings/useDeviceSignIns";
 import { CustomApiFileRow, FileApproval, FileConnectionRow, FileWarnings } from "./CustomApiFile";
 import { type FirstmateModel, FirstmateRadio } from "./CustomApiFirstmate";
@@ -278,9 +288,23 @@ function PooledUsage({ rows, now }: { rows: readonly QuotaProviderView[]; now: n
           ) : (
             <span className="fm-subs-state">{EMPTY_QUOTA_TEXT.unread}</span>
           )}
+          {row.pool && <PoolCredits row={row} />}
         </div>
       ))}
     </div>
+  );
+}
+
+/** A pool's credits, in its vendor's words; the proxy keeps them, so nothing here turns them on. */
+function PoolCredits({ row }: { row: QuotaProviderView }) {
+  const line = row.pool
+    ? creditsLine(POOL_CREDITS_PROVIDER[row.pool.kind], row.credits)
+    : undefined;
+  if (!line) return null;
+  return (
+    <span className="fm-subs-credits" data-credits="">
+      {line}
+    </span>
   );
 }
 

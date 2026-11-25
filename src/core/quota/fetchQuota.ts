@@ -163,6 +163,7 @@ async function fetchOneAccount(
     ...(outcome.credits ? { credits: outcome.credits } : {}),
     ...(outcome.savedResets ? { savedResets: outcome.savedResets } : {}),
     ...(outcome.pool ? { pool: outcome.pool } : {}),
+    ...(outcome.fromProxy ? { fromProxy: true as const } : {}),
     ...(outcome.plan ? { plan: outcome.plan } : {}),
     ...(outcome.account ? { account: outcome.account } : {}),
     ...(outcome.detail ? { detail: outcome.detail } : {}),

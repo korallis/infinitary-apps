@@ -54,13 +54,15 @@ describe("addressIsProxy", () => {
 });
 
 describe("createProxyAppReader", () => {
-  it("looks for the running proxy once, then reads its settings file each time", async () => {
+  const PROGRAM = "C:\\Tools\\EasyCLIProxyAPI\\EasyCLIProxyAPI.exe";
+
+  it("reads the settings beside the running proxy, asking the system again on each read", async () => {
     let finds = 0;
     const reads: string[] = [];
     const reader = createProxyAppReader(
       async () => {
         finds += 1;
-        return ["C:\\Tools\\EasyCLIProxyAPI\\EasyCLIProxyAPI.exe"];
+        return [{ program: PROGRAM, ports: [8317] }];
       },
       async (path) => {
         reads.push(path);
@@ -69,12 +71,32 @@ describe("createProxyAppReader", () => {
     );
     expect((await reader())?.port).toBe(8317);
     expect((await reader())?.port).toBe(8317);
-    expect(finds).toBe(1);
-    expect(reads).toHaveLength(2);
+    expect(finds).toBe(2);
     expect(reads[0]?.replaceAll("\\", "/")).toBe("C:/Tools/EasyCLIProxyAPI/config.toml");
   });
 
-  it("asks the process list again only after the wait while no proxy runs", async () => {
+  // The review's finding: the keys go only to a port the proxy itself
+  // listens on now, never to whatever took a port a saved file names.
+  it("reads nothing when the port the settings name is not the proxy's", async () => {
+    const reader = createProxyAppReader(
+      async () => [{ program: PROGRAM, ports: [9000] }],
+      async () => SETTINGS,
+    );
+    expect(await reader()).toBe(undefined);
+  });
+
+  it("reads nothing once the proxy has exited, though its settings file is still there", async () => {
+    let running = true;
+    const reader = createProxyAppReader(
+      async () => (running ? [{ program: PROGRAM, ports: [8317] }] : []),
+      async () => SETTINGS,
+    );
+    expect((await reader())?.port).toBe(8317);
+    running = false;
+    expect(await reader()).toBe(undefined);
+  });
+
+  it("asks the system again only after the wait while no proxy runs", async () => {
     let finds = 0;
     let now = 0;
     const reader = createProxyAppReader(

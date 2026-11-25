@@ -217,8 +217,52 @@ export const quotaPoolViewSchema = z.object({
   signInSoon: z.number().int().nonnegative(),
   /** The earliest moment one of those stops serving. */
   signInByMs: z.number().optional(),
+  /**
+   * The connection's models this pool serves, on a custom connection's row:
+   * the row measures those models alone (`rowMeasuresModel`). Absent on a
+   * Claude account's row, which measures every model of its account.
+   */
+  models: z.array(z.string()).optional(),
 });
 export type QuotaPoolView = z.infer<typeof quotaPoolViewSchema>;
+
+/** The provider whose credits words a pool's credits are read in. */
+export const POOL_CREDITS_PROVIDER: Record<QuotaPoolKind, string> = {
+  claude: "claude",
+  chatgpt: "codex",
+};
+
+/**
+ * Whether `row` measures model `modelId`: a custom connection's pool row
+ * measures only the models its pool serves; every other row measures every
+ * model of its account. Routing, the account pick, a computer's pool, the
+ * first mate's pause and the reset gate all read a model's row by this one
+ * rule (docs/quota.md, "A proxy's pooled logins").
+ */
+export function rowMeasuresModel(
+  row: Pick<QuotaProviderView, "pool">,
+  modelId: string | undefined,
+): boolean {
+  const models = row.pool?.models;
+  if (!models) return true;
+  return modelId !== undefined && models.includes(modelId);
+}
+
+/**
+ * The row measuring `modelId` on account `accountId`. Without a model, an
+ * account with several pools has no one row: none is chosen for it.
+ */
+export function quotaRowOf<Row extends Pick<QuotaProviderView, "accountId" | "pool">>(
+  rows: readonly Row[] | undefined,
+  accountId: string,
+  modelId?: string,
+): Row | undefined {
+  const own = (rows ?? []).filter((row) => row.accountId === accountId);
+  if (!own.some((row) => row.pool?.models)) return own[0];
+  if (modelId !== undefined) return own.find((row) => rowMeasuresModel(row, modelId));
+  const pooled = own.filter((row) => row.pool?.models);
+  return pooled.length === 1 ? pooled[0] : undefined;
+}
 
 export const quotaProviderViewSchema = z.object({
   /** Quota provider id: codex, grok, claude, copilot. */
@@ -290,6 +334,12 @@ export const quotaProviderViewSchema = z.object({
    * The proxy's own sign-ins never make the row `auth_required`.
    */
   pool: quotaPoolViewSchema.optional(),
+  /**
+   * The row reads a CLI proxy, whether or not the proxy answered: a reading
+   * it could not refresh keeps only the proxy's own last reading of the same
+   * pool, never another source's (`mergeStaleProviders`).
+   */
+  fromProxy: z.literal(true).optional(),
   /**
    * Disclosed uncertainty, in the user's words, for a row with no window.
    * The surface renders it instead of a silent blank, and it is never a

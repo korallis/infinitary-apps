@@ -129913,7 +129913,13 @@ ${FRAME_KEYBOARD_SCRIPT}
     /** Serving logins the proxy says need signing in again there. */
     signInSoon: number().int().nonnegative(),
     /** The earliest moment one of those stops serving. */
-    signInByMs: number().optional()
+    signInByMs: number().optional(),
+    /**
+     * The connection's models this pool serves, on a custom connection's row:
+     * the row measures those models alone (`rowMeasuresModel`). Absent on a
+     * Claude account's row, which measures every model of its account.
+     */
+    models: array(string()).optional()
   });
   const quotaProviderViewSchema = object({
     /** Quota provider id: codex, grok, claude, copilot. */
@@ -129985,6 +129991,12 @@ ${FRAME_KEYBOARD_SCRIPT}
      * The proxy's own sign-ins never make the row `auth_required`.
      */
     pool: quotaPoolViewSchema.optional(),
+    /**
+     * The row reads a CLI proxy, whether or not the proxy answered: a reading
+     * it could not refresh keeps only the proxy's own last reading of the same
+     * pool, never another source's (`mergeStaleProviders`).
+     */
+    fromProxy: literal(true).optional(),
     /**
      * Disclosed uncertainty, in the user's words, for a row with no window.
      * The surface renders it instead of a silent blank, and it is never a

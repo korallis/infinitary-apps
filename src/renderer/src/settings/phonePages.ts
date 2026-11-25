@@ -70,7 +70,7 @@ import {
   projectsSummary,
   runsOnWhere,
 } from "./projectsWords";
-import { CREW_PREFERRED_MARK, SUBSCRIPTIONS_WORDS } from "./subscriptionsWords";
+import { CREW_PREFERRED_MARK, poolLine, SUBSCRIPTIONS_WORDS } from "./subscriptionsWords";
 import {
   formatAmount,
   formatRecorded,
@@ -212,7 +212,8 @@ function accountRow(
   const row = rows[0];
   const view = rowView(account, row, now);
   // A connection to a CLI proxy has a row per pool it serves: the phone shows
-  // each pool's meters under its name, and how its logins stand as the state.
+  // each pool's meters under its name, and how each pool's logins stand,
+  // with its credits, as the state, whichever pool comes first.
   const pools = rows.length > 1 && rows.every((entry) => entry.pool) ? rows : undefined;
   if (pools) {
     const views = pools.map((entry) => ({ entry, view: rowView(account, entry, now) }));
@@ -223,11 +224,24 @@ function accountRow(
         label: `${QUOTA_POOL_NAMES[entry.pool?.kind ?? "claude"]} ${meter.label}`,
       })),
     );
-    const lines = views.flatMap(({ entry, view: each }) =>
-      each.pool ? [`${QUOTA_POOL_NAMES[entry.pool?.kind ?? "claude"]}: ${each.pool}`] : [],
+    // A state that is not the first pool's own line (a hold on the
+    // connection, or why it was not read) leads.
+    const first = rows[0]?.pool;
+    const held = first && view.stateText !== poolLine(first, now) ? view.stateText : undefined;
+    const lines = views.map(({ entry, view: each }) =>
+      [
+        ...(entry.pool
+          ? [`${QUOTA_POOL_NAMES[entry.pool.kind]}: ${poolLine(entry.pool, now)}`]
+          : []),
+        ...(each.credits ? [each.credits] : []),
+      ].join(" · "),
     );
-    if (!view.stateText && lines.length > 0) view.stateText = lines.join(" · ");
-  } else if (!view.stateText && view.pool) view.stateText = view.pool;
+    view.stateText = [...(held ? [held] : []), ...lines].join(" · ");
+  } else if (row?.pool) {
+    const line = poolLine(row.pool, now);
+    const own = view.stateText && view.stateText !== line ? [view.stateText] : [];
+    view.stateText = [...own, line, ...(view.credits ? [view.credits] : [])].join(" · ");
+  }
   const stale = view.kind === "stale";
   // The first-run sentence already says where to sign in; every other waiting row gets the line.
   const saysWhere = view.stateText === SUBSCRIPTIONS_WORDS.claudeFirstRun;

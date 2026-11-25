@@ -15117,8 +15117,18 @@ ${events}` : prompt;
     /** Serving logins the proxy says need signing in again there. */
     signInSoon: number().int().nonnegative(),
     /** The earliest moment one of those stops serving. */
-    signInByMs: number().optional()
+    signInByMs: number().optional(),
+    /**
+     * The connection's models this pool serves, on a custom connection's row:
+     * the row measures those models alone (`rowMeasuresModel`). Absent on a
+     * Claude account's row, which measures every model of its account.
+     */
+    models: array(string()).optional()
   });
+  const POOL_CREDITS_PROVIDER = {
+    claude: "claude",
+    chatgpt: "codex"
+  };
   const quotaProviderViewSchema = object({
     /** Quota provider id: codex, grok, claude, copilot. */
     provider: string(),
@@ -15189,6 +15199,12 @@ ${events}` : prompt;
      * The proxy's own sign-ins never make the row `auth_required`.
      */
     pool: quotaPoolViewSchema.optional(),
+    /**
+     * The row reads a CLI proxy, whether or not the proxy answered: a reading
+     * it could not refresh keeps only the proxy's own last reading of the same
+     * pool, never another source's (`mergeStaleProviders`).
+     */
+    fromProxy: literal(true).optional(),
     /**
      * Disclosed uncertainty, in the user's words, for a row with no window.
      * The surface renders it instead of a silent blank, and it is never a
@@ -19347,6 +19363,8 @@ ${events}` : prompt;
         if (row.detail) view.stateText = row.detail;
       } else {
         view.stateText = row.detail ?? (row.pool ? poolLine(row.pool, now) : emptyQuotaText(row.status));
+        const poolCredits = row.pool ? creditsOf(row, account) : void 0;
+        if (poolCredits) view.credits = poolCredits;
         return account.access ? withHold(view, account, now) : view;
       }
     }
@@ -19363,12 +19381,15 @@ ${events}` : prompt;
     });
     const verdict = verdictFor(kind, row, now);
     if (verdict) view.verdict = verdict;
-    const credits = row ? creditsLine(row.provider, row.credits, account.keepGoingOnCredits === true) : void 0;
+    const credits = row ? creditsOf(row, account) : void 0;
     if (credits) view.credits = credits;
     const savedResets = row ? savedResetsLine(row.provider, row.savedResets) : void 0;
     if (savedResets) view.savedResets = savedResets;
     if (row?.pool) view.pool = poolLine(row.pool, now);
     return withHold(view, account, now);
+  }
+  function creditsOf(row, account) {
+    return row.pool ? creditsLine(POOL_CREDITS_PROVIDER[row.pool.kind], row.credits) : creditsLine(row.provider, row.credits, account.keepGoingOnCredits === true);
   }
   function withHold(view, account, now) {
     const hold = standingCutOff(account, now);
@@ -19988,11 +20009,20 @@ ${events}` : prompt;
           label: `${QUOTA_POOL_NAMES[entry.pool?.kind ?? "claude"]} ${meter.label}`
         }))
       );
-      const lines = views.flatMap(
-        ({ entry, view: each }) => each.pool ? [`${QUOTA_POOL_NAMES[entry.pool?.kind ?? "claude"]}: ${each.pool}`] : []
+      const first = rows[0]?.pool;
+      const held = first && view.stateText !== poolLine(first, now) ? view.stateText : void 0;
+      const lines = views.map(
+        ({ entry, view: each }) => [
+          ...entry.pool ? [`${QUOTA_POOL_NAMES[entry.pool.kind]}: ${poolLine(entry.pool, now)}`] : [],
+          ...each.credits ? [each.credits] : []
+        ].join(" · ")
       );
-      if (!view.stateText && lines.length > 0) view.stateText = lines.join(" · ");
-    } else if (!view.stateText && view.pool) view.stateText = view.pool;
+      view.stateText = [...held ? [held] : [], ...lines].join(" · ");
+    } else if (row?.pool) {
+      const line = poolLine(row.pool, now);
+      const own2 = view.stateText && view.stateText !== line ? [view.stateText] : [];
+      view.stateText = [...own2, line, ...view.credits ? [view.credits] : []].join(" · ");
+    }
     const stale = view.kind === "stale";
     const saysWhere = view.stateText === SUBSCRIPTIONS_WORDS.claudeFirstRun;
     return {

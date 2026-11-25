@@ -1,7 +1,14 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { describe, expect, it } from "vitest";
-import type { QuotaHttp, QuotaRequest, QuotaResponse } from "../http";
+import { createQuotaHttp, type QuotaHttp, type QuotaRequest, type QuotaResponse } from "../http";
 import type { ProxyApp } from "./proxyApp";
-import { createProxyPoolReader, guardedProxyHttp, UNREAD_RETRY_MS } from "./proxyPools";
+import {
+  createProxyPoolReader,
+  guardedProxyHttp,
+  type ProxyUse,
+  UNREAD_RETRY_MS,
+} from "./proxyPools";
 
 // The task's constraints: the reader sends only reads, never the proxy's
 // usage queue, quota reset or any write; and the captain's choice asks a
@@ -62,6 +69,17 @@ describe("guardedProxyHttp", () => {
     expect(sent).toHaveLength(0);
   });
 
+  it("refuses the request tool when asking is off", async () => {
+    const quiet = standIn(() => ({ status: 200, json: {} }));
+    await expect(
+      guardedProxyHttp(quiet.http, APP, { ask: false })(
+        `${APP.origin}/v0/management/api-call`,
+        usageCall("https://chatgpt.com/backend-api/wham/usage"),
+      ),
+    ).rejects.toThrow("refused proxy request");
+    expect(quiet.sent).toHaveLength(0);
+  });
+
   it("sends the reads and a usage read of a login", async () => {
     await guarded(`${APP.origin}/v8/management/credentials`, {});
     await guarded(`${APP.origin}/v1/models`, {});
@@ -76,6 +94,9 @@ describe("guardedProxyHttp", () => {
     ]);
   });
 });
+
+/** Claude Code sends its requests to the proxy; no connection is pointed there. */
+const CLAUDE_CODE = (): ProxyUse => ({ claude: true, modelIds: [] });
 
 const unreadClaude = { provider: "claude", auth_index: "a1", status: "active", disabled: false };
 const models = {
@@ -95,6 +116,50 @@ const usageAnswer = {
   }),
 };
 
+// The review's finding: a redirect answer must not carry a request to a
+// route the guard refuses, so the proxy's own redirect fails the read.
+describe("a redirect from the proxy", () => {
+  it("fails the read without a second request", async () => {
+    const paths: string[] = [];
+    const server = createServer((req, res) => {
+      paths.push(req.url ?? "");
+      res.writeHead(302, { Location: "/v0/management/usage-queue" });
+      res.end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const { port } = server.address() as AddressInfo;
+      const app = { ...APP, origin: `http://127.0.0.1:${port}`, port };
+      await expect(
+        guardedProxyHttp(createQuotaHttp(), app)(`${app.origin}/v8/management/credentials`, {}),
+      ).rejects.toThrow();
+      expect(paths).toEqual(["/v8/management/credentials"]);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+});
+
+/** The proxy's answers: one unread Claude login, its model list, and `usage` on the request tool. */
+function answering(usage: unknown): (sent: Sent) => QuotaResponse {
+  return (entry) => {
+    const path = new URL(entry.url).pathname;
+    if (path === "/v8/management/credentials")
+      return { status: 200, json: { files: [unreadClaude] } };
+    if (path === "/v1/models") return { status: 200, json: models };
+    return { status: 200, json: usage };
+  };
+}
+
+// The proxy's own reading of the login, in Anthropic's limit headers.
+const readSignals = {
+  observed_at: "2026-11-25T16:41:00Z",
+  signals: {
+    "Anthropic-Ratelimit-Unified-5h-Utilization": "0.30",
+    "Anthropic-Ratelimit-Unified-5h-Reset": "1795640000",
+  },
+};
+
 describe("createProxyPoolReader", () => {
   it("asks an unread login once and keeps its answer for the next reads", async () => {
     let now = NOW;
@@ -105,7 +170,12 @@ describe("createProxyPoolReader", () => {
       if (path === "/v1/models") return { status: 200, json: models };
       return { status: 200, json: usageAnswer };
     });
-    const read = createProxyPoolReader({ app: async () => APP, http, now: () => now });
+    const read = createProxyPoolReader({
+      app: async () => APP,
+      http,
+      uses: CLAUDE_CODE,
+      now: () => now,
+    });
 
     const first = await read();
     now += 5 * 60_000;
@@ -142,7 +212,12 @@ describe("createProxyPoolReader", () => {
       if (path === "/v1/models") return { status: 200, json: models };
       return { status: 200, json: { status_code: 429, header: {}, body: "" } };
     });
-    const read = createProxyPoolReader({ app: async () => APP, http, now: () => now });
+    const read = createProxyPoolReader({
+      app: async () => APP,
+      http,
+      uses: CLAUDE_CODE,
+      now: () => now,
+    });
     const asks = () => sent.filter((entry) => entry.url.endsWith("/api-call")).length;
 
     await read();
@@ -161,7 +236,11 @@ describe("createProxyPoolReader", () => {
       if (path === "/v0/management/auth-files") return { status: 200, json: { files: [] } };
       return { status: 200, json: models };
     });
-    const reading = await createProxyPoolReader({ app: async () => APP, http })();
+    const reading = await createProxyPoolReader({
+      app: async () => APP,
+      http,
+      uses: CLAUDE_CODE,
+    })();
     expect(reading?.status).toBe("ok");
     expect(sent.map((entry) => new URL(entry.url).pathname).slice(0, 2)).toEqual([
       "/v8/management/credentials",
@@ -171,7 +250,104 @@ describe("createProxyPoolReader", () => {
 
   it("reads a refused key as an unavailable proxy, never as spent logins", async () => {
     const { http } = standIn(() => ({ status: 401, json: { error: "invalid management key" } }));
-    const reading = await createProxyPoolReader({ app: async () => APP, http })();
+    const reading = await createProxyPoolReader({
+      app: async () => APP,
+      http,
+      uses: CLAUDE_CODE,
+    })();
     expect(reading).toMatchObject({ status: "unavailable", reason: "proxy_key_refused" });
+  });
+
+  it("reads nothing of a proxy nothing in the app sends requests to", async () => {
+    const { http, sent } = standIn(() => ({ status: 200, json: { files: [unreadClaude] } }));
+    const reading = await createProxyPoolReader({
+      app: async () => APP,
+      http,
+      uses: () => ({ claude: false, modelIds: [] }),
+    })();
+    expect(reading).toBe(undefined);
+    expect(sent).toHaveLength(0);
+  });
+
+  it("asks only the logins of a pool the app uses", async () => {
+    const { http, sent } = standIn(answering(usageAnswer));
+    // A connection uses the ChatGPT model alone: the unread Claude login is not asked.
+    await createProxyPoolReader({
+      app: async () => APP,
+      http,
+      uses: () => ({ claude: false, modelIds: ["gpt-5.5"] }),
+    })();
+    expect(sent.filter((entry) => entry.url.endsWith("/api-call"))).toHaveLength(0);
+  });
+
+  it("only reads with asking off", async () => {
+    const { http, sent } = standIn(answering(usageAnswer));
+    const reading = await createProxyPoolReader({
+      app: async () => APP,
+      http,
+      uses: CLAUDE_CODE,
+      ask: false,
+    })();
+    expect(reading?.status).toBe("ok");
+    expect(sent.map((entry) => `${entry.method} ${new URL(entry.url).pathname}`)).toEqual([
+      "GET /v8/management/credentials",
+      "GET /v1/models",
+    ]);
+  });
+
+  it("never asks a login that answered again, after the proxy read it and lost that reading", async () => {
+    let now = NOW;
+    let files: unknown[] = [unreadClaude];
+    const { http, sent } = standIn((entry) => {
+      const path = new URL(entry.url).pathname;
+      if (path === "/v8/management/credentials") return { status: 200, json: { files } };
+      if (path === "/v1/models") return { status: 200, json: models };
+      return { status: 200, json: usageAnswer };
+    });
+    const read = createProxyPoolReader({
+      app: async () => APP,
+      http,
+      uses: CLAUDE_CODE,
+      now: () => now,
+    });
+    await read();
+    files = [{ ...unreadClaude, quota: readSignals }];
+    now += 60_000;
+    await read();
+    files = [unreadClaude];
+    now += UNREAD_RETRY_MS;
+    await read();
+    expect(sent.filter((entry) => entry.url.endsWith("/api-call"))).toHaveLength(1);
+  });
+
+  it("waits out the vendor's longer Retry-After before asking a login again", async () => {
+    let now = NOW;
+    const { http, sent } = standIn(
+      answering({ status_code: 429, header: { "Retry-After": ["3600"] }, body: "" }),
+    );
+    const read = createProxyPoolReader({
+      app: async () => APP,
+      http,
+      uses: CLAUDE_CODE,
+      now: () => now,
+    });
+    const asks = () => sent.filter((entry) => entry.url.endsWith("/api-call")).length;
+    await read();
+    now += UNREAD_RETRY_MS;
+    await read();
+    expect(asks()).toBe(1);
+    now = NOW + 3600_000;
+    await read();
+    expect(asks()).toBe(2);
+  });
+
+  it("keeps what it asked apart for each proxy", async () => {
+    let app = APP;
+    const { http, sent } = standIn(answering(usageAnswer));
+    const read = createProxyPoolReader({ app: async () => app, http, uses: CLAUDE_CODE });
+    await read();
+    app = { ...APP, origin: "http://127.0.0.1:8318", port: 8318 };
+    await read();
+    expect(sent.filter((entry) => entry.url.endsWith("/api-call"))).toHaveLength(2);
   });
 });

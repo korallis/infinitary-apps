@@ -21,6 +21,9 @@ import { CLAUDE_PROVIDER_ID, catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
 import { consumerConfigMessage, grpcWebOkBody } from "../support/grpcWebEncoder";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
+import { CLI_PROXY_MODELS, type CliProxyStub, startCliProxyStub } from "./cliProxyStub";
+import { customApiBlock } from "./customApi";
+import { startCustomApiFixture } from "./customApiFixture";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import {
@@ -990,5 +993,85 @@ test.describe("the real quota sensor, end to end", () => {
     // (INF-838, the captain's answer).
     const chip = app.page.locator('[data-connect-provider="github-copilot"]');
     await expect(chip).toHaveText(catalogEntry("github-copilot")?.name as string);
+  });
+});
+
+test.describe("a CLI proxy's pools, end to end", () => {
+  let app: LaunchedApp | undefined;
+  let proxy: CliProxyStub | undefined;
+  let models: Awaited<ReturnType<typeof startCustomApiFixture>> | undefined;
+
+  test.afterEach(async () => {
+    await app?.close();
+    app = undefined;
+    const server = proxy?.server;
+    if (server) {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+    await models?.close();
+    proxy = undefined;
+    models = undefined;
+  });
+
+  test("a connection to the proxy shows its Claude and ChatGPT pools, read with reads alone", async () => {
+    // The captain's ask: read the pooled Claude and ChatGPT usage from the
+    // proxy Claude Code and the connection send their requests to
+    // (docs/quota.md, "A proxy's pooled logins"). The proxy, its settings
+    // file and the model server behind it are local stand-ins.
+    const userDataDir = scratchDir("infinitary-e2e-proxy-");
+    models = await startCustomApiFixture(0);
+    proxy = await startCliProxyStub(Number(new URL(models.baseUrl).port));
+    app = await launchApp({
+      userDataDir,
+      env: { INFINITARY_CLI_PROXY_SETTINGS: proxy.writeSettings(userDataDir) },
+    });
+    const baseUrl = `http://127.0.0.1:${proxy.port}/v1`;
+    const accountId = await app.page.evaluate(
+      async ({ baseUrl, ids }) => {
+        const draft = await window.infinitary.accounts.custom.prepare({
+          baseUrl,
+          approvedDestination: baseUrl,
+          label: "Proxy",
+          mode: "local",
+          protocol: "openai-completions",
+          key: "",
+          noKey: true,
+          headers: [],
+          unencryptedLocalApproved: true,
+          allowStorageDefault: false,
+          storageApproved: false,
+          models: ids.map((id) => ({ id, context: 200000, output: 4096 })),
+        });
+        for (const id of ids) {
+          const checked = await window.infinitary.accounts.custom.check(draft.draftId ?? "", id);
+          if (!checked.models.find((model) => model.id === id)?.checked)
+            throw new Error(`Fixture model check failed for ${id}`);
+        }
+        const saved = await window.infinitary.accounts.custom.save(draft.draftId ?? "", false);
+        await window.infinitary.quota.refresh();
+        return saved.accountId;
+      },
+      { baseUrl, ids: [CLI_PROXY_MODELS.claude, CLI_PROXY_MODELS.chatgpt] },
+    );
+    await openSubscriptions(app);
+    const block = customApiBlock(app.page, accountId ?? "").block;
+    const claude = block.locator('[data-custom-pool="claude"]');
+    const chatgpt = block.locator('[data-custom-pool="chatgpt"]');
+    await expect(claude).toBeVisible({ timeout: 30_000 });
+    await expect(chatgpt).toBeVisible();
+    // The stand-in's one Claude login has 38% of its session left, and its
+    // one ChatGPT login 88% of its five-hour window.
+    await expect(claude.getByText("38%", { exact: false })).toBeVisible();
+    await expect(chatgpt.getByText("88%", { exact: false })).toBeVisible();
+    // The ChatGPT login says its credits answer, with 15 left: the pool
+    // tells it in ChatGPT's words.
+    await expect(chatgpt.locator("[data-credits]")).toContainText("Credits: 15 left");
+    // Only the proxy's two reads reached its own routes: both logins were
+    // read, so nothing was asked through it, and nothing changed it.
+    const own = proxy.seen.filter(
+      (entry) => / \/v0\//.test(entry) || / \/v8\//.test(entry) || entry === "GET /v1/models",
+    );
+    expect(new Set(own)).toEqual(new Set(["GET /v8/management/credentials", "GET /v1/models"]));
   });
 });

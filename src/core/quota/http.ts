@@ -31,6 +31,11 @@ export type QuotaRequest = {
    * and the read of its body both stop when it fires.
    */
   signal?: AbortSignal;
+  /**
+   * What a redirect answer does: followed (the default), or `error`, which
+   * fails the request as `network` before a second request is sent.
+   */
+  redirect?: "follow" | "error";
 };
 
 export type QuotaHttp = (url: string, init: QuotaRequest) => Promise<QuotaResponse>;
@@ -72,6 +77,7 @@ export function createQuotaHttp(fetchImpl: typeof fetch = fetch): QuotaHttp {
         method: init.method ?? "GET",
         headers: init.headers,
         ...(init.body ? { body: init.body } : {}),
+        ...(init.redirect ? { redirect: init.redirect } : {}),
         signal,
       });
     } catch (caught) {

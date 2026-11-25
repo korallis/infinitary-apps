@@ -1,6 +1,8 @@
 import type { QuotaSnapshotView } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
 import { openInMemoryDatabase } from "../storage/db";
+import type { ProxyReading } from "./cliProxy/proxyPools";
+import { proxyConnectionRows } from "./cliProxy/proxyQuota";
 import { claudeAccessOutcome } from "./outcome";
 import { mergeStaleProviders, QuotaService } from "./quotaService";
 
@@ -69,6 +71,59 @@ describe("QuotaService", () => {
 
     const restored = new QuotaService({ refresh, db, broadcast });
     expect(restored.latest()?.generatedAt).toBe("2026-08-13T20:00:00Z");
+  });
+
+  // The review's finding on a CLI proxy (docs/quota.md, "A proxy's pooled
+  // logins"): the proxy is read on its own clock, never holding up a
+  // refresh, and its last reading stays laid over each refresh.
+  it("lays the local reading over the snapshot without holding up a refresh", async () => {
+    const db = openInMemoryDatabase();
+    const broadcast = vi.fn();
+    const refresh = vi.fn(async () => ({ snapshot: SNAPSHOT, catalog: CATALOG }));
+    let answer: (() => void) | undefined;
+    const proxyRow = {
+      provider: "fm-custom-0123456789abcdef",
+      label: "Proxy",
+      accountId: "acct_proxy",
+      status: "ok" as const,
+      stale: false,
+      fromProxy: true as const,
+      windows: [{ id: "weekly", label: "weekly", percentRemaining: 60 }],
+    };
+    const service = new QuotaService({
+      refresh,
+      db,
+      broadcast,
+      catalogFor: () => CATALOG,
+      localReading: {
+        everyMs: 60_000,
+        run: async () => {
+          await new Promise<void>((resolve) => {
+            answer = resolve;
+          });
+          return (snapshot) => ({ ...snapshot, providers: [...snapshot.providers, proxyRow] });
+        },
+      },
+      now: () => 5000,
+    });
+    await service.refresh("demand");
+    expect(service.latest()?.providers.map((row) => row.provider)).toEqual(["claude", "grok"]);
+    answer?.();
+    await vi.waitFor(() =>
+      expect(service.latest()?.providers.map((row) => row.provider)).toEqual([
+        "claude",
+        "grok",
+        "fm-custom-0123456789abcdef",
+      ]),
+    );
+    expect(broadcast).toHaveBeenCalledTimes(2);
+    // The next refresh keeps the proxy's row from its first broadcast.
+    const next = service.refresh("demand");
+    await next;
+    expect(
+      broadcast.mock.calls[2]?.[0].providers.map((row: { provider: string }) => row.provider),
+    ).toEqual(["claude", "grok", "fm-custom-0123456789abcdef"]);
+    answer?.();
   });
 
   it("reads the saved snapshot at start with the switches as they stand now", async () => {
@@ -313,5 +368,107 @@ describe("mergeStaleProviders", () => {
       ],
     };
     expect(mergeStaleProviders(next, previous, 3000).providers[0]?.windows).toEqual([]);
+  });
+
+  // The review's finding on a CLI proxy's rows (docs/quota.md, "A proxy's
+  // pooled logins"): a proxy that did not answer keeps each pool's last
+  // reading apart, and never takes a direct sign-in's windows.
+  describe("a CLI proxy's rows", () => {
+    const connection = {
+      accountId: "acct_proxy",
+      accountLabel: "Proxy",
+      providerId: "fm-custom-0123456789abcdef",
+      baseUrl: "http://127.0.0.1:8317/v1",
+      modelIds: ["claude-opus-5-5", "gpt-5.5"],
+    };
+    const answered: ProxyReading = {
+      status: "ok",
+      port: 8317,
+      atMs: 1000,
+      modelPools: new Map([
+        ["claude-opus-5-5", "claude"],
+        ["gpt-5.5", "chatgpt"],
+      ]),
+      logins: [
+        {
+          kind: "claude",
+          state: "serving",
+          windows: [{ id: "five_hour", label: "5h", percentRemaining: 30, resetsAtMs: 9000 }],
+        },
+        {
+          kind: "chatgpt",
+          state: "serving",
+          windows: [{ id: "weekly", label: "weekly", percentRemaining: 70, resetsAtMs: 9000 }],
+        },
+      ],
+    };
+    const silent: ProxyReading = {
+      status: "unavailable",
+      port: 8317,
+      reason: "connection_refused",
+      atMs: 2000,
+    };
+    const snapshotOf = (fetchedAt: number, providers: QuotaSnapshotView["providers"]) => ({
+      generatedAt: String(fetchedAt),
+      fetchedAt,
+      providers,
+    });
+
+    it("keeps both pools' last readings, each under its own pool, when the proxy stops answering", () => {
+      const previous = snapshotOf(1000, proxyConnectionRows(answered, [connection], 1000));
+      const next = snapshotOf(2000, proxyConnectionRows(silent, [connection], 2000));
+      const merged = mergeStaleProviders(next, previous, 3000).providers;
+      expect(
+        merged.map((row) => [row.pool?.kind, row.stale, row.windows[0]?.percentRemaining]),
+      ).toEqual([
+        ["claude", true, 30],
+        ["chatgpt", true, 70],
+      ]);
+      expect(merged.every((row) => row.reason === "connection_refused")).toBe(true);
+    });
+
+    it("never gives a proxy's unanswered Claude row the account's direct windows", () => {
+      const previous = snapshotOf(1000, [
+        {
+          provider: "claude",
+          label: "Claude",
+          accountId: "acct_claude",
+          status: "ok",
+          stale: false,
+          windows: [{ id: "session", label: "session", percentRemaining: 40, resetsAtMs: 9000 }],
+        },
+      ]);
+      const next = snapshotOf(2000, [
+        {
+          provider: "claude",
+          label: "Claude",
+          accountId: "acct_claude",
+          status: "unavailable",
+          stale: false,
+          fromProxy: true,
+          windows: [],
+        },
+      ]);
+      expect(mergeStaleProviders(next, previous, 3000).providers[0]?.windows).toEqual([]);
+    });
+
+    it("never gives the account's unanswered direct row the proxy's last pool reading", () => {
+      const pooled = proxyConnectionRows(answered, [connection], 1000)[0];
+      if (!pooled) throw new Error("The proxy reads a Claude pool.");
+      const previous = snapshotOf(1000, [
+        { ...pooled, provider: "claude", label: "Claude", accountId: "acct_claude" },
+      ]);
+      const next = snapshotOf(2000, [
+        {
+          provider: "claude",
+          label: "Claude",
+          accountId: "acct_claude",
+          status: "unavailable",
+          stale: false,
+          windows: [],
+        },
+      ]);
+      expect(mergeStaleProviders(next, previous, 3000).providers[0]?.windows).toEqual([]);
+    });
   });
 });

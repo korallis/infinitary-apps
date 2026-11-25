@@ -1,5 +1,5 @@
-import type { QuotaSnapshotView } from "@shared/quota";
-import { quotaEntryForPiProvider } from "../quota/auth";
+import { type QuotaSnapshotView, rowMeasuresModel } from "@shared/quota";
+import { quotaRowProviderOf } from "../quota/auth";
 import { effectiveFromProvider, spentScopes } from "../quota/catalog";
 import type { DecisionStore } from "../storage/decisionStore";
 import { type AccountCandidate, isExhausted, selectAccount } from "./accountPolicy";
@@ -261,7 +261,7 @@ export class AccountSelector {
   ): AccountCandidate[] {
     const snapshot = this.options.quota.latest();
     const rows = placed?.readings ?? snapshot?.providers;
-    const quotaId = quotaEntryForPiProvider(piProviderId)?.quotaId;
+    const quotaId = quotaRowProviderOf(piProviderId);
     const now = Date.now();
     // Every account is scored against one read of the placed work.
     const placedWork = this.options.placedWork;
@@ -282,7 +282,10 @@ export class AccountSelector {
         : accounts.filter((account) => serving(account.id) === undefined);
     return pool.map((account) => {
       const row = rows?.find(
-        (provider) => provider.accountId === account.id && provider.provider === quotaId,
+        (provider) =>
+          provider.accountId === account.id &&
+          provider.provider === quotaId &&
+          rowMeasuresModel(provider, model),
       );
       const effective = effectiveFromProvider(row, now, model);
       const score = row && data ? placedWork?.score(row, now, model, data) : undefined;

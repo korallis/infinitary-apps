@@ -12,7 +12,7 @@ import {
   BEDROCK_SIGN_IN,
   CLAUDE_PROVIDER_ID,
 } from "@shared/providers";
-import { formatBedrockSpend, type QuotaSnapshotView } from "@shared/quota";
+import { formatBedrockSpend, type QuotaProviderView, type QuotaSnapshotView } from "@shared/quota";
 import type { ClaudeAccess } from "../claude/claudeAccess";
 import type { ClaudeRateLimit } from "../claude/claudeEvents";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
@@ -32,7 +32,13 @@ import { UsageStore } from "../storage/usageStore";
 import { type QuotaCatalogModel, quotaEntryForPiProvider } from "./auth";
 import { buildModelsCatalog, effectiveFromProvider } from "./catalog";
 import { managedFromClaudeStore } from "./claudeAuthResolve";
-import { createProxyAppReader, type ProxyApp, readProxySettings } from "./cliProxy/proxyApp";
+import {
+  addressIsProxy,
+  createProxyAppReader,
+  loopbackPortOf,
+  type ProxyApp,
+  readProxySettings,
+} from "./cliProxy/proxyApp";
 import { createProxyPoolReader, type ProxyReading } from "./cliProxy/proxyPools";
 import {
   type PooledConnection,
@@ -45,7 +51,7 @@ import { createQuotaFetcher } from "./fetchQuota";
 import { createFixtureRefresh } from "./fixture";
 import { createQuotaHttp } from "./http";
 import { needsReauthTargets } from "./needsReauth";
-import { claudeAccessOutcome, type ProviderOutcome } from "./outcome";
+import { CLAUDE_ACCESS_REASON, claudeAccessOutcome, type ProviderOutcome } from "./outcome";
 import {
   PushedQuotaStore,
   type PushedWindow,
@@ -173,21 +179,9 @@ export function startHomeQuota(options: {
     return [...byId.entries()].map(([id, name]) => ({ provider: providerId, id, name }));
   };
   // The CLI proxy on this computer (docs/quota.md, "A proxy's pooled
-  // logins"): read before each refresh; the Claude row, the custom
-  // connections' rows and the catalog read that reading until the next.
-  const proxyApp = proxyAppFor(options.standIns);
-  const readProxy = proxyApp
-    ? createProxyPoolReader({ app: proxyApp, http: createQuotaHttp() })
-    : undefined;
-  let proxy: ProxyReading | undefined;
-  const refreshProxy = async () => {
-    if (!readProxy) return;
-    try {
-      proxy = await readProxy();
-    } catch {
-      proxy = undefined;
-    }
-  };
+  // logins"): read on its own one-minute clock, never holding up a refresh;
+  // the Claude row, the custom connections' rows and the catalog read the
+  // latest reading.
   const pooledConnections = (): PooledConnection[] => {
     const views = vault.customViews();
     return vault.list().flatMap((account) => {
@@ -204,6 +198,60 @@ export function startHomeQuota(options: {
         },
       ];
     });
+  };
+  // Where Claude Code sends its requests, for an enabled Claude account on
+  // access set up for Claude Code; read with each proxy reading.
+  let claudeAddress: string | undefined;
+  const readClaudeAddress = async () => {
+    const claudeAccount = vault
+      .list()
+      .some((account) => account.enabled && claudeStoreDirOf(vault, account.id) !== undefined);
+    claudeAddress = claudeAccount ? (await options.claudeAccess?.())?.address : undefined;
+    return claudeAddress;
+  };
+  const proxyApp = proxyAppFor(options.standIns);
+  const readProxy = proxyApp
+    ? createProxyPoolReader({
+        app: proxyApp,
+        http: createQuotaHttp(),
+        uses: (port) => ({
+          claude: claudeAddress !== undefined && addressIsProxy(claudeAddress, port),
+          modelIds: pooledConnections()
+            .filter((connection) => addressIsProxy(connection.baseUrl, port))
+            .flatMap((connection) => connection.modelIds),
+        }),
+      })
+    : undefined;
+  let proxy: ProxyReading | undefined;
+  const refreshProxy = async () => {
+    if (!readProxy) return;
+    // Nothing in the app sends requests to this computer's own address:
+    // no proxy is looked for.
+    const address = await readClaudeAddress();
+    const local = [address, ...pooledConnections().map((connection) => connection.baseUrl)].some(
+      (entry) => entry !== undefined && loopbackPortOf(entry) !== undefined,
+    );
+    try {
+      proxy = local ? await readProxy() : undefined;
+    } catch {
+      proxy = undefined;
+    }
+  };
+  // The proxy's rows laid over a snapshot: the Claude row read through it,
+  // and each connection's pool rows made again.
+  const withProxyRows = (snapshot: QuotaSnapshotView): QuotaSnapshotView => {
+    const now = Date.now();
+    const providers = snapshot.providers.flatMap((row) => {
+      if (isCustomApiProvider(row.provider) && row.fromProxy) return [];
+      if (row.provider !== CLAUDE_PROVIDER_ID) return [row];
+      if (!row.fromProxy && row.reason !== CLAUDE_ACCESS_REASON) return [row];
+      const outcome = poolOutcome(proxy, "claude", claudeAddress, now);
+      return [outcome ? rowOfOutcome(row, outcome, now) : row];
+    });
+    return {
+      ...snapshot,
+      providers: [...providers, ...proxyConnectionRows(proxy, pooledConnections(), now)],
+    };
   };
   const catalogModels = () => [
     ...auth.catalogModels(vault.piModelRuntimes()),
@@ -402,12 +450,7 @@ export function startHomeQuota(options: {
           ...pushedOnlyViews(now),
         ],
       });
-  const quotaRefresh: QuotaRefresh = fetchQuota
-    ? async (reason) => {
-        await refreshProxy();
-        return fetchQuota(reason);
-      }
-    : createFixtureRefresh(fixtureDir ?? "");
+  const quotaRefresh: QuotaRefresh = fetchQuota ?? createFixtureRefresh(fixtureDir ?? "");
   const quota = new QuotaService({
     refresh: quotaRefresh,
     db,
@@ -421,6 +464,17 @@ export function startHomeQuota(options: {
         }),
     stamp: (snapshot) => stampSnapshot(snapshot, keepsGoing),
     broadcast: options.broadcast,
+    ...(readProxy
+      ? {
+          localReading: {
+            everyMs: PROXY_READ_EVERY_MS,
+            run: async () => {
+              await refreshProxy();
+              return withProxyRows;
+            },
+          },
+        }
+      : {}),
   });
   // The captain's Try again on a spent allowance ends the vault's hold and
   // the refused readings laid over its meter together, so the seat, the crew
@@ -603,4 +657,36 @@ function proxyAppFor(
   if (standIn) return () => readFile(standIn, "utf8").then(readProxySettings, () => undefined);
   // `quotaEndpoints` is present on every unpackaged run (`readStandIns`).
   return standIns.quotaEndpoints === undefined ? createProxyAppReader() : undefined;
+}
+
+/** How often the CLI proxy is read: its own readings move by the minute. */
+const PROXY_READ_EVERY_MS = 60_000;
+
+/** A row read again from a new outcome, keeping who and what it is. */
+function rowOfOutcome(
+  row: QuotaProviderView,
+  outcome: ProviderOutcome,
+  now: number,
+): QuotaProviderView {
+  const {
+    pool: _pool,
+    credits: _credits,
+    reason: _reason,
+    detail: _detail,
+    retryAfter: _retryAfter,
+    measuredAt: _measuredAt,
+    fromProxy: _fromProxy,
+    ...rest
+  } = row;
+  return {
+    ...rest,
+    status: outcome.status,
+    windows: outcome.windows,
+    stale: false,
+    ...(outcome.windows.length > 0 ? { measuredAt: now } : {}),
+    ...(outcome.pool ? { pool: outcome.pool } : {}),
+    ...(outcome.credits ? { credits: outcome.credits } : {}),
+    ...(outcome.reason ? { reason: outcome.reason } : {}),
+    ...(outcome.fromProxy ? { fromProxy: true as const } : {}),
+  };
 }

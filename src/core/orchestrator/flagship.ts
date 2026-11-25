@@ -10,7 +10,7 @@ import {
   PROVIDER_CATALOG,
   providerServesRole,
 } from "@shared/providers";
-import { creditsOfferOf, type QuotaSnapshotView, savedResetsNow } from "@shared/quota";
+import { creditsOfferOf, type QuotaSnapshotView, quotaRowOf, savedResetsNow } from "@shared/quota";
 import { allowanceSpent } from "@shared/quotaSignals";
 import { CUT_OFF_REFUSED, CUT_OFF_SIGNED_OUT } from "../accounts/credentialHealth";
 import type { ModelRuntime } from "../pi/types";
@@ -543,9 +543,15 @@ export class Flagship {
     return lines.length > 0 ? lines.join("; ") : "no reset times are known yet";
   }
 
+  /**
+   * The reading of the account that serves the first mate's model: a
+   * connection to a CLI proxy has a row per pool, and the first mate's
+   * model's pool is the one it pauses, keeps headroom and resets by.
+   */
   private snapshotRow(accountId: string) {
-    return this.options.quota
-      .latest()
-      ?.providers.find((provider) => provider.accountId === accountId);
+    const selected = this.options.settings.getFirstmateModel?.();
+    const modelId =
+      selected && selected.provider === this.providerOf(accountId) ? selected.id : undefined;
+    return quotaRowOf(this.options.quota.latest()?.providers, accountId, modelId);
   }
 }

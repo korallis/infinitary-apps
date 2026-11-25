@@ -36,9 +36,14 @@ const MODELS_LIMIT_BYTES = 1024 * 1024;
 /**
  * The request seam every proxy request goes through. Anything but the four
  * reads above, to anywhere but the proxy's own origin, is refused before it
- * is sent.
+ * is sent, and so is the request tool when `ask` is off. A redirect fails
+ * the request: the route checked here is the only one a request reaches.
  */
-export function guardedProxyHttp(http: QuotaHttp, app: ProxyApp): QuotaHttp {
+export function guardedProxyHttp(
+  http: QuotaHttp,
+  app: ProxyApp,
+  options: { ask?: boolean } = {},
+): QuotaHttp {
   return (url, init) => {
     const method = (init.method ?? "GET").toUpperCase();
     let parsed: URL;
@@ -54,11 +59,12 @@ export function guardedProxyHttp(http: QuotaHttp, app: ProxyApp): QuotaHttp {
         [PROXY_ROUTES.credentials, PROXY_ROUTES.credentialsBefore8, PROXY_ROUTES.models].includes(
           parsed.pathname as never,
         )) ||
-        (method === "POST" &&
+        (options.ask !== false &&
+          method === "POST" &&
           parsed.pathname === PROXY_ROUTES.apiCall &&
           apiCallAllowed(init.body)));
     if (!allowed) return Promise.reject(new Error("refused proxy request"));
-    return http(url, init);
+    return http(url, { ...init, redirect: "error" });
   };
 }
 
@@ -94,12 +100,21 @@ export type ProxyReading =
       atMs: number;
     };
 
+/** What Infinitary asked of one login, kept for that proxy and login. */
 type Asked = {
-  atMs: number;
-  /** What the vendor answered, while the proxy has no reading of its own. */
+  /** The login answered once: it is never asked again. */
+  answered: boolean;
+  /** What it answered, while the proxy has no reading of its own. */
   reading?: Pick<ProxyLogin, "windows" | "credits">;
-  failed?: true;
+  /** A failed ask is tried again no sooner than this. */
+  retryAtMs?: number;
 };
+
+/**
+ * What the app uses of the proxy at a port: whether Claude Code sends its
+ * requests there, and the models of the custom connections pointed there.
+ */
+export type ProxyUse = { claude: boolean; modelIds: readonly string[] };
 
 const POOL_OF_OWNER: Record<string, QuotaPoolKind> = {
   anthropic: "claude",
@@ -107,22 +122,31 @@ const POOL_OF_OWNER: Record<string, QuotaPoolKind> = {
 };
 
 /**
- * Reads the proxy's logins on each call. A serving login the proxy has not
- * read is asked once through the proxy's own request tool (the captain's
- * choice, docs/quota.md), and its answer stands in until the proxy reads the
- * login itself; a failed ask is tried again after `UNREAD_RETRY_MS`.
+ * Reads the proxy's logins on each call, once the app uses the proxy. A
+ * serving login of a pool the app uses that the proxy has not read is asked
+ * once through the proxy's own request tool (the captain's choice,
+ * docs/quota.md); its answer stands in until the proxy reads the login
+ * itself, and once answered it is never asked again. A failed ask is tried
+ * again after `UNREAD_RETRY_MS`, or the vendor's longer Retry-After. With
+ * `ask` off the reader only reads: the request tool is refused.
  */
 export function createProxyPoolReader(options: {
   app: () => Promise<ProxyApp | undefined>;
   http: QuotaHttp;
+  uses: (port: number) => Promise<ProxyUse> | ProxyUse;
+  ask?: boolean;
   now?: () => number;
 }): () => Promise<ProxyReading | undefined> {
   const now = options.now ?? Date.now;
+  const ask = options.ask !== false;
   const asked = new Map<string, Asked>();
   return async () => {
     const app = await options.app();
     if (!app) return undefined;
-    const http = guardedProxyHttp(options.http, app);
+    // A proxy nothing in the app sends requests to is not read at all.
+    const use = await options.uses(app.port);
+    if (!use.claude && use.modelIds.length === 0) return undefined;
+    const http = guardedProxyHttp(options.http, app, { ask });
     const management = { Authorization: bearer(app.key), Accept: "application/json" };
     const atMs = now();
     let answer = await read(http, `${app.origin}${PROXY_ROUTES.credentials}`, management);
@@ -140,8 +164,13 @@ export function createProxyPoolReader(options: {
     }
     const logins = parseProxyCredentials(answer.json, atMs);
     const modelPools = await listModelPools(http, app);
+    const used = new Set<QuotaPoolKind>(use.claude ? ["claude"] : []);
+    for (const id of use.modelIds) {
+      const kind = modelPools.get(id);
+      if (kind) used.add(kind);
+    }
     const filled = await Promise.all(
-      logins.map((login) => fillUnread(http, app, login, asked, atMs)),
+      logins.map((login) => fillUnread(http, app, login, asked, atMs, ask && used.has(login.kind))),
     );
     return { status: "ok", port: app.port, logins: filled, modelPools, atMs };
   };
@@ -198,20 +227,31 @@ async function fillUnread(
   login: ProxyLogin,
   asked: Map<string, Asked>,
   atMs: number,
+  mayAsk: boolean,
 ): Promise<ProxyLogin> {
-  const key = login.authIndex ? `${login.kind}:${login.authIndex}` : undefined;
-  if (!key || login.windows !== undefined) {
-    // The proxy reads it now: its own reading is the one kept.
-    if (key && login.windows !== undefined) asked.delete(key);
+  if (!login.authIndex) return login;
+  const key = JSON.stringify([app.origin, login.kind, login.authIndex]);
+  const before = asked.get(key);
+  if (login.windows !== undefined) {
+    // The proxy reads it now: its own reading is the one kept, and the
+    // login that answered stays answered.
+    if (before?.reading) asked.set(key, { answered: before.answered });
     return login;
   }
   if (login.state !== "serving") return login;
-  const before = asked.get(key);
   if (before?.reading) return { ...login, ...before.reading };
-  if (before && (!before.failed || atMs - before.atMs < UNREAD_RETRY_MS)) return login;
-  const reading = await askUsage(http, app, login, atMs);
-  asked.set(key, reading ? { atMs, reading } : { atMs, failed: true });
-  return reading ? { ...login, ...reading } : login;
+  if (before?.answered) return login;
+  if (!mayAsk || (before?.retryAtMs !== undefined && atMs < before.retryAtMs)) return login;
+  const result = await askUsage(http, app, login, atMs);
+  if (result.reading) {
+    asked.set(key, { answered: true, reading: result.reading });
+    return { ...login, ...result.reading };
+  }
+  asked.set(key, {
+    answered: false,
+    retryAtMs: atMs + Math.max(UNREAD_RETRY_MS, result.retryAfterMs ?? 0),
+  });
+  return login;
 }
 
 /**
@@ -224,7 +264,7 @@ async function askUsage(
   app: ProxyApp,
   login: ProxyLogin,
   atMs: number,
-): Promise<Pick<ProxyLogin, "windows" | "credits"> | undefined> {
+): Promise<{ reading?: Pick<ProxyLogin, "windows" | "credits">; retryAfterMs?: number }> {
   const header: Record<string, string> =
     login.kind === "claude"
       ? {
@@ -254,7 +294,14 @@ async function askUsage(
       body: new TextEncoder().encode(JSON.stringify(call)),
     });
     const answer = asRecord(result.json);
-    if (result.status !== 200 || answer?.status_code !== 200) return undefined;
+    if (result.status !== 200 || answer?.status_code !== 200) {
+      // The vendor's wait, as the proxy relays it, else the proxy's own.
+      const waited = retryAfterMs(headerValue(answer?.header, "retry-after"), atMs);
+      const own = retryAfterMs(result.retryAfter, atMs);
+      return waited !== undefined || own !== undefined
+        ? { retryAfterMs: Math.max(waited ?? 0, own ?? 0) }
+        : {};
+    }
     const body = JSON.parse(asString(answer.body) ?? "") as unknown;
     const parsed =
       login.kind === "claude" ? parseClaudeUsage(body, atMs) : parseCodexUsage(body, atMs);
@@ -271,14 +318,31 @@ async function askUsage(
             },
           ],
     );
-    if (windows.length === 0) return undefined;
-    return {
-      windows,
-      ...(parsed.credits ? { credits: parsed.credits } : {}),
-    };
+    if (windows.length === 0) return {};
+    return { reading: { windows, ...(parsed.credits ? { credits: parsed.credits } : {}) } };
   } catch {
-    return undefined;
+    return {};
   }
+}
+
+/** One header of the request tool's answer, whose values are lists (Go's `http.Header`). */
+function headerValue(header: unknown, name: string): string | undefined {
+  const record = asRecord(header);
+  if (!record) return undefined;
+  for (const [key, value] of Object.entries(record)) {
+    if (key.toLowerCase() !== name) continue;
+    return Array.isArray(value) ? asString(value[0]) : asString(value);
+  }
+  return undefined;
+}
+
+/** RFC 9110 Retry-After: seconds, or a date. */
+function retryAfterMs(text: string | undefined, atMs: number): number | undefined {
+  if (!text) return undefined;
+  const trimmed = text.trim();
+  if (/^[0-9]+$/.test(trimmed)) return Number(trimmed) * 1000;
+  const at = Date.parse(trimmed);
+  return Number.isFinite(at) ? Math.max(0, at - atMs) : undefined;
 }
 
 function bearer(token: string): string {
