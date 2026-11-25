@@ -111,7 +111,7 @@ Every other provider's work reaches the same collector, and a managed setup's, i
 
 `claudeReporting.integration.test.ts` holds this on the client the product would run, boxed, with stand-in collectors over OTLP/HTTP JSON, protobuf and gRPC and a header command: the collector gets the client's own batches byte for byte, the token and cost counters among them, the person's resource attributes on logs and metrics, prompts only where the person's `OTEL_LOG_USER_PROMPTS` asks, and a managed setup leaves the collector empty.
 Collectors on a certificate authority of their own, over OTLP/HTTP and gRPC, take only the setup's client certificate and get every priced call; one the computer's trusted list vouches for is reached with no certificate key, and an untrusted one is named as not connecting securely.
-`usageReporter.integration.test.ts` holds the same for the usage report: a Codex call reaches a collector that takes only the setup's client certificate, and one the computer's trusted list vouches for, while an untrusted one drops the batch with a log line saying the connection could not be made secure.
+`usageReporter.integration.test.ts` holds the same for the usage report: a Codex call reaches a collector that takes only the setup's client certificate and one the computer's trusted list vouches for, a certificate authority file renewed in place is used from the next batch, and an untrusted collector drops the batch with a log line saying the connection could not be made secure.
 
 ## Daily totals
 

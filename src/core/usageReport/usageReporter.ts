@@ -1,4 +1,6 @@
+import { statSync } from "node:fs";
 import type { Agent } from "node:http";
+import { resolve as resolvePath } from "node:path";
 import type { FmEvent } from "@shared/events";
 import { isProgressTool } from "@shared/events";
 import type { UsageWorkKind } from "@shared/usage";
@@ -88,9 +90,11 @@ export class UsageReporter {
   private readonly turns = new Map<string, Turn>();
   private timer: ReturnType<typeof setTimeout> | undefined;
   /**
-   * Each destination signal's kept connections, made again when its address
-   * or certificate files change, so a file is read, and a file that cannot
-   * be read is logged, once per setup rather than per batch.
+   * Each destination signal's kept connections, made again when its address,
+   * a certificate file's path or that file's last change moves, so a
+   * certificate renewed in place is sent from the next batch, while a file
+   * is read, and a file that cannot be read is logged, once per change
+   * rather than per batch.
    */
   private readonly connections = new Map<string, { made: string; agent: Agent }>();
 
@@ -320,18 +324,32 @@ export class UsageReporter {
 
   private connection(destination: UsageReportDestination, signal: OtlpSignal, url: string): Agent {
     const files = destination.certificates?.[signal];
-    const made = JSON.stringify([url, files ?? null]);
+    // A relative certificate path resolves against the folder the app runs in.
+    const cwd = process.cwd();
+    const made = JSON.stringify([url, files ?? null, changedAt(files, cwd)]);
     const id = `${destination.id} ${signal}`;
     const held = this.connections.get(id);
     if (held?.made === made) return held.agent;
-    held?.agent.destroy();
-    // A relative certificate path resolves against the folder the app runs in.
-    const agent = collectorAgent(url, files, process.cwd(), (line) =>
+    // The replaced connections are left to close once idle, not destroyed:
+    // a batch still in flight on one finishes.
+    const agent = collectorAgent(url, files, cwd, (line) =>
       console.warn(`[usage report] ${hostOf(url)}: ${line}`),
     );
     this.connections.set(id, { made, agent });
     return agent;
   }
+}
+
+/** When each named certificate file last changed, or null for one that is not named or cannot be read. */
+function changedAt(files: CertificateFiles | undefined, cwd: string): (number | null)[] {
+  return [files?.ca, files?.cert, files?.key].map((path) => {
+    if (!path) return null;
+    try {
+      return statSync(resolvePath(cwd, path)).mtimeMs;
+    } catch {
+      return null;
+    }
+  });
 }
 
 function hostOf(url: string): string {

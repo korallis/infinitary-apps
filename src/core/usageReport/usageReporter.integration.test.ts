@@ -1,6 +1,8 @@
+import { writeFileSync } from "node:fs";
 import type { IncomingHttpHeaders, IncomingMessage, ServerResponse } from "node:http";
 import { createServer as createHttpsServer, type Server } from "node:https";
 import type { AddressInfo } from "node:net";
+import { join } from "node:path";
 import type { TLSSocket } from "node:tls";
 import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -70,6 +72,11 @@ async function secureCollector(asks: boolean): Promise<{ url: string; received: 
 
 /** A Codex crewmate call recorded in the ledger and reported from it. */
 async function reportCodexCall(keys: Record<string, string>): Promise<void> {
+  await (await codexReporter(keys))();
+}
+
+/** One app run's usage report under this setup: each call records a Codex crewmate call and reports it. */
+async function codexReporter(keys: Record<string, string>): Promise<() => Promise<void>> {
   const setup = companyReportingFrom({
     CLAUDE_CODE_ENABLE_TELEMETRY: "1",
     OTEL_METRICS_EXPORTER: "otlp",
@@ -93,20 +100,22 @@ async function reportCodexCall(keys: Record<string, string>): Promise<void> {
     hearEvents: () => {},
     reportDestinations: source.destinations,
   });
-  usage.recordUsage({
-    taskId: "task-1",
-    accountId: "acct-codex",
-    model: { provider: "openai-codex", id: "gpt-5.5" },
-    usage: {
-      input: 1200,
-      output: 340,
-      cacheRead: 8000,
-      cost: 0.0123,
-      costSource: "listed-prices",
-      costParts: { input: 0.0015, output: 0.0034, cacheRead: 0.0074 },
-    },
-  });
-  await usage.usageReporter.flush();
+  return async () => {
+    usage.recordUsage({
+      taskId: "task-1",
+      accountId: "acct-codex",
+      model: { provider: "openai-codex", id: "gpt-5.5" },
+      usage: {
+        input: 1200,
+        output: 340,
+        cacheRead: 8000,
+        cost: 0.0123,
+        costSource: "listed-prices",
+        costParts: { input: 0.0015, output: 0.0034, cacheRead: 0.0074 },
+      },
+    });
+    await usage.usageReporter.flush();
+  };
 }
 
 describe("the usage report to a company's secure collector", () => {
@@ -133,6 +142,24 @@ describe("the usage report to a company's secure collector", () => {
     const collector = await secureCollector(false);
     useSystemRootsForTests(() => [tls.ca]);
     await reportCodexCall({ OTEL_EXPORTER_OTLP_ENDPOINT: collector.url });
+    expect(collector.received.map((r) => r.path).sort()).toEqual(["/v1/logs", "/v1/metrics"]);
+  });
+
+  it("uses a certificate authority file renewed in place from the next batch", async () => {
+    // A company renews its certificate files at the same paths, and the report keeps its
+    // connections for the whole app run, so it must not go on sending the old file.
+    const collector = await secureCollector(false);
+    const renewed = join(scratchDir("infinitary-usage-report-renewal-"), "company-ca.pem");
+    writeFileSync(renewed, collectorTlsFixture(scratchDir("infinitary-usage-report-old-tls-")).ca);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const report = await codexReporter({
+      OTEL_EXPORTER_OTLP_ENDPOINT: collector.url,
+      OTEL_EXPORTER_OTLP_CERTIFICATE: renewed,
+    });
+    await report();
+    expect(collector.received, "the old authority does not vouch for the collector").toEqual([]);
+    writeFileSync(renewed, tls.ca);
+    await report();
     expect(collector.received.map((r) => r.path).sort()).toEqual(["/v1/logs", "/v1/metrics"]);
   });
 
