@@ -222,8 +222,8 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
         const before = saved;
         write(deps.file, next);
         saved = next;
-        // What waits was written in the old format for the old address; sent now it would
-        // reach the new place in the new shape, so it is dropped.
+        // What waits was built in the old format for the old address; sent now it would reach
+        // the new address, or a tool reading the new format, in the old format, so it is dropped.
         if (before?.endpoint !== next.endpoint || before?.format !== next.format) dropWaiting();
         await forgetUnnamed(before, next);
         return { saved: true, view: viewOf(saved) };

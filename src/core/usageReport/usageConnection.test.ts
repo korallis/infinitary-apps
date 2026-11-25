@@ -242,7 +242,7 @@ describe("usageConnection", () => {
     expect(moved).toEqual({ saved: false, problem: "header-value" });
   });
 
-  // docs/usage-report.md: nothing is ever sent in two formats, and a batch goes only where it was meant.
+  // docs/usage-report.md, "The person's reporting connection": a save that changes the address or format drops what waits.
   it("drops what waits when a save changes the format, and keeps it for an edit of the headers alone", async () => {
     const { url, received } = await collector();
     const { connection, usage } = setup();

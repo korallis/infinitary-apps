@@ -35,6 +35,7 @@ The address is reached the way an MCP server's is (`docs/integrations.md`): its 
 Header names and values follow a custom API's rules (`assertCustomHeaders`).
 Each header value is a hidden Secrets entry (`docs/secrets.md`, "App sign-ins"), and `userData/usage-connection.json` keeps only the address, its network class, the format and each header's name and reference.
 An edit at the same address keeps a header whose value is left blank; a new address takes every value again.
+A save that changes the address or the format drops what waits, which was built for the old one; an edit of the headers alone keeps it, and it leaves with the new headers.
 A computer without Secrets saves a connection only without headers.
 
 The connection batches for a minute rather than five seconds, merging the reporter's batches into one request per signal, because every send with headers is one brokered use, and each use writes a line to Secrets' history, which is kept until the person deletes it.
