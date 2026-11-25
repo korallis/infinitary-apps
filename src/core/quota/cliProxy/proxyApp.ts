@@ -71,9 +71,10 @@ export function readProxySettings(text: string): ProxyApp | undefined {
     : typeof clientKeys === "string" && clientKeys.length > 0
       ? clientKeys
       : undefined;
+  const origin = loopbackOrigin("127.0.0.1", port);
   return {
-    origin: `http://127.0.0.1:${port}`,
-    origins: [`http://127.0.0.1:${port}`],
+    origin,
+    origins: [origin],
     port,
     key,
     ...(clientKey ? { clientKey } : {}),
@@ -128,8 +129,8 @@ function tomlString(text: string): string | undefined {
 export function addressIsProxy(address: string, origins: readonly string[]): boolean {
   const port = loopbackPortOf(address);
   if (port === undefined) return false;
-  const ipv4 = `http://127.0.0.1:${port}`;
-  const ipv6 = `http://[::1]:${port}`;
+  const ipv4 = loopbackOrigin("127.0.0.1", port);
+  const ipv6 = loopbackOrigin("[::1]", port);
   const host = new URL(address).hostname.toLowerCase();
   if (host === "localhost") return origins.includes(ipv4) && origins.includes(ipv6);
   return origins.includes(host === "[::1]" ? ipv6 : ipv4);
@@ -250,10 +251,19 @@ export function lsofEndpoint(name: string, family: string | undefined): ListenEn
  */
 export function loopbackOriginOf(endpoint: ListenEndpoint): string | undefined {
   if (endpoint.address === "127.0.0.1" || endpoint.address === "0.0.0.0")
-    return `http://127.0.0.1:${endpoint.port}`;
+    return loopbackOrigin("127.0.0.1", endpoint.port);
   if (endpoint.address === "::1" || endpoint.address === "::")
-    return `http://[::1]:${endpoint.port}`;
+    return loopbackOrigin("[::1]", endpoint.port);
   return undefined;
+}
+
+/**
+ * A loopback origin written as `URL.origin` writes it, which leaves out port
+ * 80: discovery, attribution and the request guard compare these strings, so
+ * they are all made here.
+ */
+export function loopbackOrigin(host: "127.0.0.1" | "[::1]", port: number): string {
+  return new URL(`http://${host}:${port}`).origin;
 }
 
 function run(command: string, args: string[]): Promise<string[]> {
@@ -286,8 +296,10 @@ function listenersOf(entries: ({ program: string } & ListenEndpoint)[]): ProxyLi
 
 /**
  * The proxy app's settings, read on each call from the running proxy
- * program's folder or the app's folder above it, whichever holds them, while
- * that program listens on the port they name. Its keys go only to a
+ * program's folder and the app's folder above it, while that program listens
+ * on the port they name. When both files name a port it listens on, they
+ * must hold the same keys: which one the running proxy uses is not known,
+ * so differing keys are read as no settings at all. Its keys go only to a
  * loopback address where that program itself listens on that port now
  * (`loopbackOriginOf`), IPv4 first: a settings file left by a proxy that
  * exited, or a port another program took, is not read. While no proxy runs,
@@ -304,9 +316,17 @@ export function createProxyAppReader(
     if (missedAt !== undefined && now() - missedAt < lookAgainMs) return undefined;
     for (const listener of await find()) {
       const folder = dirname(listener.program);
-      const app =
-        (await readAt(join(folder, SETTINGS_FILE), read)) ??
-        (await readAt(join(dirname(folder), SETTINGS_FILE), read));
+      const found: ProxyApp[] = [];
+      for (const path of [join(folder, SETTINGS_FILE), join(dirname(folder), SETTINGS_FILE)]) {
+        const settings = await readAt(path, read);
+        if (settings && listener.endpoints.some((endpoint) => endpoint.port === settings.port))
+          found.push(settings);
+      }
+      const app = found.every(
+        (other) => other.key === found[0]?.key && other.clientKey === found[0]?.clientKey,
+      )
+        ? found[0]
+        : undefined;
       // "http://127..." sorts before "http://[::1]...": IPv4 comes first.
       const origins = app
         ? [

@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { describe, expect, it } from "vitest";
 import { createQuotaHttp, type QuotaHttp, type QuotaRequest, type QuotaResponse } from "../http";
-import type { ProxyApp } from "./proxyApp";
+import { addressIsProxy, type ProxyApp, readProxySettings } from "./proxyApp";
 import {
   createProxyPoolReader,
   guardedProxyHttp,
@@ -119,6 +119,32 @@ const usageAnswer = {
 
 // The review's finding: a redirect answer must not carry a request to a
 // route the guard refuses, so the proxy's own redirect fails the read.
+// The review's finding: a proxy on port 80 is written one way everywhere,
+// as an address writes it, so its reads are sent and kept to that address.
+describe("a proxy on the default HTTP port", () => {
+  const app = readProxySettings(
+    ["port = 80", 'management-secret-key = "Mk7q2Vz9Lp4X"', 'api-keys = ["sk-client-one"]'].join(
+      "\n",
+    ),
+  );
+
+  it("sends its reads to its own address and nowhere else", async () => {
+    if (!app) throw new Error("settings not read");
+    expect(app.origins).toEqual(["http://127.0.0.1"]);
+    const { http, sent } = standIn(() => ({ status: 200, json: {} }));
+    const guarded = guardedProxyHttp(http, app);
+    await guarded("http://127.0.0.1:80/v8/management/credentials", {});
+    await expect(guarded("http://127.0.0.1:8080/v8/management/credentials", {})).rejects.toThrow(
+      "refused proxy request",
+    );
+    expect(sent.map((entry) => entry.url)).toEqual([
+      "http://127.0.0.1:80/v8/management/credentials",
+    ]);
+    expect(addressIsProxy("http://localhost/v1", app.origins)).toBe(false);
+    expect(addressIsProxy("http://127.0.0.1/v1", app.origins)).toBe(true);
+  });
+});
+
 describe("a redirect from the proxy", () => {
   it("fails the read without a second request", async () => {
     const paths: string[] = [];

@@ -190,6 +190,8 @@ export type ProxyProjection = {
   claudeAccess: Pick<ClaudeAccess, "address" | "source"> | undefined;
   /** The quota id of a Claude account's row. */
   claudeRowId: string | undefined;
+  /** Whether the last ordinary refresh read this Claude account through Claude Code's access. */
+  readThroughAccess: (accountId: string) => boolean;
   connections: readonly PooledConnection[];
   /** An account's sessions' readings, whose current refusals still hold. */
   refusalsOf: (accountId: string) => PushedWindow[];
@@ -200,7 +202,10 @@ export type ProxyProjection = {
  * The proxy's one projection over a snapshot, the only place its rows are
  * made, all at the reading's own moment (docs/quota.md, "A proxy's pooled
  * logins"). A Claude row is Claude Code's access's while that access is set
- * up, whatever an earlier overlay made of it: the proxy's Claude pool when
+ * up and the last ordinary refresh read the account through it, whatever an
+ * earlier overlay made of the row: a fresh reading of the account's own
+ * sign-in is never replaced by an access this reading still holds. It is
+ * the proxy's Claude pool when
  * the access sends its requests to the proxy, else what the access says,
  * with the sessions' current refusals laid over it as on any sensed row
  * (`withRejectedReadings`) and no session's usage or credits. Once the
@@ -217,10 +222,13 @@ export function projectProxyRows(
   const providers = snapshot.providers.flatMap((row) => {
     if (row.fromProxy && row.provider !== projection.claudeRowId) return [];
     if (row.provider !== projection.claudeRowId) return [row];
-    if (!claudeAccess && !row.fromProxy) return [row];
-    const outcome: ProviderOutcome = claudeAccess
-      ? (poolOutcome(reading, "claude", claudeAccess.address) ??
-        claudeAccessOutcome(claudeAccess.source))
+    const access =
+      row.accountId !== undefined && projection.readThroughAccess(row.accountId)
+        ? claudeAccess
+        : undefined;
+    if (!access && !row.fromProxy) return [row];
+    const outcome: ProviderOutcome = access
+      ? (poolOutcome(reading, "claude", access.address) ?? claudeAccessOutcome(access.source))
       : { status: "unavailable", windows: [] };
     const projected = rowOfOutcome(row, outcome, at);
     return [

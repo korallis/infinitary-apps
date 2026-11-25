@@ -99,6 +99,36 @@ describe("createProxyAppReader", () => {
     ]);
   });
 
+  // The review's finding: the key comes from the settings the running proxy
+  // uses; two files naming its port with different keys leave that unknown.
+  describe("with settings both beside the proxy program and in the folder above", () => {
+    const CORE = "C:\\Tools\\EasyCLIProxyAPI\\cpa-core\\cli-proxy-api.exe";
+    const readerWith = (beside: string, above: string) =>
+      createProxyAppReader(
+        async () => [{ program: CORE, endpoints: [{ address: "127.0.0.1", port: 8317 }] }],
+        async (path) => (path.includes("cpa-core") ? beside : above),
+      );
+
+    it("reads nothing when both name the proxy's port with different keys", async () => {
+      const stale = SETTINGS.replace("Mk7q2Vz9Lp4X", "Old4Key9Left");
+      expect(await readerWith(stale, SETTINGS)()).toBe(undefined);
+      expect(await readerWith(SETTINGS, stale)()).toBe(undefined);
+    });
+
+    it("reads the one that names the port the proxy listens on", async () => {
+      const other = SETTINGS.replace("port = 8317", "port = 8400").replace(
+        "Mk7q2Vz9Lp4X",
+        "Old4Key9Left",
+      );
+      expect(await readerWith(other, SETTINGS)()).toMatchObject({ key: "Mk7q2Vz9Lp4X" });
+      expect(await readerWith(SETTINGS, other)()).toMatchObject({ key: "Mk7q2Vz9Lp4X" });
+    });
+
+    it("reads them when both hold the same keys", async () => {
+      expect(await readerWith(SETTINGS, SETTINGS)()).toMatchObject({ key: "Mk7q2Vz9Lp4X" });
+    });
+  });
+
   it("reads the settings beside the running proxy, asking the system again on each read", async () => {
     let finds = 0;
     const reads: string[] = [];

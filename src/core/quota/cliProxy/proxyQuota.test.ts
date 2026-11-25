@@ -187,11 +187,13 @@ describe("projectProxyRows", () => {
     snapshot: QuotaSnapshotView,
     claudeAccess: typeof access | undefined,
     refusals: (typeof refusal)[],
+    readThroughAccess = true,
   ) =>
     projectProxyRows(snapshot, {
       reading: claudeReading,
       claudeAccess,
       claudeRowId: CLAUDE_ROW,
+      readThroughAccess: () => readThroughAccess,
       connections: [],
       refusalsOf: () => refusals,
       nowMs: NOW,
@@ -244,5 +246,24 @@ describe("projectProxyRows", () => {
       ],
     };
     expect(project(direct, undefined, []).providers).toEqual(direct.providers);
+  });
+
+  // The review's finding: once an ordinary refresh read the account's own
+  // sign-in, an access the minute's reading still holds never replaces it.
+  it("keeps a fresh reading of the account's own sign-in over an access read earlier", () => {
+    const direct = {
+      ...refreshed,
+      providers: [
+        {
+          provider: CLAUDE_ROW,
+          label: "Claude",
+          accountId: "acct_claude",
+          status: "ok" as const,
+          stale: false,
+          windows: [{ id: "five_hour", label: "5h", percentRemaining: 40 }],
+        },
+      ],
+    };
+    expect(project(direct, access, [], false).providers).toEqual(direct.providers);
   });
 });

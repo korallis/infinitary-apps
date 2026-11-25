@@ -233,6 +233,9 @@ export function startHomeQuota(options: {
       proxy = undefined;
     }
   };
+  // The Claude accounts the last ordinary refresh read through Claude Code's
+  // access rather than their own sign-in (`resolveQuotaAuth`).
+  const readThroughAccess = new Set<string>();
   // The quota service lays the proxy's one projection over each refresh and
   // each reading, and publishes it when it changes.
   const claudeRowId = quotaRowProviderOf(CLAUDE_PROVIDER_ID);
@@ -241,6 +244,7 @@ export function startHomeQuota(options: {
       reading: proxy,
       claudeAccess,
       claudeRowId,
+      readThroughAccess: (accountId) => readThroughAccess.has(accountId),
       connections: pooledConnections(),
       refusalsOf: (accountId) => pushedQuota.windowsFor(accountId),
       nowMs: Date.now(),
@@ -264,9 +268,11 @@ export function startHomeQuota(options: {
       // makes the proxy's Claude pool its allowance.
       const access = await options.claudeAccess?.();
       if (access) {
+        readThroughAccess.add(accountId);
         quotaUnresolved.set(accountId, claudeAccessOutcome(access.source));
         return undefined;
       }
+      readThroughAccess.delete(accountId);
       const read = await readClaudeStore(claudeDir, {
         keychain: host.keychain,
         allowPrompt: resolve?.allowPrompt,
