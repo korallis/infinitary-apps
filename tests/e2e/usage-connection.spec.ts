@@ -70,7 +70,7 @@ test("the person adds a reporting connection by keys and the crew's usage reache
         "Enter",
       );
       const name = form.getByLabel(m.settingsUsageConnectionHeaderName());
-      await focusOn(name);
+      await expect(name).toBeFocused();
       await typeInto(name, "Authorization");
       await pressKey(name, "Tab");
       const value = form.getByLabel(m.settingsUsageConnectionHeaderValue());
@@ -79,6 +79,9 @@ test("the person adds a reporting connection by keys and the crew's usage reache
       await pressKey(value, "Enter");
       await expect(row).toContainText(m.settingsUsageConnectionStandard({ host }));
       await expect(form).toHaveCount(0);
+      await expect(
+        row.getByRole("button", { name: m.settingsUsageConnectionEdit() }),
+      ).toBeFocused();
       const saved = readFileSync(join(userDataDir, USAGE_CONNECTION_FILE), "utf8");
       expect(saved).toContain(url);
       expect(saved).not.toContain(TOKEN);
@@ -125,10 +128,9 @@ test("the person adds a reporting connection by keys and the crew's usage reache
       await pressKey(intelligence, "Enter");
       await pressKey(row.getByRole("button", { name: m.settingsUsageConnectionRemove() }), "Enter");
       await expect(row).toContainText(m.settingsUsageConnectionRemoveWarning());
-      await pressKey(
-        row.getByRole("button", { name: m.settingsUsageConnectionRemoveConfirm() }),
-        "Enter",
-      );
+      const confirm = row.getByRole("button", { name: m.settingsUsageConnectionRemoveConfirm() });
+      await expect(confirm).toBeFocused();
+      await pressKey(confirm, "Enter");
       await expect(row).toContainText(m.settingsUsageConnectionNone());
       expect(existsSync(join(userDataDir, USAGE_CONNECTION_FILE))).toBe(false);
     });

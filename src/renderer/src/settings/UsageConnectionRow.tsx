@@ -4,8 +4,9 @@ import type {
   UsageConnectionProblem,
   UsageConnectionView,
 } from "@shared/usageConnection";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Button, Input, SecretField } from "../design";
+import { focusWithRing } from "../design/focus";
 import { SettingError, SettingRow } from "./settingRows";
 import "./usageConnection.css";
 
@@ -21,6 +22,29 @@ const PROBLEM_WORDS: Record<UsageConnectionProblem, () => string> = {
 };
 
 type HeaderDraft = { key: number; name: string; value: string; kept: boolean };
+
+const ROW = '[data-setting="usage-connection"]';
+/** Where the keyboard goes when the form or the remove question closes: the row's own button. */
+const ROW_BUTTON = "[data-usage-connection-edit], [data-usage-connection-add]";
+
+/**
+ * Moves focus, with its ring, to what `selector` names under `within` once
+ * the next render has drawn it, since the control a key pressed has just
+ * unmounted (docs/keyboard.md).
+ */
+function useFocusAfter(within: () => ParentNode | null | undefined, deps: readonly unknown[]) {
+  const [selector, setSelector] = useState<string | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: it runs after each render the callers name
+  useEffect(() => {
+    if (!selector) return;
+    const target = within()?.querySelector<HTMLElement>(selector);
+    if (target) {
+      focusWithRing(target);
+      setSelector(null);
+    }
+  }, [selector, ...deps]);
+  return setSelector;
+}
 
 /**
  * The reporting connection a person adds (docs/usage-report.md, "The
@@ -38,9 +62,11 @@ export function UsageConnectionRow() {
     void window.infinitary.settings
       .getUsageConnection()
       .then(setView)
-      .catch(() => setView(null));
+      // A home without the connection's channels answers nothing: the row stays hidden.
+      .catch(() => undefined);
   }, []);
   useEffect(refresh, [refresh]);
+  const focusAfter = useFocusAfter(() => document.querySelector(ROW), [view, editing, armed]);
   if (view === undefined) return null;
   const host = view ? new URL(view.endpoint).host : null;
   return (
@@ -59,10 +85,14 @@ export function UsageConnectionRow() {
         editing ? (
           <UsageConnectionForm
             original={view}
-            onClose={() => setEditing(false)}
+            onClose={() => {
+              setEditing(false);
+              focusAfter(ROW_BUTTON);
+            }}
             onSaved={(next) => {
               setView(next);
               setEditing(false);
+              focusAfter(ROW_BUTTON);
             }}
           />
         ) : armed ? (
@@ -72,6 +102,7 @@ export function UsageConnectionRow() {
               <Button
                 variant="secondary"
                 size="sm"
+                data-usage-connection-confirm=""
                 onClick={() =>
                   void window.infinitary.settings
                     .removeUsageConnection()
@@ -79,13 +110,21 @@ export function UsageConnectionRow() {
                       setView(next);
                       setArmed(false);
                       setError(null);
+                      focusAfter(ROW_BUTTON);
                     })
                     .catch(() => setError(m.settingsUsageConnectionFailed()))
                 }
               >
                 {m.settingsUsageConnectionRemoveConfirm()}
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setArmed(false)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setArmed(false);
+                  focusAfter(ROW_BUTTON);
+                }}
+              >
                 {m.settingsUsageConnectionKeep()}
               </Button>
             </div>
@@ -95,15 +134,32 @@ export function UsageConnectionRow() {
       control={
         editing || armed ? null : view ? (
           <div className="fm-usage-conn-acts">
-            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              data-usage-connection-edit=""
+              onClick={() => setEditing(true)}
+            >
               {m.settingsUsageConnectionEdit()}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setArmed(true)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setArmed(true);
+                focusAfter("[data-usage-connection-confirm]");
+              }}
+            >
               {m.settingsUsageConnectionRemove()}
             </Button>
           </div>
         ) : (
-          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+          <Button
+            variant="secondary"
+            size="sm"
+            data-usage-connection-add=""
+            onClick={() => setEditing(true)}
+          >
             {m.settingsUsageConnectionAdd()}
           </Button>
         )
@@ -135,6 +191,8 @@ function UsageConnectionForm({
   const [nextKey, setNextKey] = useState(headers.length);
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const focusAfter = useFocusAfter(() => formRef.current, [headers]);
   const change = (key: number, edit: Partial<HeaderDraft>) =>
     setHeaders((rows) => rows.map((row) => (row.key === key ? { ...row, ...edit } : row)));
   const save = () => {
@@ -158,6 +216,7 @@ function UsageConnectionForm({
   };
   return (
     <form
+      ref={formRef}
       className="fm-usage-conn-form"
       data-usage-connection-form=""
       onSubmit={(event) => {
@@ -193,7 +252,11 @@ function UsageConnectionForm({
         <legend>{m.settingsUsageConnectionHeaders()}</legend>
         <span className="fm-usage-conn-hint">{m.settingsUsageConnectionHeadersHint()}</span>
         {headers.map((header) => (
-          <div className="fm-usage-conn-header" key={header.key} data-usage-connection-header="">
+          <div
+            className="fm-usage-conn-header"
+            key={header.key}
+            data-usage-connection-header={header.key}
+          >
             <Input
               aria-label={m.settingsUsageConnectionHeaderName()}
               placeholder={m.settingsUsageConnectionHeaderName()}
@@ -215,7 +278,16 @@ function UsageConnectionForm({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setHeaders((rows) => rows.filter((row) => row.key !== header.key))}
+              onClick={() => {
+                const at = headers.findIndex((row) => row.key === header.key);
+                const neighbor = headers[at + 1] ?? headers[at - 1];
+                setHeaders((rows) => rows.filter((row) => row.key !== header.key));
+                focusAfter(
+                  neighbor
+                    ? `[data-usage-connection-header="${neighbor.key}"] input`
+                    : "[data-usage-connection-add-header]",
+                );
+              }}
             >
               {m.settingsUsageConnectionRemoveHeader()}
             </Button>
@@ -226,9 +298,11 @@ function UsageConnectionForm({
             type="button"
             variant="ghost"
             size="sm"
+            data-usage-connection-add-header=""
             onClick={() => {
               setHeaders((rows) => [...rows, { key: nextKey, name: "", value: "", kept: false }]);
               setNextKey(nextKey + 1);
+              focusAfter(`[data-usage-connection-header="${nextKey}"] input`);
             }}
           >
             {m.settingsUsageConnectionAddHeader()}
