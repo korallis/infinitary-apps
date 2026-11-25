@@ -33,16 +33,20 @@ A person adds one reporting connection beside the cost limit in Settings → Int
 Save is the consent to send there, so reporting starts once saved and nothing asks again; Remove stops it, drops what waits and forgets the headers.
 The address is reached the way an MCP server's is (`docs/integrations.md`): its network class is read from every DNS answer on Save (`classifyCustomApiAddresses`) and held on every send (`guardedMcpFetch`), plain http only reaches a tool on this computer, and a signal's own address, such as `…/v1/traces`, saves as the base it sits under.
 Header names and values follow a custom API's rules (`assertCustomHeaders`).
-Each header value is a hidden Secrets entry (`docs/secrets.md`, "App sign-ins"), and `userData/usage-connection.json` keeps only the address, its network class, the format and each header's name and reference.
+Each header value is a hidden Secrets entry marked as the connection's (`consumer` `usage-report`; `docs/secrets.md`, "App sign-ins"), and `userData/usage-connection.json` keeps only the address, its network class, the format and each header's name and reference.
 An edit at the same address keeps a header whose value is left blank; a new address takes every value again.
 A save that changes the address or the format drops what waits, which was built for the old one; an edit of the headers alone keeps it, and it leaves with the new headers.
 A computer without Secrets saves a connection only without headers.
 
-The connection batches for a minute rather than five seconds, merging the reporter's batches into one request per signal, because every send with headers is one brokered use, and each use writes a line to Secrets' history, which is kept until the person deletes it.
+The connection batches for ten minutes rather than five seconds, merging the reporter's batches into one request per signal, because every send with headers is one brokered use, and each use writes a line to Secrets' history, which is kept until the person deletes it; at quit the app waits for the last send before it closes, so nothing waiting is lost.
 Its broker (`usage-report`) declares `signIn`, binds the saved address and each signal's body by digest, applies the headers inside Secrets and answers each signal's HTTP status; a body never reaches the journal.
 A connection without headers sends through the same guarded fetch with no use.
 A connection in Claude Code's format also carries Claude's own work, from the ledger rather than Claude's records (`claudeFromLedger`), since nothing passes Claude's records on to it; those rows have no line or commit counts.
+Each record carries the person's Claude Code sign-in email as `user.email`, in either format, when this computer has one, so a tool's per-person view counts their work; the email is read again every minute.
 Prompts and outputs are not sent.
+
+When the company setup (`companyDestination`) already sends to the same host, the connection leaves out what that setup carries, so a tool never counts it twice: nothing at all when the setup is the company's HTTP destination for every row, and Claude's work (`withoutClaude`) when the host is the one Claude's own reports go to.
+Hosts are compared by name without the port, since one collector often listens on two.
 Settings → Usage adds a line naming the connection's host (`reporting`'s `connection`).
 
 ## The two formats

@@ -1,5 +1,5 @@
 ---
-source: 809001f06c842a92
+source: f41f28526ff12c2d
 title: Ce qui quitte votre ordinateur
 description: Ce qu’envoie Infinitary, où cela va, et le seul interrupteur qui nous envoie quoi que ce soit.
 ---
@@ -55,6 +55,8 @@ Les deux sortes de configuration ne reçoivent que le travail de Claude si elles
 
 Une connexion de rapports que vous ajoutez dans Réglages → **Intelligence** envoie l’utilisation de votre équipage à l’outil de supervision ou de traçage que vous indiquez, comme Grafana, Datadog ou Langfuse, dès que vous l’enregistrez.
 Elle envoie les mêmes enregistrements : durées, modèles, jetons et coût estimé, si le travail vient de votre second ou d’un membre d’équipage et le type de travail, jamais vos mots, les titres de tâches ou les noms de projets.
+Chaque enregistrement porte aussi l’adresse e-mail de votre connexion à Claude Code, si cet ordinateur en a une, pour que l’outil compte votre travail par personne.
+Elle envoie toutes les dix minutes, et une dernière fois quand vous quittez.
 Les en-têtes que l’outil demande, comme un jeton, sont gardés dans Secrets et envoyés seulement à cette adresse.
 Réglages → **Utilisation** indique où il va, et Retirer l’arrête.
 

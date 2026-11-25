@@ -1,5 +1,5 @@
 ---
-source: 809001f06c842a92
+source: f41f28526ff12c2d
 title: Lo que sale de tu computadora
 description: Lo que envía Infinitary, adónde va, y el único interruptor que nos envía algo a nosotros.
 ---
@@ -55,6 +55,8 @@ Cualquiera de las dos configuraciones recibe solo el trabajo de Claude si envía
 
 Una conexión de informes que agregas en Configuración → **Inteligencia** envía el uso de tu tripulación a la herramienta de supervisión o trazas que indiques, como Grafana, Datadog o Langfuse, en cuanto la guardas.
 Envía los mismos registros: tiempos, modelos, tokens y costo estimado, si el trabajo lo hizo tu primer oficial o un tripulante y el tipo de trabajo, nunca tus palabras, títulos de tareas ni nombres de proyectos.
+Cada registro lleva además el correo de tu inicio de sesión en Claude Code, si este computador tiene uno, para que la herramienta cuente tu trabajo por persona.
+Envía cada diez minutos, y una vez más al salir.
 Los encabezados que pide la herramienta, como un token, se guardan en Secretos y solo se envían a esa dirección.
 Configuración → **Uso** dice a dónde va, y Quitar lo detiene.
 
