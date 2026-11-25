@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { launchSignedInClaude } from "./claudeAccount";
@@ -73,6 +74,30 @@ test("Settings adds another Claude login in its own folder and removes it again"
       existsSync(join(folder, "stub-credential")),
       "the client signed in inside the new login's own folder",
     ).toBe(true);
+
+    // The added row is paused and preferred on its own, from its own menu.
+    const addedRow = app.page.locator(`[data-account-row="${further.id}"]`);
+    const firstRow = app.page.locator(`[data-account-row="${FIRST}"]`);
+    await addedRow.getByRole("button", { name: /actions$/ }).click();
+    const prefer = app.page.locator('[data-menu-item="prefer"]');
+    await prefer.click();
+    await expect(addedRow.locator("[data-crew-preferred]")).toBeVisible();
+    const paused = app.page.getByRole("menuitemcheckbox", { name: m.settingsMenuPaused() });
+    await paused.click();
+    await expect(addedRow).toHaveAttribute("data-paused", "true", { timeout: 10_000 });
+    await app.page.keyboard.press("Escape");
+    await expect(firstRow.locator("[data-crew-preferred]")).toHaveCount(0);
+    await expect(firstRow).not.toHaveAttribute("data-paused", "true");
+    const after = await app.page.evaluate(() => window.infinitary.accounts.list());
+    expect(after.find((account) => account.id === further.id)).toMatchObject({
+      enabled: false,
+      pinned: true,
+    });
+    expect(after.find((account) => account.id === FIRST)).toMatchObject({
+      enabled: true,
+      pinned: false,
+      connected: true,
+    });
 
     await app.page.evaluate((id) => window.infinitary.accounts.remove(id), further.id);
     await expect(app.page.locator("[data-account-row]")).toHaveCount(1);

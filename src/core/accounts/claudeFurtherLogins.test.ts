@@ -304,6 +304,17 @@ describe("further Claude logins", () => {
       { id: "five_hour" },
       { id: "seven_day", percentRemaining: 60 },
     ]);
+    // The same window again, now saying extra usage can answer: only what
+    // extra usage can do moved.
+    expect(rowOf(second.id)?.credits).toBe(undefined);
+    run.homeQuota.recordClaudeRateLimit(second.id, {
+      status: "allowed",
+      windowId: "seven_day",
+      utilization: 0.4,
+      resetsAt: START + 100 * HOUR,
+      overageStatus: "allowed",
+    });
+    expect(rowOf(second.id)?.credits).toMatchObject({ state: "available" });
     await Promise.resolve();
     expect(run.usageAsks.length, "the usage address was not asked again").toBe(asksBefore);
     expect(rowOf(first.id), "the first login's row is as it was read").toEqual(firstRowBefore);

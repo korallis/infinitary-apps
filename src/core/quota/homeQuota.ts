@@ -413,15 +413,19 @@ export function startHomeQuota(options: {
       });
       const after = pushedQuota.windowsFor(accountId);
       const creditsAfter = pushedCredits(after, now)?.credits;
+      const creditsMoved =
+        creditsBefore?.state !== creditsAfter?.state ||
+        Boolean(creditsBefore?.inUse) !== Boolean(creditsAfter?.inUse);
       // A further login has no sensor pass: each reading that moves its
-      // window is the only news of it, so its row alone is published as it
-      // arrives, with no pass over the other accounts' sensors.
+      // window or what extra usage can do is the only news of it, so its
+      // row alone is published as it arrives, with no pass over the other
+      // accounts' sensors.
       if (vault.claudeConfigDir(accountId) !== undefined) {
         const shown = (windows: PushedWindow[]) => {
           const window = windows.find((entry) => entry.windowId === reading.windowId);
           return window && [window.status, window.utilization, window.resetsAt].join();
         };
-        if (shown(before) === shown(after)) return;
+        if (shown(before) === shown(after) && !creditsMoved) return;
         const [row] = pushedOnlyViews(now, accountId);
         // Before the first snapshot there is nothing to lay the row in.
         if (row && !quota.publishProvider(row)) void quota.refresh("pushed");
@@ -430,11 +434,7 @@ export function startHomeQuota(options: {
       // A window that just said no, or just stopped saying it, moves the
       // account's headroom now rather than at the next sensor pass; so does
       // a change in what extra usage can do.
-      if (
-        (reading.status === "rejected") !== refusedBefore ||
-        creditsBefore?.state !== creditsAfter?.state ||
-        Boolean(creditsBefore?.inUse) !== Boolean(creditsAfter?.inUse)
-      )
+      if ((reading.status === "rejected") !== refusedBefore || creditsMoved)
         void quota.refresh("pushed");
     },
     noteCutOff: (accountId, cutOff) =>
