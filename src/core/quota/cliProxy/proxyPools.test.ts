@@ -196,7 +196,7 @@ describe("createProxyPoolReader", () => {
         expect.objectContaining({ id: "five_hour", percentRemaining: 75 }),
         expect.objectContaining({ id: "seven_day", percentRemaining: 60 }),
       ]);
-      expect([...reading.modelPools]).toEqual([
+      expect([...(reading.modelPools ?? [])]).toEqual([
         ["claude-opus-5-5", "claude"],
         ["gpt-5.5", "chatgpt"],
       ]);
@@ -246,6 +246,28 @@ describe("createProxyPoolReader", () => {
       "/v8/management/credentials",
       "/v0/management/auth-files",
     ]);
+  });
+
+  // The review's finding: a model list the proxy did not give is not a list
+  // with no model of a pool, which would read every pooled model as unmeasured.
+  it("tells a model list it could not read from an empty one", async () => {
+    const readWith = (list: QuotaResponse) =>
+      createProxyPoolReader({
+        app: async () => APP,
+        http: standIn((entry) =>
+          new URL(entry.url).pathname === "/v1/models"
+            ? list
+            : { status: 200, json: { files: [] } },
+        ).http,
+        uses: CLAUDE_CODE,
+        ask: false,
+      })();
+    const failed = await readWith({ status: 503 });
+    expect(failed).toMatchObject({ status: "ok", modelsFailure: "models_http_503" });
+    expect(failed).not.toHaveProperty("modelPools");
+    const empty = await readWith({ status: 200, json: { data: [] } });
+    expect(empty?.status === "ok" ? empty.modelPools?.size : undefined).toBe(0);
+    expect(empty).not.toHaveProperty("modelsFailure");
   });
 
   it("reads a refused key as an unavailable proxy, never as spent logins", async () => {

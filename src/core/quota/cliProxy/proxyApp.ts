@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { hostEnv } from "../../hostEnv";
 import { encodedCommand, windowsPowerShell } from "../../storage/ownerOnly";
 
@@ -10,11 +10,11 @@ import { encodedCommand, windowsPowerShell } from "../../storage/ownerOnly";
  * own program, with the port it listens on, the management key that reads
  * its logins and the client keys that list its models. Infinitary finds the
  * running program, reads that file, and sends the keys only to the loopback
- * address and port the same file names, while that program listens there. The keys stay in memory: they are
- * never logged, stored or shown.
+ * address where that program listens on the port the same file names. The
+ * keys stay in memory: they are never logged, stored or shown.
  */
 export type ProxyApp = {
-  /** `http://127.0.0.1:<port>`: where the proxy answers on this computer. */
+  /** `http://127.0.0.1:<port>` or `http://[::1]:<port>`: where the proxy listens on this computer. */
   origin: string;
   port: number;
   /** The management key. Never logged, stored or put in a message. */
@@ -130,21 +130,24 @@ export function loopbackPortOf(address: string): number | undefined {
   return Number(url.port || 80);
 }
 
-/** A running proxy program, with the ports it listens on. */
-export type ProxyListener = { program: string; ports: readonly number[] };
+/** One address and port a program listens on, as the system names it. */
+export type ListenEndpoint = { address: string; port: number };
+
+/** A running proxy program, with where it listens. */
+export type ProxyListener = { program: string; endpoints: readonly ListenEndpoint[] };
 
 export type FindProxyListeners = () => Promise<ProxyListener[]>;
 
 /**
- * The running proxy programs and the TCP ports each listens on, asked of
- * the system on every call. Windows answers through its own process and
- * connection lists; elsewhere `lsof` names each listening process and `ps`
- * its program's path.
+ * The running proxy programs and the TCP addresses and ports each listens
+ * on, asked of the system on every call. Windows answers through its own
+ * process and connection lists; elsewhere `lsof` names each listening
+ * process with its address family, and `ps` its program's path.
  */
 export const findProxyListeners: FindProxyListeners = async () => {
   if (process.platform === "win32") {
     // i18n-exempt: a PowerShell command, never shown
-    const script = `Get-CimInstance Win32_Process -Filter "Name='${PROXY_PROGRAM}.exe'" | ForEach-Object { $p = $_; Get-NetTCPConnection -State Listen -OwningProcess $p.ProcessId -ErrorAction SilentlyContinue | ForEach-Object { "$($p.ExecutablePath)\t$($_.LocalPort)" } }`;
+    const script = `Get-CimInstance Win32_Process -Filter "Name='${PROXY_PROGRAM}.exe'" | ForEach-Object { $p = $_; Get-NetTCPConnection -State Listen -OwningProcess $p.ProcessId -ErrorAction SilentlyContinue | ForEach-Object { "$($p.ExecutablePath)\t$($_.LocalAddress)\t$($_.LocalPort)" } }`;
     const lines = await run(windowsPowerShell(), [
       "-NoProfile",
       "-NonInteractive",
@@ -153,32 +156,60 @@ export const findProxyListeners: FindProxyListeners = async () => {
     ]);
     return listenersOf(
       lines.flatMap((line) => {
-        const [program, port] = line.split("\t");
-        return program && port ? [{ program, port: Number(port) }] : [];
+        const [program, address, port] = line.split("\t");
+        return program && address && port ? [{ program, address, port: Number(port) }] : [];
       }),
     );
   }
-  const listening = await run("lsof", ["-nP", "-a", "-iTCP", "-sTCP:LISTEN", "-Fpn"]);
-  const portsOf = new Map<string, number[]>();
+  const listening = await run("lsof", ["-nP", "-a", "-iTCP", "-sTCP:LISTEN", "-Fptn"]);
+  const endpointsOf = new Map<string, ListenEndpoint[]>();
   let pid: string | undefined;
+  let family: string | undefined;
   for (const line of listening) {
     if (line.startsWith("p")) pid = line.slice(1);
+    else if (line.startsWith("t")) family = line.slice(1);
     else if (line.startsWith("n") && pid) {
-      const port = Number(/:(\d+)$/.exec(line)?.[1]);
-      if (Number.isInteger(port)) portsOf.set(pid, [...(portsOf.get(pid) ?? []), port]);
+      const endpoint = lsofEndpoint(line.slice(1), family);
+      if (endpoint) endpointsOf.set(pid, [...(endpointsOf.get(pid) ?? []), endpoint]);
     }
   }
-  if (portsOf.size === 0) return [];
+  if (endpointsOf.size === 0) return [];
   const programs = await run("ps", ["-axww", "-o", "pid=,comm="]);
   return listenersOf(
     programs.flatMap((line) => {
       const match = /^(\d+)\s+(.+)$/.exec(line);
       const [, pid, program] = match ?? [];
-      if (!pid || !program?.includes(PROXY_PROGRAM)) return [];
-      return (portsOf.get(pid) ?? []).map((port) => ({ program, port }));
+      if (!pid || !program || basename(program) !== PROXY_PROGRAM) return [];
+      return (endpointsOf.get(pid) ?? []).map((endpoint) => ({ program, ...endpoint }));
     }),
   );
 };
+
+/**
+ * An `lsof` name field (`127.0.0.1:8317`, `[::1]:8317`, `*:8317`) as an
+ * endpoint; `*` is the wildcard of the file's address family.
+ */
+export function lsofEndpoint(name: string, family: string | undefined): ListenEndpoint | undefined {
+  const match = /^(.*):(\d+)$/.exec(name);
+  if (!match?.[1] || !match[2]) return undefined;
+  const host = match[1].replace(/^\[|\]$/g, "");
+  const address = host === "*" ? (family === "IPv6" ? "::" : "0.0.0.0") : host;
+  return { address, port: Number(match[2]) };
+}
+
+/**
+ * Where on this computer a listener at `endpoint` answers, as an origin:
+ * IPv4 loopback for one on IPv4 loopback or every IPv4 address, IPv6
+ * loopback for one on IPv6 loopback or every IPv6 address. A listener on
+ * another interface alone is not reachable here and answers nothing.
+ */
+export function loopbackOriginOf(endpoint: ListenEndpoint): string | undefined {
+  if (endpoint.address === "127.0.0.1" || endpoint.address === "0.0.0.0")
+    return `http://127.0.0.1:${endpoint.port}`;
+  if (endpoint.address === "::1" || endpoint.address === "::")
+    return `http://[::1]:${endpoint.port}`;
+  return undefined;
+}
 
 function run(command: string, args: string[]): Promise<string[]> {
   return new Promise((resolve) => {
@@ -199,21 +230,23 @@ function run(command: string, args: string[]): Promise<string[]> {
   });
 }
 
-function listenersOf(entries: { program: string; port: number }[]): ProxyListener[] {
-  const byProgram = new Map<string, number[]>();
-  for (const { program, port } of entries) {
+function listenersOf(entries: ({ program: string } & ListenEndpoint)[]): ProxyListener[] {
+  const byProgram = new Map<string, ListenEndpoint[]>();
+  for (const { program, address, port } of entries) {
     if (!Number.isInteger(port)) continue;
-    byProgram.set(program, [...(byProgram.get(program) ?? []), port]);
+    byProgram.set(program, [...(byProgram.get(program) ?? []), { address, port }]);
   }
-  return [...byProgram].map(([program, ports]) => ({ program, ports }));
+  return [...byProgram].map(([program, endpoints]) => ({ program, endpoints }));
 }
 
 /**
  * The proxy app's settings, read on each call from beside the running
- * program that listens on the port they name. Its keys go only to a port
- * the proxy program itself listens on now: a settings file left by a proxy
- * that exited, or a port another program took, is not read. While no proxy
- * runs, the system is asked at most once every `lookAgainMs`.
+ * program that listens on the port they name. Its keys go only to the
+ * loopback address where that program itself listens on that port now
+ * (`loopbackOriginOf`), which becomes the app's origin: a settings file
+ * left by a proxy that exited, or a port another program took, is not
+ * read. While no proxy runs, the system is asked at most once every
+ * `lookAgainMs`.
  */
 export function createProxyAppReader(
   find: FindProxyListeners = findProxyListeners,
@@ -226,9 +259,16 @@ export function createProxyAppReader(
     if (missedAt !== undefined && now() - missedAt < lookAgainMs) return undefined;
     for (const listener of await find()) {
       const app = await readAt(join(dirname(listener.program), SETTINGS_FILE), read);
-      if (app && listener.ports.includes(app.port)) {
+      const origin = app
+        ? listener.endpoints
+            .filter((endpoint) => endpoint.port === app.port)
+            .map(loopbackOriginOf)
+            .sort()
+            .find((entry) => entry !== undefined)
+        : undefined;
+      if (app && origin) {
         missedAt = undefined;
-        return app;
+        return { ...app, origin };
       }
     }
     missedAt = now();

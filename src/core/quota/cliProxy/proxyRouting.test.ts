@@ -53,7 +53,7 @@ const reading: ProxyReading = {
 
 /** The connection's rows, in either order: the decisions never read by order. */
 function snapshotOf(order: "claude-first" | "chatgpt-first"): QuotaSnapshotView {
-  const rows = proxyConnectionRows(reading, [CONNECTION], NOW);
+  const rows = proxyConnectionRows(reading, [CONNECTION]);
   return {
     generatedAt: new Date(NOW).toISOString(),
     fetchedAt: NOW,

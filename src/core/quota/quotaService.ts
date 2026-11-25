@@ -173,7 +173,9 @@ export class QuotaService {
   /**
    * One run of the local reading, laid over the last snapshot as a refresh
    * lays its reading: stale rows kept, switches stamped, the catalog rebuilt
-   * and every surface told. A run still going skips the next tick.
+   * and every surface told - only when the rows it gives differ from the
+   * last snapshot's, so a reading that changes nothing publishes nothing. A
+   * run still going skips the next tick.
    */
   async readLocal(): Promise<void> {
     const local = this.options.localReading;
@@ -185,7 +187,9 @@ export class QuotaService {
       const latest = this.latestSnapshot;
       if (!rewrite || !latest) return;
       const merged = mergeStaleProviders(rewrite(latest), latest, this.now());
-      this.latestSnapshot = this.options.stamp?.(merged) ?? merged;
+      const next = this.options.stamp?.(merged) ?? merged;
+      if (JSON.stringify(next.providers) === JSON.stringify(latest.providers)) return;
+      this.latestSnapshot = next;
       this.recatalog();
     } catch {
       // A local reading that failed leaves the last snapshot as it was.

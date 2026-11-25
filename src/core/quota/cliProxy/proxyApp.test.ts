@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addressIsProxy, createProxyAppReader, readProxySettings } from "./proxyApp";
+import { addressIsProxy, createProxyAppReader, lsofEndpoint, readProxySettings } from "./proxyApp";
 
 // The captain's choice: Infinitary reads the proxy's key from the proxy
 // app's own settings file (docs/quota.md, "A proxy's pooled logins"). The
@@ -62,7 +62,7 @@ describe("createProxyAppReader", () => {
     const reader = createProxyAppReader(
       async () => {
         finds += 1;
-        return [{ program: PROGRAM, ports: [8317] }];
+        return [{ program: PROGRAM, endpoints: [{ address: "127.0.0.1", port: 8317 }] }];
       },
       async (path) => {
         reads.push(path);
@@ -79,16 +79,51 @@ describe("createProxyAppReader", () => {
   // listens on now, never to whatever took a port a saved file names.
   it("reads nothing when the port the settings name is not the proxy's", async () => {
     const reader = createProxyAppReader(
-      async () => [{ program: PROGRAM, ports: [9000] }],
+      async () => [{ program: PROGRAM, endpoints: [{ address: "127.0.0.1", port: 9000 }] }],
       async () => SETTINGS,
     );
     expect(await reader()).toBe(undefined);
   });
 
+  // The review's finding: the keys go to the loopback address the proxy
+  // itself listens on, so a proxy on IPv6 alone is sent them there, never at
+  // an IPv4 port another program may hold, and one listening only on
+  // another interface is not read.
+  it.each([
+    ["127.0.0.1", "http://127.0.0.1:8317"],
+    ["0.0.0.0", "http://127.0.0.1:8317"],
+    ["::1", "http://[::1]:8317"],
+    ["::", "http://[::1]:8317"],
+    ["192.168.1.20", undefined],
+  ])("sends the keys to where a proxy listening on %s answers: %s", async (address, origin) => {
+    const reader = createProxyAppReader(
+      async () => [{ program: PROGRAM, endpoints: [{ address, port: 8317 }] }],
+      async () => SETTINGS,
+    );
+    expect((await reader())?.origin).toBe(origin);
+  });
+
+  it("prefers IPv4 loopback when the proxy listens on both", async () => {
+    const reader = createProxyAppReader(
+      async () => [
+        {
+          program: PROGRAM,
+          endpoints: [
+            { address: "::1", port: 8317 },
+            { address: "127.0.0.1", port: 8317 },
+          ],
+        },
+      ],
+      async () => SETTINGS,
+    );
+    expect((await reader())?.origin).toBe("http://127.0.0.1:8317");
+  });
+
   it("reads nothing once the proxy has exited, though its settings file is still there", async () => {
     let running = true;
     const reader = createProxyAppReader(
-      async () => (running ? [{ program: PROGRAM, ports: [8317] }] : []),
+      async () =>
+        running ? [{ program: PROGRAM, endpoints: [{ address: "127.0.0.1", port: 8317 }] }] : [],
       async () => SETTINGS,
     );
     expect((await reader())?.port).toBe(8317);
@@ -115,5 +150,18 @@ describe("createProxyAppReader", () => {
     now = 5 * 60_000;
     await reader();
     expect(finds).toBe(2);
+  });
+});
+
+// What `lsof -Fptn` names a listening socket, read as an endpoint: the
+// wildcard `*` is every address of the socket's own family.
+describe("lsofEndpoint", () => {
+  it.each([
+    ["127.0.0.1:8317", "IPv4", { address: "127.0.0.1", port: 8317 }],
+    ["[::1]:8317", "IPv6", { address: "::1", port: 8317 }],
+    ["*:8317", "IPv4", { address: "0.0.0.0", port: 8317 }],
+    ["*:8317", "IPv6", { address: "::", port: 8317 }],
+  ])("%s on %s", (name, family, endpoint) => {
+    expect(lsofEndpoint(name, family)).toEqual(endpoint);
   });
 });

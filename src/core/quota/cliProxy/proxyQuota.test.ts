@@ -44,7 +44,7 @@ const reading: ProxyReading = {
 
 describe("proxyConnectionRows", () => {
   it("gives a connection to the proxy one row per pool its models are served from", () => {
-    const rows = proxyConnectionRows(reading, [CONNECTION], NOW);
+    const rows = proxyConnectionRows(reading, [CONNECTION]);
     expect(rows.map((row) => [row.provider, row.accountId, row.pool?.kind])).toEqual([
       ["fm-custom-0123456789abcdef", "acct_proxy", "claude"],
       ["fm-custom-0123456789abcdef", "acct_proxy", "chatgpt"],
@@ -57,7 +57,7 @@ describe("proxyConnectionRows", () => {
 
   it("gives a connection elsewhere no row", () => {
     expect(
-      proxyConnectionRows(reading, [{ ...CONNECTION, baseUrl: "https://api.example.com/v1" }], NOW),
+      proxyConnectionRows(reading, [{ ...CONNECTION, baseUrl: "https://api.example.com/v1" }]),
     ).toEqual([]);
   });
 
@@ -65,7 +65,6 @@ describe("proxyConnectionRows", () => {
     const rows = proxyConnectionRows(
       { status: "unavailable", port: 8317, reason: "connection_refused", atMs: NOW },
       [CONNECTION],
-      NOW,
     );
     expect(rows).toEqual([
       expect.objectContaining({ status: "unavailable", windows: [], reason: "connection_refused" }),
@@ -73,11 +72,35 @@ describe("proxyConnectionRows", () => {
   });
 });
 
+describe("a model list the proxy did not give", () => {
+  // The review's finding: without the list the proxy names no pool for the
+  // connection's models, so the connection's one row says why and no model
+  // is weighed by a pool it may not belong to.
+  const { modelPools: _modelPools, ...unlisted } = reading;
+  const noList: ProxyReading = { ...unlisted, modelsFailure: "models_http_503" };
+
+  it("gives the connection one unread row saying why", () => {
+    expect(proxyConnectionRows(noList, [CONNECTION])).toEqual([
+      expect.objectContaining({
+        accountId: "acct_proxy",
+        status: "unavailable",
+        windows: [],
+        reason: "models_http_503",
+        fromProxy: true,
+      }),
+    ]);
+  });
+
+  it("puts none of the connection's models under a pool", () => {
+    expect(proxyCatalogModels(noList, [CONNECTION])).toEqual([]);
+  });
+});
+
 describe("the catalog over the pools", () => {
   it("takes a spent pool's models out of routing and leaves the other pool's in", () => {
     const catalog = buildModelsCatalog(
       proxyCatalogModels(reading, [CONNECTION]),
-      proxyConnectionRows(reading, [CONNECTION], NOW),
+      proxyConnectionRows(reading, [CONNECTION]),
       new Date(NOW).toISOString(),
       NOW,
     );
@@ -91,11 +114,11 @@ describe("the catalog over the pools", () => {
 
 describe("poolOutcome", () => {
   it("serves the Claude pool to Claude Code set up to send its requests to the proxy", () => {
-    const outcome = poolOutcome(reading, "claude", "http://localhost:8317", NOW);
+    const outcome = poolOutcome(reading, "claude", "http://localhost:8317");
     expect(outcome).toMatchObject({ status: "ok", pool: { kind: "claude", logins: 2, spent: 2 } });
   });
 
   it("serves nothing to an address that is not the proxy", () => {
-    expect(poolOutcome(reading, "claude", "https://api.anthropic.com", NOW)).toBe(undefined);
+    expect(poolOutcome(reading, "claude", "https://api.anthropic.com")).toBe(undefined);
   });
 });

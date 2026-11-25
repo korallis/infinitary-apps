@@ -19,6 +19,8 @@ export type CliProxyStub = {
   seen: string[];
   /** Writes the proxy app's settings file naming this stand-in, and answers its path. */
   writeSettings: (dir: string) => string;
+  /** Sets the share of its session the Claude login has used, 0 to 1, from the next read on. */
+  setClaudeUsed: (fraction: number) => void;
 };
 
 const MANAGEMENT_KEY = "stub-management-key";
@@ -27,7 +29,7 @@ const CLIENT_KEY = "sk-stub-client";
 /** The models the stand-in lists, under the owners the proxy names. */
 export const CLI_PROXY_MODELS = { claude: "claude-opus-5-5", chatgpt: "gpt-5.5" } as const;
 
-function credentials(now: number) {
+function credentials(now: number, claudeUsed: number) {
   const inSeconds = (hours: number) => String(Math.floor((now + hours * 3600_000) / 1000));
   return {
     files: [
@@ -40,7 +42,7 @@ function credentials(now: number) {
         quota: {
           observed_at: new Date(now).toISOString(),
           signals: {
-            "Anthropic-Ratelimit-Unified-5h-Utilization": "0.62",
+            "Anthropic-Ratelimit-Unified-5h-Utilization": String(claudeUsed),
             "Anthropic-Ratelimit-Unified-5h-Reset": inSeconds(3),
             "Anthropic-Ratelimit-Unified-7d-Utilization": "0.31",
             "Anthropic-Ratelimit-Unified-7d-Reset": inSeconds(80),
@@ -73,6 +75,7 @@ function credentials(now: number) {
 
 export async function startCliProxyStub(modelServerPort: number): Promise<CliProxyStub> {
   const seen: string[] = [];
+  let claudeUsed = 0.62;
   const server = createServer((req, res) => {
     const path = req.url ?? "";
     seen.push(`${req.method} ${path}`);
@@ -84,7 +87,7 @@ export async function startCliProxyStub(modelServerPort: number): Promise<CliPro
       if (req.headers.authorization !== `Bearer ${MANAGEMENT_KEY}`)
         return json(401, { error: "invalid management key" });
       if (req.method === "GET" && path === "/v8/management/credentials")
-        return json(200, credentials(Date.now()));
+        return json(200, credentials(Date.now(), claudeUsed));
       return json(404, { error: "not found" });
     }
     if (req.method === "GET" && path === "/v1/models") {
@@ -127,6 +130,9 @@ export async function startCliProxyStub(modelServerPort: number): Promise<CliPro
         ].join("\n"),
       );
       return file;
+    },
+    setClaudeUsed: (fraction) => {
+      claudeUsed = fraction;
     },
   };
 }

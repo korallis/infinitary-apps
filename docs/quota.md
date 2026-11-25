@@ -310,10 +310,10 @@ A CLI proxy on this computer (EasyCLIProxyAPI, a build of CLIProxyAPI) can hold 
 Infinitary reads such a proxy's own limit readings and shows, routes and pauses by one Claude pool and one ChatGPT pool, never by a single login (`src/core/quota/cliProxy/`).
 
 - **Finding the proxy.**
-  A packaged app asks the system, on every read, which programs listen on this computer's TCP ports (`findProxyListeners`: `Get-NetTCPConnection` on Windows, `lsof` elsewhere; at most once every five minutes while no proxy runs) and reads `config.toml` beside a proxy program (`readProxySettings`): the port, the management key and the first client key, from the top-level lines before any table.
-  The settings are used only while that program itself listens on the port they name (`createProxyAppReader`), so a proxy that exited, or another program on its port, is never sent a key.
-  A proxy whose `host` is not this computer is not read.
-  The keys stay in memory: they are never logged, saved or shown, and go only to `http://127.0.0.1:<port>`.
+  A packaged app asks the system, on every read, which programs named `EasyCLIProxyAPI` listen on this computer's TCP ports, and on which address and port (`findProxyListeners`: `Get-NetTCPConnection` on Windows, `lsof` with each address's family elsewhere; at most once every five minutes while no proxy runs), and reads `config.toml` beside such a program (`readProxySettings`): the port, the management key and the first client key, from the top-level lines before any table.
+  The settings are used only while that program itself listens on the port they name, and only at the loopback address where it listens there (`loopbackOriginOf`): `http://127.0.0.1:<port>` for IPv4 loopback or every IPv4 address, `http://[::1]:<port>` for IPv6 loopback or every IPv6 address, IPv4 first when it listens on both (`createProxyAppReader`).
+  A proxy that exited, another program on its port, or a proxy listening only on another interface is never sent a key, and a proxy whose `host` is not this computer is not read.
+  The keys stay in memory: they are never logged, saved or shown, and go only to that loopback address.
   A development or test run reads no proxy unless `CLI_PROXY_SETTINGS` names a settings file (`proxyAppFor` in `src/core/quota/homeQuota.ts`), so a test never reads the proxy of the computer it runs on.
 - **Only reads.**
   Every request goes through `guardedProxyHttp`, which refuses before sending anything but `GET /v8/management/credentials` (`/v0/management/auth-files` on a proxy before version 8, after a 404), `GET /v1/models`, and a `POST /v0/management/api-call` that reads one login's usage from Anthropic's or ChatGPT's usage address with no body.
@@ -342,11 +342,15 @@ Infinitary reads such a proxy's own limit readings and shows, routes and pauses 
   The Claude row whose access for Claude Code sends its requests to the proxy (`ClaudeAccess.address`) reads the Claude pool (`poolOutcome`).
   A custom connection whose base address is the proxy gets one row per pool its models are served from, under its own provider id, the pool named by the owner the proxy's model list gives each model (`owned_by`: anthropic is Claude, openai is ChatGPT); a model of any other owner belongs to no pool (`proxyConnectionRows`).
   Each such row names the models it measures (`pool.models`), and every row read through the proxy is marked `fromProxy`.
-  A proxy that did not answer gives such a connection one unread row; the last reading of each pool stays on as stale under its own pool, and never mixes with a reading taken without the proxy (`mergeStaleProviders` keys a proxy's row by its pool).
+  A proxy that did not answer, or whose model list could not be read, gives such a connection one unread row saying why (`models_http_<status>` or `models_unreadable` for the list); the last reading of each pool stays on as stale under its own pool, and never mixes with a reading taken without the proxy (`mergeStaleProviders` keys a proxy's row by its pool).
+  A list that could not be read is not a list with no model of a pool: while it is missing, none of the connection's models is put under a pool, so routing knows nothing of their headroom.
   Settings shows each pool's meters, a line saying how its logins stand (`poolLine` in `src/renderer/src/settings/subscriptionsWords.ts`) and its credits, on the Claude row and under the connection; the phone shows the same for each pool, in whatever order the rows come.
 - **Routing and pausing.**
   Each pooled model of a connection has a catalog row that reads its pool's row (`proxyCatalogModels`, `pool` on `QuotaCatalogModel`), so routing weighs its pool's reading instead of admitting it by its level alone, and a spent pool takes its models out as any spent allowance does (`allowanceSpent`).
   Every decision that reads an account's row for a model reads the row that measures that model (`rowMeasuresModel`, `quotaRowOf` in `src/shared/quota.ts`): the router's ranking, the account selector, a bound computer's check and the first mate's seat, which reads the row of the first mate's model.
+  The first mate's one-line allowance digest names each pool row's pool beside its account (`quotaContextLine`), so a connection's two pools never read as one account.
   A model of no pool is still admitted by its level alone.
 - **When it is read.**
-  The proxy is read on its own one-minute clock and again after each quota refresh (`localReading` on `QuotaService`), never holding a refresh up; each reading rewrites the proxy's rows and the catalog, and is laid over every refresh until the next.
+  The proxy is read on its own one-minute clock and again after each quota refresh (`localReading` on `QuotaService`), never holding a refresh up.
+  One projection makes every row read through the proxy, all timed at the reading's own moment (`withProxyRows` in `src/core/quota/homeQuota.ts`, through `rowOfOutcome`): the Claude row, found by its quota id, and each connection's pool rows.
+  It is laid over every refresh until the next reading, and a reading publishes the rows and the catalog only when they change, so an unchanged minute tells no surface; when the last proxy goes, one publish gives the Claude row back to what its access says and takes the connection rows away.

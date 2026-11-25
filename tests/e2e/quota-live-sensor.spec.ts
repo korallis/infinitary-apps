@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
@@ -15,12 +15,15 @@ import {
   EMPTY_QUOTA_TEXT,
   SUBSCRIPTIONS_WORDS,
 } from "../../src/renderer/src/settings/subscriptionsWords";
+import { CLAUDE_ACCESS_ALLOWANCE_TEXT } from "../../src/shared/claudeAccess";
 import { needsReauthCopy } from "../../src/shared/credentialHealth";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { CLAUDE_PROVIDER_ID, catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
 import { consumerConfigMessage, grpcWebOkBody } from "../support/grpcWebEncoder";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
+import { claudeSettingsGateway } from "./claudeAccount";
+import { NO_CLAUDE_LOGIN_USER } from "./claudeSeat";
 import { CLI_PROXY_MODELS, type CliProxyStub, startCliProxyStub } from "./cliProxyStub";
 import { customApiBlock } from "./customApi";
 import { startCustomApiFixture } from "./customApiFixture";
@@ -35,6 +38,7 @@ import {
   writeRefusedClaudeClient,
   writeRenewingClaudeClient,
 } from "./mockClaudeClient";
+import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { readSavedData } from "./savedData";
 import { focusOn, pressKey } from "./windowKeys";
@@ -1000,6 +1004,7 @@ test.describe("a CLI proxy's pools, end to end", () => {
   let app: LaunchedApp | undefined;
   let proxy: CliProxyStub | undefined;
   let models: Awaited<ReturnType<typeof startCustomApiFixture>> | undefined;
+  let claudeModels: MockProviderServer | undefined;
 
   test.afterEach(async () => {
     await app?.close();
@@ -1010,15 +1015,17 @@ test.describe("a CLI proxy's pools, end to end", () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
     await models?.close();
+    await claudeModels?.close();
     proxy = undefined;
     models = undefined;
+    claudeModels = undefined;
   });
 
   test("a connection to the proxy shows its Claude and ChatGPT pools, read with reads alone", async () => {
     // The captain's ask: read the pooled Claude and ChatGPT usage from the
-    // proxy Claude Code and the connection send their requests to
-    // (docs/quota.md, "A proxy's pooled logins"). The proxy, its settings
-    // file and the model server behind it are local stand-ins.
+    // proxy a connection sends its requests to (docs/quota.md, "A proxy's
+    // pooled logins"). The proxy, its settings file and the model server
+    // behind it are local stand-ins.
     const userDataDir = scratchDir("infinitary-e2e-proxy-");
     models = await startCustomApiFixture(0);
     proxy = await startCliProxyStub(Number(new URL(models.baseUrl).port));
@@ -1073,5 +1080,47 @@ test.describe("a CLI proxy's pools, end to end", () => {
       (entry) => / \/v0\//.test(entry) || / \/v8\//.test(entry) || entry === "GET /v1/models",
     );
     expect(new Set(own)).toEqual(new Set(["GET /v8/management/credentials", "GET /v1/models"]));
+  });
+
+  test("Claude Code's access through the proxy reads its Claude pool on the proxy's own minute", async () => {
+    // The captain's ask: Claude Code is set up to send its requests to the
+    // proxy, so its Claude row is the proxy's Claude pool (docs/quota.md, "A
+    // proxy's pooled logins"). The review's finding: the proxy's own minute,
+    // with no refresh asked, starts the row, follows a changed reading and
+    // gives the row back to its access when the proxy goes. The Claude
+    // settings name a token command and the stand-in proxy's address, as
+    // `claude-access.spec.ts` sets them up.
+    test.setTimeout(300_000);
+    const userDataDir = scratchDir("infinitary-e2e-proxy-claude-");
+    claudeModels = await startMockProvider();
+    proxy = await startCliProxyStub(claudeModels.port);
+    const settingsFile = proxy.writeSettings(userDataDir);
+    app = await launchApp({
+      userDataDir,
+      reuseMockProvider: claudeModels,
+      claudeTurns: { credential: "settings", maxRetries: 0 },
+      prepareHome: claudeSettingsGateway(`http://127.0.0.1:${proxy.port}`, "e2e-proxy-token"),
+      env: { USER: NO_CLAUDE_LOGIN_USER, INFINITARY_CLI_PROXY_SETTINGS: settingsFile },
+    });
+    const { page } = app;
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("tab", { name: "Intelligence" }).click();
+    await page.getByRole("button", { name: "Connect Claude" }).first().click();
+    await page.getByRole("button", { name: "Save", exact: true }).click({ timeout: 20_000 });
+    const accounts = await page.evaluate(() => window.infinitary.accounts.list());
+    const claude = accounts.find((account) => account.providerId === "anthropic-claude");
+    expect(claude).toMatchObject({ connected: true, access: "claude-settings" });
+    const row = page.locator(`[data-account-row="${claude?.id}"]`);
+    // The stand-in's one Claude login has 38% of its session left.
+    await expect(row.getByText("38%", { exact: false })).toBeVisible({ timeout: 90_000 });
+    // A changed reading reaches the row on the proxy's next minute.
+    proxy.setClaudeUsed(0.9);
+    await expect(row.getByText("10%", { exact: false })).toBeVisible({ timeout: 90_000 });
+    // The proxy goes: the row says what its access says again, with no meter.
+    rmSync(settingsFile);
+    await expect(row).toContainText(CLAUDE_ACCESS_ALLOWANCE_TEXT["claude-settings"], {
+      timeout: 90_000,
+    });
+    await expect(row.getByTestId("quota-micro-meter")).toHaveCount(0);
   });
 });

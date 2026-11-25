@@ -126,6 +126,50 @@ describe("QuotaService", () => {
     answer?.();
   });
 
+  // The review's finding: the proxy is read every minute, and a reading that
+  // changes no row tells no surface.
+  it("publishes a local reading only when it changes a row", async () => {
+    const db = openInMemoryDatabase();
+    const broadcast = vi.fn();
+    let percentRemaining = 60;
+    const service = new QuotaService({
+      refresh: async () => ({ snapshot: SNAPSHOT, catalog: CATALOG }),
+      db,
+      broadcast,
+      catalogFor: () => CATALOG,
+      localReading: {
+        everyMs: 60_000,
+        // As the proxy's projection does, it makes its row again over any
+        // it laid before.
+        run: async () => (snapshot) => ({
+          ...snapshot,
+          providers: [
+            ...snapshot.providers.filter((row) => !row.fromProxy),
+            {
+              provider: "fm-custom-0123456789abcdef",
+              label: "Proxy",
+              accountId: "acct_proxy",
+              status: "ok" as const,
+              stale: false,
+              fromProxy: true as const,
+              windows: [{ id: "weekly", label: "weekly", percentRemaining }],
+            },
+          ],
+        }),
+      },
+      now: () => 5000,
+    });
+    // The refresh publishes, then reads the proxy at once, which adds its row.
+    await service.refresh("demand");
+    await vi.waitFor(() => expect(broadcast).toHaveBeenCalledTimes(2));
+    await service.readLocal();
+    expect(broadcast).toHaveBeenCalledTimes(2);
+    percentRemaining = 55;
+    await service.readLocal();
+    expect(broadcast).toHaveBeenCalledTimes(3);
+    expect(service.latest()?.providers.at(-1)?.windows[0]?.percentRemaining).toBe(55);
+  });
+
   it("reads the saved snapshot at start with the switches as they stand now", async () => {
     // docs/quota.md "Keep going on credits": a switch turned off before a
     // restart spends no credits on the saved snapshot's old mark.
@@ -415,8 +459,8 @@ describe("mergeStaleProviders", () => {
     });
 
     it("keeps both pools' last readings, each under its own pool, when the proxy stops answering", () => {
-      const previous = snapshotOf(1000, proxyConnectionRows(answered, [connection], 1000));
-      const next = snapshotOf(2000, proxyConnectionRows(silent, [connection], 2000));
+      const previous = snapshotOf(1000, proxyConnectionRows(answered, [connection]));
+      const next = snapshotOf(2000, proxyConnectionRows(silent, [connection]));
       const merged = mergeStaleProviders(next, previous, 3000).providers;
       expect(
         merged.map((row) => [row.pool?.kind, row.stale, row.windows[0]?.percentRemaining]),
@@ -425,6 +469,24 @@ describe("mergeStaleProviders", () => {
         ["chatgpt", true, 70],
       ]);
       expect(merged.every((row) => row.reason === "connection_refused")).toBe(true);
+    });
+
+    // The review's finding: a model list the proxy did not give keeps the
+    // pools' last readings, marked stale, instead of dropping them.
+    it("keeps both pools' last readings when the proxy's model list cannot be read", () => {
+      const { modelPools: _modelPools, ...unlisted } = answered;
+      const previous = snapshotOf(1000, proxyConnectionRows(answered, [connection]));
+      const next = snapshotOf(
+        2000,
+        proxyConnectionRows({ ...unlisted, atMs: 2000, modelsFailure: "models_http_503" }, [
+          connection,
+        ]),
+      );
+      const merged = mergeStaleProviders(next, previous, 3000).providers;
+      expect(merged.map((row) => [row.pool?.kind, row.stale, row.reason])).toEqual([
+        ["claude", true, "models_http_503"],
+        ["chatgpt", true, "models_http_503"],
+      ]);
     });
 
     it("never gives a proxy's unanswered Claude row the account's direct windows", () => {
@@ -453,7 +515,7 @@ describe("mergeStaleProviders", () => {
     });
 
     it("never gives the account's unanswered direct row the proxy's last pool reading", () => {
-      const pooled = proxyConnectionRows(answered, [connection], 1000)[0];
+      const pooled = proxyConnectionRows(answered, [connection])[0];
       if (!pooled) throw new Error("The proxy reads a Claude pool.");
       const previous = snapshotOf(1000, [
         { ...pooled, provider: "claude", label: "Claude", accountId: "acct_claude" },

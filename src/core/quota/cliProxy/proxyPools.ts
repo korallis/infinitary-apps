@@ -88,8 +88,14 @@ export type ProxyReading =
       status: "ok";
       port: number;
       logins: ProxyLogin[];
-      /** Each model the proxy lists, by the pool its owner names. */
-      modelPools: Map<string, QuotaPoolKind>;
+      /**
+       * Each model the proxy lists, by the pool its owner names; absent when
+       * the list could not be read (`modelsFailure`), which is not a list
+       * with no model of a pool.
+       */
+      modelPools?: Map<string, QuotaPoolKind>;
+      /** Why the model list could not be read. */
+      modelsFailure?: string;
       atMs: number;
     }
   | {
@@ -163,16 +169,23 @@ export function createProxyPoolReader(options: {
       };
     }
     const logins = parseProxyCredentials(answer.json, atMs);
-    const modelPools = await listModelPools(http, app);
+    const models = await listModelPools(http, app);
+    const modelPools = "pools" in models ? models.pools : undefined;
     const used = new Set<QuotaPoolKind>(use.claude ? ["claude"] : []);
     for (const id of use.modelIds) {
-      const kind = modelPools.get(id);
+      const kind = modelPools?.get(id);
       if (kind) used.add(kind);
     }
     const filled = await Promise.all(
       logins.map((login) => fillUnread(http, app, login, asked, atMs, ask && used.has(login.kind))),
     );
-    return { status: "ok", port: app.port, logins: filled, modelPools, atMs };
+    return {
+      status: "ok",
+      port: app.port,
+      logins: filled,
+      ...("pools" in models ? { modelPools: models.pools } : { modelsFailure: models.failure }),
+      atMs,
+    };
   };
 }
 
@@ -194,10 +207,13 @@ async function read(
 
 /**
  * The proxy's model list, each model under the pool its owner names
- * (`owned_by`: anthropic is Claude, openai is ChatGPT). A model of any other
- * owner, and every model when the list cannot be read, has no pool.
+ * (`owned_by`: anthropic is Claude, openai is ChatGPT); a model of any other
+ * owner has no pool. A list that cannot be read answers why instead.
  */
-async function listModelPools(http: QuotaHttp, app: ProxyApp): Promise<Map<string, QuotaPoolKind>> {
+async function listModelPools(
+  http: QuotaHttp,
+  app: ProxyApp,
+): Promise<{ pools: Map<string, QuotaPoolKind> } | { failure: string }> {
   const pools = new Map<string, QuotaPoolKind>();
   try {
     const result = await http(`${app.origin}${PROXY_ROUTES.models}`, {
@@ -208,17 +224,20 @@ async function listModelPools(http: QuotaHttp, app: ProxyApp): Promise<Map<strin
       limitBytes: MODELS_LIMIT_BYTES,
     });
     const data = asRecord(result.json)?.data;
-    if (result.status !== 200 || !Array.isArray(data)) return pools;
+    if (result.status !== 200) return { failure: `models_http_${result.status}` };
+    if (!Array.isArray(data)) return { failure: "models_unreadable" };
     for (const raw of data) {
       const model = asRecord(raw);
       const id = asString(model?.id);
       const pool = POOL_OF_OWNER[asString(model?.owned_by)?.toLowerCase() ?? ""];
       if (id && pool) pools.set(id, pool);
     }
-  } catch {
-    return pools;
+  } catch (caught) {
+    return {
+      failure: caught instanceof QuotaTransportError ? caught.failure : "models_unreadable",
+    };
   }
-  return pools;
+  return { pools };
 }
 
 async function fillUnread(

@@ -12,7 +12,7 @@ import {
   BEDROCK_SIGN_IN,
   CLAUDE_PROVIDER_ID,
 } from "@shared/providers";
-import { formatBedrockSpend, type QuotaProviderView, type QuotaSnapshotView } from "@shared/quota";
+import { formatBedrockSpend, QUOTA_POOL_NAMES, type QuotaSnapshotView } from "@shared/quota";
 import type { ClaudeAccess } from "../claude/claudeAccess";
 import type { ClaudeRateLimit } from "../claude/claudeEvents";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
@@ -29,7 +29,7 @@ import type { PiAuthService } from "../pi/piAuth";
 import type { StandIns } from "../standIns";
 import type { AppDatabase } from "../storage/db";
 import { UsageStore } from "../storage/usageStore";
-import { type QuotaCatalogModel, quotaEntryForPiProvider } from "./auth";
+import { type QuotaCatalogModel, quotaEntryForPiProvider, quotaRowProviderOf } from "./auth";
 import { buildModelsCatalog, effectiveFromProvider } from "./catalog";
 import { managedFromClaudeStore } from "./claudeAuthResolve";
 import {
@@ -45,6 +45,7 @@ import {
   poolOutcome,
   proxyCatalogModels,
   proxyConnectionRows,
+  rowOfOutcome,
 } from "./cliProxy/proxyQuota";
 import { CreditsWatch, stampSnapshot, stampSwitch } from "./creditsSwitch";
 import { createQuotaFetcher } from "./fetchQuota";
@@ -199,15 +200,15 @@ export function startHomeQuota(options: {
       ];
     });
   };
-  // Where Claude Code sends its requests, for an enabled Claude account on
-  // access set up for Claude Code; read with each proxy reading.
-  let claudeAddress: string | undefined;
+  // The access set up for Claude Code of an enabled Claude account, with
+  // where it sends its requests; read with each proxy reading.
+  let claudeAccess: ClaudeAccess | undefined;
   const readClaudeAddress = async () => {
     const claudeAccount = vault
       .list()
       .some((account) => account.enabled && claudeStoreDirOf(vault, account.id) !== undefined);
-    claudeAddress = claudeAccount ? (await options.claudeAccess?.())?.address : undefined;
-    return claudeAddress;
+    claudeAccess = claudeAccount ? await options.claudeAccess?.() : undefined;
+    return claudeAccess?.address;
   };
   const proxyApp = proxyAppFor(options.standIns);
   const readProxy = proxyApp
@@ -215,7 +216,7 @@ export function startHomeQuota(options: {
         app: proxyApp,
         http: createQuotaHttp(),
         uses: (port) => ({
-          claude: claudeAddress !== undefined && addressIsProxy(claudeAddress, port),
+          claude: claudeAccess?.address !== undefined && addressIsProxy(claudeAccess.address, port),
           modelIds: pooledConnections()
             .filter((connection) => addressIsProxy(connection.baseUrl, port))
             .flatMap((connection) => connection.modelIds),
@@ -237,20 +238,27 @@ export function startHomeQuota(options: {
       proxy = undefined;
     }
   };
-  // The proxy's rows laid over a snapshot: the Claude row read through it,
-  // and each connection's pool rows made again.
+  // The proxy's one projection over a snapshot, the only place its rows are
+  // made: the Claude access row read through it, and each connection's pool
+  // rows made again, all at the reading's own moment. The quota service lays
+  // it over each refresh and each reading, and publishes it when it changes.
+  // Without a proxy reading, a row read through it goes back to what the
+  // access says, and the connection rows go.
+  const claudeQuotaId = quotaRowProviderOf(CLAUDE_PROVIDER_ID);
   const withProxyRows = (snapshot: QuotaSnapshotView): QuotaSnapshotView => {
-    const now = Date.now();
+    const at = proxy?.atMs ?? Date.now();
     const providers = snapshot.providers.flatMap((row) => {
       if (isCustomApiProvider(row.provider) && row.fromProxy) return [];
-      if (row.provider !== CLAUDE_PROVIDER_ID) return [row];
+      if (row.provider !== claudeQuotaId) return [row];
       if (!row.fromProxy && row.reason !== CLAUDE_ACCESS_REASON) return [row];
-      const outcome = poolOutcome(proxy, "claude", claudeAddress, now);
-      return [outcome ? rowOfOutcome(row, outcome, now) : row];
+      const outcome =
+        poolOutcome(proxy, "claude", claudeAccess?.address) ??
+        (claudeAccess ? claudeAccessOutcome(claudeAccess.source) : undefined);
+      return [outcome ? rowOfOutcome(row, outcome, at) : row];
     });
     return {
       ...snapshot,
-      providers: [...providers, ...proxyConnectionRows(proxy, pooledConnections(), now)],
+      providers: [...providers, ...proxyConnectionRows(proxy, pooledConnections())],
     };
   };
   const catalogModels = () => [
@@ -268,14 +276,11 @@ export function startHomeQuota(options: {
       if (vault.claudeConfigDir(accountId) !== undefined) return undefined;
       // Access set up for Claude Code serves no subscription allowance, and
       // its sign-in is not the store's: the store is not read. When its
-      // address is the CLI proxy, the proxy's Claude pool is its allowance.
+      // address is the CLI proxy, the proxy's projection (`withProxyRows`)
+      // makes the proxy's Claude pool its allowance.
       const access = await options.claudeAccess?.();
       if (access) {
-        quotaUnresolved.set(
-          accountId,
-          poolOutcome(proxy, "claude", access.address, Date.now()) ??
-            claudeAccessOutcome(access.source),
-        );
+        quotaUnresolved.set(accountId, claudeAccessOutcome(access.source));
         return undefined;
       }
       const read = await readClaudeStore(claudeDir, {
@@ -402,7 +407,6 @@ export function startHomeQuota(options: {
         // Session-pushed readings still merge for any provider the HTTP
         // sensor does not cover.
         pushed: (now) => [
-          ...proxyConnectionRows(proxy, pooledConnections(), now),
           ...vault
             .list()
             .filter((account) => account.providerId === BEDROCK_PROVIDER_ID)
@@ -628,9 +632,14 @@ export function quotaContextLine(snapshot: QuotaSnapshotView | undefined): strin
     .flatMap((provider) => {
       const effective = effectiveFromProvider(provider, now);
       if (typeof effective.effectivePercentRemaining !== "number") return [];
-      const subject = provider.accountLabel
+      const account = provider.accountLabel
         ? `${provider.provider}/${provider.accountLabel}`
         : provider.provider;
+      // A connection to a CLI proxy has a row per pool: each is named.
+      // i18n-exempt: the first mate's digest, served to a model in English
+      const subject = provider.pool
+        ? `${account} ${QUOTA_POOL_NAMES[provider.pool.kind]} pool`
+        : account;
       const priority =
         typeof effective.spendPriority === "number"
           ? ` (spend priority ${effective.spendPriority.toFixed(2)})`
@@ -661,32 +670,3 @@ function proxyAppFor(
 
 /** How often the CLI proxy is read: its own readings move by the minute. */
 const PROXY_READ_EVERY_MS = 60_000;
-
-/** A row read again from a new outcome, keeping who and what it is. */
-function rowOfOutcome(
-  row: QuotaProviderView,
-  outcome: ProviderOutcome,
-  now: number,
-): QuotaProviderView {
-  const {
-    pool: _pool,
-    credits: _credits,
-    reason: _reason,
-    detail: _detail,
-    retryAfter: _retryAfter,
-    measuredAt: _measuredAt,
-    fromProxy: _fromProxy,
-    ...rest
-  } = row;
-  return {
-    ...rest,
-    status: outcome.status,
-    windows: outcome.windows,
-    stale: false,
-    ...(outcome.windows.length > 0 ? { measuredAt: now } : {}),
-    ...(outcome.pool ? { pool: outcome.pool } : {}),
-    ...(outcome.credits ? { credits: outcome.credits } : {}),
-    ...(outcome.reason ? { reason: outcome.reason } : {}),
-    ...(outcome.fromProxy ? { fromProxy: true as const } : {}),
-  };
-}
