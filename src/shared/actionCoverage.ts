@@ -71,6 +71,16 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
     "destructive",
     "Takes a kept job whose remove did not finish off the list on the captain's click in Settings, running nothing",
   ],
+  "inf:settings:usage-connection:save": [
+    "credential",
+    // i18n-exempt: an inventory reason the channel parity test reads, never shown
+    "The person's reporting connection carries header values typed into Settings and kept in Secrets; never a first mate operation, since no value may pass through an agent",
+  ],
+  "inf:settings:usage-connection:remove": [
+    "destructive",
+    // i18n-exempt: an inventory reason the channel parity test reads, never shown
+    "Stops reporting and forgets the connection's kept headers on the captain's click in Settings",
+  ],
   "inf:converse": ["not-a-setting", "Conversation, not an app setting"],
   "inf:repos:offer-folder": [
     "consent",
