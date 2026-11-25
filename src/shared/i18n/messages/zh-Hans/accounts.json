@@ -1,10 +1,12 @@
 {
+  "accountsClaudeFurtherLoginNoAnswer": "Claude Code 没有响应，因此 Infinitary 没有开始登录。请重试。",
+  "accountsClaudeFurtherLoginUnfinished": "Claude 登录失败。请重试。",
   "accountsClaudeLoginUnreadable": "Infinitary 无法读取 {here} 上的 Claude 登录，因此没有在它之上开始新的登录。请再试一次；如果仍然发生，请退出 Infinitary，然后从程序坞打开它。",
   "accountsClaudeLoginUnreadableReopen": "Infinitary 无法读取 {here} 上的 Claude 登录，因此没有在它之上开始新的登录。请再试一次；如果仍然发生，请退出 Infinitary，然后重新打开它。",
   "accountsConnectAddAnother": "再添加一个 {provider} 账户",
+  "accountsConnectAddClaudeLogin": "再添加一个 Claude 登录",
   "accountsConnectBrowser": "用浏览器登录",
   "accountsConnectCancel": "取消",
-  "accountsConnectClaudeLoginOn": "Claude 使用 {here} 上的登录",
   "accountsConnectClaudeLoginThere": "Claude 使用那里的登录",
   "accountsConnectConnected": "{provider} 已连接",
   "accountsConnectConnecting": "正在连接...",

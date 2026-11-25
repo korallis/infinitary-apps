@@ -182,6 +182,34 @@ export function pushedProviderViews(
 }
 
 /**
+ * The rows of logins measured only by what their sessions push: a further
+ * Claude login, whose usage nothing but Claude Code reports (docs/quota.md,
+ * "A further Claude login"). Each reading stands until its reset: a refused
+ * window reads zero until then, and a window whose reset has passed counts
+ * as refilled, with no reset of its own until a session reports the next.
+ */
+export function pushedOnlyProviderViews(
+  accounts: { accountId: string; accountLabel: string; quotaId: string; providerLabel: string }[],
+  windowsFor: (accountId: string) => PushedWindow[],
+  now: number,
+): QuotaProviderView[] {
+  return pushedProviderViews(
+    accounts,
+    (accountId) =>
+      windowsFor(accountId).map((reading): PushedWindow => {
+        if (reading.resetsAt !== undefined && reading.resetsAt <= now) {
+          const { resetsAt: _resetsAt, status: _status, ...rest } = reading;
+          return { ...rest, status: "allowed", utilization: 0 };
+        }
+        return reading.status === "rejected" && reading.resetsAt !== undefined
+          ? { ...reading, utilization: 1 }
+          : reading;
+      }),
+    now,
+  );
+}
+
+/**
  * The client's codes for extra usage that cannot answer because nothing
  * could be read, rather than because it is switched off: unknown, never off.
  */

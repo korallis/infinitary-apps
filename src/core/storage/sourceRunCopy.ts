@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { DATABASE_VERSION, readDatabaseSnapshot } from "./db";
 import { KNOWLEDGE_DB_FILE, KNOWLEDGE_SCHEMA_VERSION } from "./knowledgeStore";
 import { privateCopy } from "./privateCopy";
+import { markFurtherLoginsFormat } from "./savedDataCompatibility";
 
 /**
  * The copy of the saved record a run from source keeps before it first opens
@@ -29,6 +30,18 @@ export const SOURCE_RUN_COPY_FILES = [
   join("knowledge", KNOWLEDGE_DB_FILE),
   join("knowledge", `${KNOWLEDGE_DB_FILE}-wal`),
 ] as const;
+
+/**
+ * The kept copy's format marker follows the folder's while a further Claude
+ * login is held (docs/saved-data-compatibility.md, "Further Claude logins"):
+ * the copy holds no account records, so its older marker copied back beside
+ * such a login would open the folder to a build that runs it on the default
+ * login.
+ */
+export function markKeptCopyFurtherLogins(dataDir: string, held: boolean): void {
+  const kept = join(dataDir, SOURCE_RUN_COPY_DIR);
+  if (existsSync(join(kept, SOURCE_RUN_COPY_FILES[0]))) markFurtherLoginsFormat(kept, held);
+}
 
 /**
  * Whether this build would change how the record in `dataDir` is saved

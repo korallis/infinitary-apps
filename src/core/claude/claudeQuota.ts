@@ -24,7 +24,8 @@ import {
  * under whatever account the client keyed it on (findClaudeKeychainItem).
  * Setting CLAUDE_CONFIG_DIR would hash a suffix onto that name and miss the
  * everyday login - the login probe measured that, which is why Claude runs
- * leave the variable unset. One Claude account, ever.
+ * on that login leave the variable unset. A further login's own folder is
+ * never read here (docs/claude-client.md, "Further logins").
  *
  * macOS may ask before the Keychain item can be read. On a Claude Code item
  * with an apple-tool partition, even Always Allow for Infinitary's decrypt ACL

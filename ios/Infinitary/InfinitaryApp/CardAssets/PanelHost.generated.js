@@ -6688,6 +6688,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return rules.select(count);
   }
+  function accountsClaudeFurtherLoginNoAnswer() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُجب Claude Code، لذلك لم يبدأ Infinitary تسجيل الدخول. حاول مجددًا.`;
+      case "de":
+        return `Claude Code hat nicht geantwortet, deshalb hat Infinitary keine Anmeldung gestartet. Versuch es noch einmal.`;
+      case "es":
+        return `Claude Code no respondió, así que Infinitary no inició ningún inicio de sesión. Inténtalo de nuevo.`;
+      case "fr":
+        return `Claude Code n’a pas répondu, Infinitary n’a donc pas lancé de connexion. Réessayez.`;
+      case "ja":
+        return `Claude Code から応答がなかったため、Infinitary はサインインを開始しませんでした。もう一度お試しください。`;
+      case "ko":
+        return `Claude Code가 응답하지 않아 Infinitary가 로그인을 시작하지 않았어요. 다시 시도하세요.`;
+      case "pt-BR":
+        return `O Claude Code não respondeu, então o Infinitary não iniciou o login. Tente de novo.`;
+      case "zh-Hans":
+        return `Claude Code 没有响应，因此 Infinitary 没有开始登录。请重试。`;
+      case "zh-Hant":
+        return `Claude Code 沒有回應，因此 Infinitary 沒有開始登入。請再試一次。`;
+      case "en-XA":
+        return `[Çļáûðé Çöðé ðîðñ'ţ áñšŵéŕ, šö Îñƒîñîţáŕý ðîðñ'ţ šţáŕţ á šîĝñ-îñ. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Claude Code didn't answer, so Infinitary didn't start a sign-in. Try again.‬`;
+    }
+    return `Claude Code didn't answer, so Infinitary didn't start a sign-in. Try again.`;
+  }
+  function accountsClaudeFurtherLoginUnfinished() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على Claude تسجيل الدخول. حاول مجددًا.`;
+      case "de":
+        return `Die Anmeldung bei Claude ist fehlgeschlagen. Versuch es noch einmal.`;
+      case "es":
+        return `Claude no pudo iniciar sesión. Inténtalo de nuevo.`;
+      case "fr":
+        return `La connexion à Claude a échoué. Réessayez.`;
+      case "ja":
+        return `Claude にサインインできませんでした。もう一度お試しください。`;
+      case "ko":
+        return `Claude에 로그인하지 못했어요. 다시 시도하세요.`;
+      case "pt-BR":
+        return `O Claude não conseguiu fazer login. Tente de novo.`;
+      case "zh-Hans":
+        return `Claude 登录失败。请重试。`;
+      case "zh-Hant":
+        return `Claude 登入失敗。請再試一次。`;
+      case "en-XA":
+        return `[Çļáûðé ƒáîļéð ţö šîĝñ îñ. Ţŕý áĝáîñ. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Claude failed to sign in. Try again.‬`;
+    }
+    return `Claude failed to sign in. Try again.`;
+  }
   function accountsClaudeLoginUnreadable(input2) {
     const here = input2.here;
     switch (currentLanguage()) {
@@ -6772,6 +6826,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Add another ${provider} account`;
   }
+  function accountsConnectAddClaudeLogin() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إضافة تسجيل دخول آخر إلى Claude`;
+      case "de":
+        return `Weitere Claude-Anmeldung hinzufügen`;
+      case "es":
+        return `Agregar otro inicio de sesión de Claude`;
+      case "fr":
+        return `Ajouter une autre connexion Claude`;
+      case "ja":
+        return `Claude のログインをもう1つ追加`;
+      case "ko":
+        return `다른 Claude 로그인 추가`;
+      case "pt-BR":
+        return `Adicionar outro login do Claude`;
+      case "zh-Hans":
+        return `再添加一个 Claude 登录`;
+      case "zh-Hant":
+        return `再加入一個 Claude 登入`;
+      case "en-XA":
+        return `[Åðð áñöţĥéŕ Çļáûðé ļöĝîñ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Add another Claude login‬`;
+    }
+    return `Add another Claude login`;
+  }
   function accountsConnectBrowser() {
     switch (currentLanguage()) {
       case "ar":
@@ -6825,34 +6906,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Cancel‬`;
     }
     return `Cancel`;
-  }
-  function accountsConnectClaudeLoginOn(input2) {
-    const here = input2.here;
-    switch (currentLanguage()) {
-      case "ar":
-        return `يستخدم Claude تسجيل الدخول على ${here}`;
-      case "de":
-        return `Claude nutzt die Anmeldung auf ${here}`;
-      case "es":
-        return `Claude usa el inicio de sesión de ${here}`;
-      case "fr":
-        return `Claude utilise la connexion de ${here}`;
-      case "ja":
-        return `Claude は ${here} のログインを使います`;
-      case "ko":
-        return `Claude는 ${here}의 로그인을 사용해요`;
-      case "pt-BR":
-        return `O Claude usa o login de ${here}`;
-      case "zh-Hans":
-        return `Claude 使用 ${here} 上的登录`;
-      case "zh-Hant":
-        return `Claude 使用 ${here} 上的登入`;
-      case "en-XA":
-        return `[Çļáûðé ûšéš ţĥé ļöĝîñ öñ ${here} ~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Claude uses the login on ‬${here}`;
-    }
-    return `Claude uses the login on ${here}`;
   }
   function accountsConnectClaudeLoginThere() {
     switch (currentLanguage()) {
@@ -39533,6 +39586,62 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Finished‬`;
     }
     return `Finished`;
+  }
+  function feedFirstMateLoginRemoved(input2) {
+    const label = input2.label;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أزلت ${label}، وهو تسجيل دخول Claude الذي كان نائب القبطان يعمل عليه. سيستخدم نائب القبطان تسجيل دخول Claude آخر عند تشغيله في المرة القادمة.`;
+      case "de":
+        return `Du hast ${label} entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Dein Erster Offizier nutzt eine andere Claude-Anmeldung, wenn er das nächste Mal läuft.`;
+      case "es":
+        return `Quitaste ${label}, el inicio de sesión de Claude que usaba tu primer oficial. Tu primer oficial usará otro inicio de sesión de Claude la próxima vez que funcione.`;
+      case "fr":
+        return `Vous avez retiré ${label}, la connexion Claude qu’utilisait votre second. Votre second utilisera une autre connexion Claude la prochaine fois qu’il fonctionnera.`;
+      case "ja":
+        return `一等航海士が使っていた Claude のログイン「${label}」を削除しました。一等航海士は次に動くとき、別の Claude のログインを使います。`;
+      case "ko":
+        return `일등항해사가 쓰던 Claude 로그인(${label})을 제거했어요. 일등항해사는 다음에 실행될 때 다른 Claude 로그인을 사용해요.`;
+      case "pt-BR":
+        return `Você removeu ${label}, o login do Claude que seu imediato usava. Seu imediato usará outro login do Claude na próxima vez que rodar.`;
+      case "zh-Hans":
+        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登录。你的大副下次运行时会改用另一个 Claude 登录。`;
+      case "zh-Hant":
+        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登入。你的大副下次執行時會改用另一個 Claude 登入。`;
+      case "en-XA":
+        return `[Ýöû ŕéɱöṽéð ${label}, ţĥé Çļáûðé ļöĝîñ ýöûŕ ƒîŕšţ ɱáţé ŵáš ŕûññîñĝ öñ. Ýöûŕ ƒîŕšţ ɱáţé ŵîļļ ûšé áñöţĥéŕ Çļáûðé ļöĝîñ ŵĥéñ îţ ñéẋţ ŕûñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You removed ‬${label}‮, the Claude login your first mate was running on. Your first mate will use another Claude login when it next runs.‬`;
+    }
+    return `You removed ${label}, the Claude login your first mate was running on. Your first mate will use another Claude login when it next runs.`;
+  }
+  function feedFirstMateLoginRemovedNoOther(input2) {
+    const label = input2.label;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أزلت ${label}، وهو تسجيل دخول Claude الذي كان نائب القبطان يعمل عليه. لا يوجد الآن تسجيل دخول Claude آخر يستطيع تشغيل نائب القبطان.`;
+      case "de":
+        return `Du hast ${label} entfernt, die Claude-Anmeldung, mit der dein Erster Offizier lief. Im Moment kann keine andere Claude-Anmeldung deinen Ersten Offizier ausführen.`;
+      case "es":
+        return `Quitaste ${label}, el inicio de sesión de Claude que usaba tu primer oficial. Ahora ningún otro inicio de sesión de Claude puede hacer funcionar a tu primer oficial.`;
+      case "fr":
+        return `Vous avez retiré ${label}, la connexion Claude qu’utilisait votre second. Aucune autre connexion Claude ne peut faire fonctionner votre second pour l’instant.`;
+      case "ja":
+        return `一等航海士が使っていた Claude のログイン「${label}」を削除しました。いま一等航海士を動かせる Claude のログインはほかにありません。`;
+      case "ko":
+        return `일등항해사가 쓰던 Claude 로그인(${label})을 제거했어요. 지금은 일등항해사를 실행할 수 있는 다른 Claude 로그인이 없어요.`;
+      case "pt-BR":
+        return `Você removeu ${label}, o login do Claude que seu imediato usava. Agora nenhum outro login do Claude pode rodar seu imediato.`;
+      case "zh-Hans":
+        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登录。现在没有其他 Claude 登录可以运行你的大副。`;
+      case "zh-Hant":
+        return `你移除了 ${label}，也就是你的大副一直在用的 Claude 登入。現在沒有其他 Claude 登入可以執行你的大副。`;
+      case "en-XA":
+        return `[Ýöû ŕéɱöṽéð ${label}, ţĥé Çļáûðé ļöĝîñ ýöûŕ ƒîŕšţ ɱáţé ŵáš ŕûññîñĝ öñ. Ñö öţĥéŕ Çļáûðé ļöĝîñ çáñ ŕûñ ýöûŕ ƒîŕšţ ɱáţé ñöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You removed ‬${label}‮, the Claude login your first mate was running on. No other Claude login can run your first mate now.‬`;
+    }
+    return `You removed ${label}, the Claude login your first mate was running on. No other Claude login can run your first mate now.`;
   }
   function feedFirstMateProblem(input2) {
     const problem = input2.problem;
@@ -112579,12 +112688,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return `How we work`;
   }
   const MESSAGES = {
+    accountsClaudeFurtherLoginNoAnswer,
+    accountsClaudeFurtherLoginUnfinished,
     accountsClaudeLoginUnreadable,
     accountsClaudeLoginUnreadableReopen,
     accountsConnectAddAnother,
+    accountsConnectAddClaudeLogin,
     accountsConnectBrowser,
     accountsConnectCancel,
-    accountsConnectClaudeLoginOn,
     accountsConnectClaudeLoginThere,
     accountsConnectConnected,
     accountsConnectConnecting,
@@ -113681,6 +113792,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedDropped,
     feedFailed,
     feedFinished,
+    feedFirstMateLoginRemoved,
+    feedFirstMateLoginRemovedNoOther,
     feedFirstMateProblem,
     feedFirstMateSaid,
     feedFirstMateSet,
@@ -116186,12 +116299,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     welcomeTitle
   };
   const MESSAGE_FILLS = {
+    "accountsClaudeFurtherLoginNoAnswer": [],
+    "accountsClaudeFurtherLoginUnfinished": [],
     "accountsClaudeLoginUnreadable": ["here"],
     "accountsClaudeLoginUnreadableReopen": ["here"],
     "accountsConnectAddAnother": ["provider"],
+    "accountsConnectAddClaudeLogin": [],
     "accountsConnectBrowser": [],
     "accountsConnectCancel": [],
-    "accountsConnectClaudeLoginOn": ["here"],
     "accountsConnectClaudeLoginThere": [],
     "accountsConnectConnected": ["provider"],
     "accountsConnectConnecting": [],
@@ -117288,6 +117403,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedDropped": ["sentence"],
     "feedFailed": ["problem"],
     "feedFinished": [],
+    "feedFirstMateLoginRemoved": ["label"],
+    "feedFirstMateLoginRemovedNoOther": ["label"],
     "feedFirstMateProblem": ["problem"],
     "feedFirstMateSaid": ["text"],
     "feedFirstMateSet": ["text"],

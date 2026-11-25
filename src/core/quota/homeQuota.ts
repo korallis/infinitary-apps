@@ -38,7 +38,9 @@ import { needsReauthTargets } from "./needsReauth";
 import { claudeAccessOutcome, type ProviderOutcome } from "./outcome";
 import {
   PushedQuotaStore,
+  type PushedWindow,
   pushedCredits,
+  pushedOnlyProviderViews,
   pushedProviderViews,
   withPushedCredits,
   withRejectedReadings,
@@ -96,16 +98,29 @@ export type HomeQuota = {
 };
 
 /**
- * The machine's default Claude config root when this account is Claude,
- * or nothing. Locations only - never a credential. CD-1=B: not the vault
- * account directory, which is bookkeeping only.
+ * The Claude config root this account's client runs on when it is Claude,
+ * or nothing: a further login's own folder, else the machine's default
+ * one. Locations only - never a credential. CD-1=B: for the first login it
+ * is not the vault account directory, which is bookkeeping only.
  */
 export function claudeStoreDirOf(vault: AccountVault, accountId: string): string | undefined {
   const account = vault.list().find((row) => row.id === accountId);
   if (!account || quotaEntryForPiProvider(account.providerId)?.quotaId !== "claude") {
     return undefined;
   }
-  return defaultClaudeConfigDir();
+  return vault.claudeConfigDir(accountId) ?? defaultClaudeConfigDir();
+}
+
+/**
+ * Whether the account's allowance is measured only by what its sessions
+ * push: a provider no sensor covers, or a further Claude login, whose
+ * usage only Claude Code reports and whose sign-in Infinitary never opens
+ * to ask Anthropic's usage address with.
+ */
+function pushedOnly(vault: AccountVault, account: { id: string; providerId: string }): boolean {
+  const entry = quotaEntryForPiProvider(account.providerId);
+  if (!entry) return false;
+  return !entry.sensed || vault.claudeConfigDir(account.id) !== undefined;
 }
 
 export function startHomeQuota(options: {
@@ -157,6 +172,8 @@ export function startHomeQuota(options: {
     // resolves through its Pi runtime. Infinitary never mints Anthropic OAuth.
     const claudeDir = claudeStoreDirOf(vault, accountId);
     if (claudeDir !== undefined) {
+      // A further login's sign-in is its client's alone: its store is never read.
+      if (vault.claudeConfigDir(accountId) !== undefined) return undefined;
       // Access set up for Claude Code serves no subscription allowance, and
       // its sign-in is not the store's: the store is not read.
       const access = await options.claudeAccess?.();
@@ -193,6 +210,25 @@ export function startHomeQuota(options: {
       }
     }
   };
+  // The rows of the logins measured only by what their sessions push.
+  const pushedOnlyViews = (now: number, only?: string) =>
+    pushedOnlyProviderViews(
+      vault.list().flatMap((account) => {
+        const entry = quotaEntryForPiProvider(account.providerId);
+        if (!entry?.sensed || !account.enabled || !pushedOnly(vault, account)) return [];
+        if (only !== undefined && account.id !== only) return [];
+        return [
+          {
+            accountId: account.id,
+            accountLabel: account.label,
+            quotaId: entry.quotaId,
+            providerLabel: entry.label,
+          },
+        ];
+      }),
+      (accountId) => pushedQuota.windowsFor(accountId),
+      now,
+    );
   // Dev/e2e can point the quota sensor at fixture files instead of live APIs.
   const fixtureDir = options.standIns.quotaFixtureDir;
   const quotaRefresh: QuotaRefresh = fixtureDir
@@ -205,7 +241,7 @@ export function startHomeQuota(options: {
             vault.list().flatMap((account) => {
               if (!account.enabled) return [];
               const entry = quotaEntryForPiProvider(account.providerId);
-              if (!entry?.sensed) return [];
+              if (!entry?.sensed || pushedOnly(vault, account)) return [];
               return [
                 {
                   accountId: account.id,
@@ -313,6 +349,7 @@ export function startHomeQuota(options: {
             (accountId) => pushedQuota.windowsFor(accountId),
             now,
           ),
+          ...pushedOnlyViews(now),
         ],
       });
   const quota = new QuotaService({
@@ -374,15 +411,30 @@ export function startHomeQuota(options: {
         ...(reading.usingOverage !== undefined ? { usingOverage: reading.usingOverage } : {}),
         at: now,
       });
-      const creditsAfter = pushedCredits(pushedQuota.windowsFor(accountId), now)?.credits;
+      const after = pushedQuota.windowsFor(accountId);
+      const creditsAfter = pushedCredits(after, now)?.credits;
+      const creditsMoved =
+        creditsBefore?.state !== creditsAfter?.state ||
+        Boolean(creditsBefore?.inUse) !== Boolean(creditsAfter?.inUse);
+      // A further login has no sensor pass: each reading that moves its
+      // window or what extra usage can do is the only news of it, so its
+      // row alone is published as it arrives, with no pass over the other
+      // accounts' sensors.
+      if (vault.claudeConfigDir(accountId) !== undefined) {
+        const shown = (windows: PushedWindow[]) => {
+          const window = windows.find((entry) => entry.windowId === reading.windowId);
+          return window && [window.status, window.utilization, window.resetsAt].join();
+        };
+        if (shown(before) === shown(after) && !creditsMoved) return;
+        const [row] = pushedOnlyViews(now, accountId);
+        // Before the first snapshot there is nothing to lay the row in.
+        if (row && !quota.publishProvider(row)) void quota.refresh("pushed");
+        return;
+      }
       // A window that just said no, or just stopped saying it, moves the
       // account's headroom now rather than at the next sensor pass; so does
       // a change in what extra usage can do.
-      if (
-        (reading.status === "rejected") !== refusedBefore ||
-        creditsBefore?.state !== creditsAfter?.state ||
-        Boolean(creditsBefore?.inUse) !== Boolean(creditsAfter?.inUse)
-      )
+      if ((reading.status === "rejected") !== refusedBefore || creditsMoved)
         void quota.refresh("pushed");
     },
     noteCutOff: (accountId, cutOff) =>

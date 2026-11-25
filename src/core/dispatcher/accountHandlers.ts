@@ -1,5 +1,7 @@
 import { isCustomApiProvider } from "@shared/customApi";
+import { said, saidLine } from "@shared/i18n/said";
 import type { CoreInvokeChannel, InvokeRequest, InvokeResponse } from "@shared/ipc";
+import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { CoreServices } from "../coreServices";
 import type { CoreEventSink } from "../events";
 
@@ -30,6 +32,17 @@ export const CHANGES_THERE: Partial<Record<string, number>> = {
 };
 
 /**
+ * The feed line when the Claude login the first mate runs on is removed:
+ * the seat's own move is announced only at its next attachment, which may be
+ * after a restart, so the removal says it now.
+ */
+export function firstmateLoginRemovedLine(label: string, another: boolean) {
+  return saidLine(
+    said(another ? "feedFirstMateLoginRemoved" : "feedFirstMateLoginRemovedNoOther", { label }),
+  );
+}
+
+/**
  * An account's own settings and its disconnect, on this Mac or, given a
  * computer that runs work, on that computer's own account (docs/helper.md,
  * "Its own sign-ins"). The core dispatcher validates requests and
@@ -42,6 +55,10 @@ export function accountHandlers(services: CoreServices, emit: CoreEventSink): Ac
       if (deviceId) return services.deviceSignIns.signOut(deviceId, accountId);
       const removed = services.vault.get(accountId);
       const custom = isCustomApiProvider(removed?.providerId ?? "");
+      const seated =
+        removed?.providerId === CLAUDE_PROVIDER_ID &&
+        (services.firstmate.boundAccount() === accountId ||
+          services.settings.getFirstmateAccount() === accountId);
       if (custom) {
         services.vault.customClose(accountId);
         await services.firstmate.disconnectAccount(accountId);
@@ -64,6 +81,16 @@ export function accountHandlers(services: CoreServices, emit: CoreEventSink): Ac
         services.settings.setFirstmateAccount(null);
       }
       services.firstRun.reconcile();
+      if (seated && removed)
+        services.broadcastEvent({
+          type: "firstmate_note",
+          ...firstmateLoginRemovedLine(
+            removed.label,
+            // Only another Claude login the seat can stand on now takes it
+            // over unasked; any other account waits for the captain.
+            services.flagship.deriveForProvider(CLAUDE_PROVIDER_ID) !== undefined,
+          ),
+        });
       return { ok: true as const };
     },
 

@@ -33,7 +33,7 @@ import { ClaudeAuthBackend } from "./claude/claudeAuth";
 import { primeClaudeExecutable } from "./claude/claudeCli";
 import { claudeReportingDeps } from "./claude/claudeCostPolicy";
 import { defaultClaudeConfigDir } from "./claude/claudeQuota";
-import { createClaudeSessionFactory } from "./claude/session";
+import { claudeLoginDirs, createClaudeSessionFactory } from "./claude/session";
 import { AutoSavedResets } from "./codex/autoSavedResets";
 import {
   SavedResets,
@@ -219,7 +219,7 @@ export async function createServices(
   // on the person's own search path once it is known, so the Claude chip
   // and the first health read never wait on it.
   void loginPath.then(() => primeClaudeExecutable());
-  const claudeBackend = new ClaudeAuthBackend({ keychain: host.keychain });
+  const claudeBackend = new ClaudeAuthBackend({ keychain: host.keychain, furtherLogins: true });
   // A sign-in or sign-out first holds the Firstmate's seat off the account
   // it rewrites (W1 S9); late-bound because the agent is built below.
   let holdSeat: ((accountId: string) => Promise<() => void>) | undefined;
@@ -632,7 +632,7 @@ export async function createServices(
     ),
     claude: bounds.factory(
       createClaudeSessionFactory({
-        configDir: defaultClaudeConfigDir(),
+        ...claudeLoginDirs(vault),
         clock: ticker,
         onRateLimit: (accountId, reading) => recordClaudeRateLimit(accountId, reading),
         onServed: (accountId) => vault.noteAccepted(accountId),

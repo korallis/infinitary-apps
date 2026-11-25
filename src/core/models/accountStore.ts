@@ -4,6 +4,8 @@ import { claudeAvailableModels } from "../claude/claudeModels";
 import type { AppPaths } from "../paths";
 import { AccountVault, type AccountVaultOptions } from "../pi/accountVault";
 import type { QuotaHttp } from "../quota/http";
+import { markFurtherLoginsFormat } from "../storage/savedDataCompatibility";
+import { markKeptCopyFurtherLogins } from "../storage/sourceRunCopy";
 import { claudeListReader } from "./clientLists";
 import { codexListReader, grokListReader, railVerdict } from "./piAccountLists";
 import { type CatalogAccount, type ServedModel, ServedModels } from "./servedModels";
@@ -49,7 +51,7 @@ export type AccountStoreOptions = Omit<
 export type AccountStore = { vault: AccountVault; served: ServedModels };
 
 export function createAccountStore(
-  paths: Pick<AppPaths, "accountsDir">,
+  paths: Pick<AppPaths, "accountsDir"> & Partial<Pick<AppPaths, "userData">>,
   options: AccountStoreOptions,
 ): AccountStore {
   const {
@@ -67,8 +69,21 @@ export function createAccountStore(
   // are the shipped catalog. Either way each keeps its name, so the Models
   // board names it before the first allowance read builds the catalog.
   let served: ServedModels | undefined;
+  // A folder that holds a further Claude login is marked so a build from
+  // before them refuses it, and unmarked once the last one is removed; the
+  // copy a run from source keeps is marked with it, so copying that back
+  // never opens the folder to such a build past a login still held
+  // (docs/saved-data-compatibility.md, "Further Claude logins").
+  const { userData } = paths;
+  const furtherLoginsHeld = userData
+    ? (held: boolean) => {
+        markFurtherLoginsFormat(userData, held);
+        markKeptCopyFurtherLogins(userData, held);
+      }
+    : undefined;
   const vault = AccountVault.create(paths, {
     ...vaultOptions,
+    ...(furtherLoginsHeld ? { furtherLoginsHeld } : {}),
     modelsForAccount: ({ accountId, providerId }) => {
       const read = served?.read(accountId);
       if (read)
@@ -100,7 +115,11 @@ export function createAccountStore(
   const resolveAuth = (id: string) => vault.resolveForQuota(id);
   served = new ServedModels({
     readers: {
-      [CLAUDE_PROVIDER_ID]: claudeListReader({ configDir: claudeConfigDir, ...claudeList }),
+      [CLAUDE_PROVIDER_ID]: claudeListReader({
+        configDir: claudeConfigDir,
+        ownConfigDir: (accountId) => vault.claudeConfigDir(accountId),
+        ...claudeList,
+      }),
       "openai-codex": codexListReader({
         resolveAuth,
         http,

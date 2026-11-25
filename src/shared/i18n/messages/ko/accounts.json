@@ -1,10 +1,12 @@
 {
+  "accountsClaudeFurtherLoginNoAnswer": "Claude Code가 응답하지 않아 Infinitary가 로그인을 시작하지 않았어요. 다시 시도하세요.",
+  "accountsClaudeFurtherLoginUnfinished": "Claude에 로그인하지 못했어요. 다시 시도하세요.",
   "accountsClaudeLoginUnreadable": "Infinitary가 {here}의 Claude 로그인을 읽지 못해서 그 위에 새 로그인을 시작하지 않았어요. 다시 시도해 주세요. 계속 이러면 Infinitary를 종료하고 Dock에서 다시 열어 주세요.",
   "accountsClaudeLoginUnreadableReopen": "Infinitary가 {here}의 Claude 로그인을 읽지 못해서 그 위에 새 로그인을 시작하지 않았어요. 다시 시도해 주세요. 계속 이러면 Infinitary를 종료하고 다시 열어 주세요.",
   "accountsConnectAddAnother": "다른 {provider} 계정 추가",
+  "accountsConnectAddClaudeLogin": "다른 Claude 로그인 추가",
   "accountsConnectBrowser": "브라우저로 로그인",
   "accountsConnectCancel": "취소",
-  "accountsConnectClaudeLoginOn": "Claude는 {here}의 로그인을 사용해요",
   "accountsConnectClaudeLoginThere": "Claude는 그곳의 로그인을 사용해요",
   "accountsConnectConnected": "{provider} 연결됨",
   "accountsConnectConnecting": "연결 중...",

@@ -30,21 +30,22 @@ import { allowanceSpentWords, type SeatBinding, type SeatPause, signedOutSentenc
  * Which accounts are eligible is asserted three ways, so no single edit can
  * quietly widen it: the provider's catalog entry must list the firstmate
  * role, its backend must have a seat (`SEAT_BINDINGS`), and the vault
- * binding it produces must be the one that seat stands on - `pi-runtime`
- * for Pi, the machine's `default-login` for Claude (W1, 2026-09-26). A
+ * binding it produces must be one that seat stands on - `pi-runtime` for
+ * Pi; for Claude the machine's `default-login` (W1, 2026-09-26) or a
+ * further login's own folder, `config-dir`. A
  * single vendor cutting the seat off is a designed path, not a reason to
  * refuse it: a typed cut-off pauses the seat and asks (`pause`, and the
  * agent's ladder).
  */
 
 /**
- * The backends that seat the Firstmate, each with the vault binding its
+ * The backends that seat the Firstmate, each with the vault bindings its
  * seat stands on. A backend absent here has no seat factory, so none of its
  * accounts is eligible whatever the catalog says.
  */
-export const SEAT_BINDINGS: Readonly<Record<BackendId, string>> = {
-  pi: "pi-runtime",
-  claude: "default-login",
+export const SEAT_BINDINGS: Readonly<Record<BackendId, readonly string[]>> = {
+  pi: ["pi-runtime"],
+  claude: ["default-login", "config-dir"],
 };
 
 export type FlagshipVaultView = {
@@ -237,7 +238,7 @@ export class Flagship {
     const seat = SEAT_BINDINGS[backendForProvider(account.providerId)];
     if (!seat) return false;
     try {
-      return this.options.vault.binding(accountId).via === seat;
+      return seat.includes(this.options.vault.binding(accountId).via);
     } catch {
       return false;
     }

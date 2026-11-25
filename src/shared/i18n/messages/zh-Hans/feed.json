@@ -66,6 +66,8 @@
   "feedDropped": "已放弃：{sentence}",
   "feedFailed": "失败：{problem}",
   "feedFinished": "已完成",
+  "feedFirstMateLoginRemoved": "你移除了 {label}，也就是你的大副一直在用的 Claude 登录。你的大副下次运行时会改用另一个 Claude 登录。",
+  "feedFirstMateLoginRemovedNoOther": "你移除了 {label}，也就是你的大副一直在用的 Claude 登录。现在没有其他 Claude 登录可以运行你的大副。",
   "feedFirstMateProblem": "大副 · 问题：{problem}",
   "feedFirstMateSaid": "大副：{text}",
   "feedFirstMateSet": "大副 · {text}",

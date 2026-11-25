@@ -55,6 +55,8 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
     private readonly releaseLease: () => void,
     /** The person's own token command, address and gateway headers, read as the session opened. */
     private readonly access?: ClaudeAccessSettings,
+    /** A further login's own Claude Code folder; absent for the default login. */
+    private readonly ownConfigDir?: string,
   ) {
     super(spec.owner);
   }
@@ -107,6 +109,7 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
         stderr: (data) => this.deps.log?.(data.trimEnd()),
         exit,
         ...(this.access ? { access: this.access } : {}),
+        ...(this.ownConfigDir ? { ownConfigDir: this.ownConfigDir } : {}),
       });
       query = (this.deps.query ?? sdkQuery)({ prompt: input, options });
     } catch (caught) {

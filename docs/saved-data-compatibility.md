@@ -6,6 +6,20 @@ Each moves the Firstmate 3000 folder of its flavor, `firstmate-3000` or `firstma
 An older app may open saved work only when it supports the persisted formats.
 Release names alone are not compatibility evidence.
 
+## Further Claude logins
+
+An account record may carry `ownLogin`: a Claude login in its own Claude Code folder inside the account's store (`docs/claude-client.md`, "Further logins").
+A build from before them ignores the mark and would run that account, and work saved on it, on the computer's default login, so the folder is marked revision 2 before the first such record is saved (`markFurtherLoginsFormat`, called by the account vault through `createAccountStore`), and that build refuses the folder with the saved-data refusal.
+The first Claude login marks nothing: a folder that never held a further login stays at revision 1 and opens in an older build as before.
+
+The way back to an older build is to remove every added Claude login in Settings first.
+Removing the last one marks the folder revision 1 again, and the older build opens it; each removal signs that login out in its folder and deletes the folder, so nothing of it is left for the older build to meet.
+Work saved on a removed login moves to another account at its next resume and says so, in this build or an older one, as work saved on any removed account does (`reselectForResume`, `src/core/routing/accountRouter.ts`); a build from before further logins never runs it on the default login without that notice.
+The first mate's seat announces its own move only at its next attachment, which may be after a restart or in an older build, so removing the Claude login the first mate runs on, or the one chosen for it, says so in the feed at that moment: that the first mate will use another Claude login when it next runs, when one can seat it now, without promising that turn, and otherwise only that no other Claude login can run it, since no other account takes the seat unasked (`firstmateLoginRemovedLine`, `src/core/dispatcher/accountHandlers.ts`).
+A start also sets the marker from the account records, so a start that ended between the mark and the record corrects itself; a start that cannot read the records leaves the marker as it is, since unread records may hold a further login.
+The copy a run from source keeps ("A run from source") holds the marker and no account records, so its marker is raised and lowered with the folder's (`markKeptCopyFurtherLogins`, `src/core/storage/sourceRunCopy.ts`): copied back while a further login is held, it still refuses the older build.
+No database migration is involved.
+
 ## Contribution routes
 
 `repos.contribution_json` stores the verified upstream and owned fork identities, the selected destination, and whether a fork-creation request was attempted.
@@ -43,6 +57,7 @@ A build changes how the record is saved when it has a database migration the rec
 A folder with no record yet keeps no copy.
 The copy is made beside its place and moved there whole, so a start that ends partway keeps the older copy and the next start copies again; while a build changes nothing in how the record is saved, no later run from source copies again.
 The run says in its terminal where the copy is and that going back means quitting Infinitary and copying those files back into the folder.
+The copy's marker stays at revision 2 while the folder holds a further Claude login, whose record the copy does not carry ("Further Claude logins").
 A run that cannot keep the copy quits without opening the record.
 A window beside a command's run opens no record of its own and keeps no copy.
 
@@ -51,11 +66,17 @@ A run from source reports the package.json version, which names no release, so i
 
 ## Non-database formats
 
-The closed marker schema is `{ "schemaVersion": 1, "revision": 1 }`.
-Missing means supported legacy state.
+The closed marker schema is `{ "schemaVersion": 1, "revision": <n> }`, where the revision is the newest one whose format the folder holds.
+Missing means supported legacy state, read as revision 1.
+A build reads every revision from 1 to its own `PERSISTED_FORMAT_REVISION` as it is, with no migration between them.
 Invalid, unreadable, extra-key or unknown revision metadata refuses startup rather than guessing.
-After a successful first database initialization, the app records the current boundary atomically.
+After a successful first database initialization, the app records revision 1 atomically; a later revision is marked only when its format is first written ("Further Claude logins" below).
 The marker is never rewritten on a refusal.
+
+| Revision | What the folder may hold | Marked when |
+| --- | --- | --- |
+| 1 | everything before revision 2 | the first database initialization |
+| 2 | an account record that is a further Claude login (`ownLogin`) | before the first such record is saved |
 
 **Before writing any future incompatible non-database format**, increase `PERSISTED_FORMAT_REVISION` in `savedDataCompatibility.ts`, define exactly which older revisions are supported/migrated, and extend compatibility tests.
 Compatible additions do not require an increase.

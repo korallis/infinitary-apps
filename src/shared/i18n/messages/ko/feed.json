@@ -66,6 +66,8 @@
   "feedDropped": "중단함: {sentence}",
   "feedFailed": "실패: {problem}",
   "feedFinished": "끝남",
+  "feedFirstMateLoginRemoved": "일등항해사가 쓰던 Claude 로그인({label})을 제거했어요. 일등항해사는 다음에 실행될 때 다른 Claude 로그인을 사용해요.",
+  "feedFirstMateLoginRemovedNoOther": "일등항해사가 쓰던 Claude 로그인({label})을 제거했어요. 지금은 일등항해사를 실행할 수 있는 다른 Claude 로그인이 없어요.",
   "feedFirstMateProblem": "일등항해사 · 문제: {problem}",
   "feedFirstMateSaid": "일등항해사: {text}",
   "feedFirstMateSet": "일등항해사 · {text}",

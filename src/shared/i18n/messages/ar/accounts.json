@@ -1,10 +1,12 @@
 {
+  "accountsClaudeFurtherLoginNoAnswer": "لم يُجب Claude Code، لذلك لم يبدأ Infinitary تسجيل الدخول. حاول مجددًا.",
+  "accountsClaudeFurtherLoginUnfinished": "تعذّر على Claude تسجيل الدخول. حاول مجددًا.",
   "accountsClaudeLoginUnreadable": "تعذّر على Infinitary قراءة تسجيل دخول Claude على {here}، لذا لم يبدأ تسجيل دخول جديدًا فوقه. حاول مرة أخرى، وإذا تكرر ذلك، فأغلق Infinitary وافتحه من شريط Dock.",
   "accountsClaudeLoginUnreadableReopen": "تعذّر على Infinitary قراءة تسجيل دخول Claude على {here}، لذا لم يبدأ تسجيل دخول جديدًا فوقه. حاول مرة أخرى، وإذا تكرر ذلك، فأغلق Infinitary وافتحه من جديد.",
   "accountsConnectAddAnother": "إضافة حساب {provider} آخر",
+  "accountsConnectAddClaudeLogin": "إضافة تسجيل دخول آخر إلى Claude",
   "accountsConnectBrowser": "تسجيل الدخول عبر متصفحك",
   "accountsConnectCancel": "إلغاء",
-  "accountsConnectClaudeLoginOn": "يستخدم Claude تسجيل الدخول على {here}",
   "accountsConnectClaudeLoginThere": "يستخدم Claude تسجيل الدخول هناك",
   "accountsConnectConnected": "{provider} متصل",
   "accountsConnectConnecting": "جارٍ الربط...",

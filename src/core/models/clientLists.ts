@@ -18,22 +18,28 @@ import type { CatalogReader } from "./servedModels";
  * reports a failure as a failure, never as an empty catalog.
  *
  * Claude: the installed client's own account-aware catalog
- * (`supportedModels()`), read under the store lease as a one-shot that
+ * (`supportedModels()`), asked as the account's own login - a further
+ * login in its folder, without the person's gateway settings, which are the
+ * default login's - and read under that login's store lease as a one-shot that
  * DEFERS while a crewmate session holds the store - the same courtesy the
  * idle rejection request pays (claudeAuth.ts). A deferred read keeps what is in hand
  * and is retried on the next pass.
  */
 export function claudeListReader(options: {
   configDir: () => string;
-  read?: () => Promise<ClaudeModelRow[]>;
+  /** A further login's own Claude Code folder, by account; nothing for the default login. */
+  ownConfigDir?: (accountId: string) => string | undefined;
+  read?: (ownConfigDir?: string) => Promise<ClaudeModelRow[]>;
   clientVersion?: () => Promise<string | undefined>;
 }): CatalogReader {
   const read =
     options.read ??
-    (async () =>
+    (async (ownConfigDir?: string) =>
       readClaudeModelCatalog({
         utilityQos: true,
-        settings: accessFlagSettings(await readClaudeAccess()),
+        ...(ownConfigDir
+          ? { ownConfigDir }
+          : { settings: accessFlagSettings(await readClaudeAccess()) }),
       }));
   const version =
     options.clientVersion ??
@@ -41,14 +47,15 @@ export function claudeListReader(options: {
       const executable = resolveClaudeExecutable();
       return executable ? claudeClientVersion(executable) : undefined;
     });
-  return async () => {
+  return async (account) => {
+    const own = options.ownConfigDir?.(account.accountId);
     const claimed = await tryExclusiveStoreTask(
-      options.configDir(),
+      own ?? options.configDir(),
       async (): Promise<
         { ok: true; rows: ClaudeModelRow[]; version?: string } | { ok: false; error: string }
       > => {
         try {
-          return { ok: true, rows: await read(), version: await version() };
+          return { ok: true, rows: await read(own), version: await version() };
         } catch (caught) {
           return { ok: false, error: caught instanceof Error ? caught.message : String(caught) };
         }

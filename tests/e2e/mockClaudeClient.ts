@@ -25,7 +25,9 @@ import { scratchDir } from "../helpers/scratchDirs";
  * is boxed in: its config dir and temp dir live in the run's throwaway
  * HOME, it holds a dummy key and talks only to the e2e mock provider, and
  * the one Keychain tool on its path is a shim that records the lookup and
- * answers "not found". A set CLAUDE_CONFIG_DIR already suffixes the
+ * answers "not found". A session the app runs in a further login's own
+ * folder names it in CLAUDE_CONFIG_DIR, and the box keeps that folder; any
+ * other session gets the throwaway HOME's. A set CLAUDE_CONFIG_DIR already suffixes the
  * Keychain service name (docs/claude-client.md), so the machine's
  * login is out of reach twice over; the shim's record is how a spec proves
  * it. `--version`, `auth *` and the model-list handshake stay stubbed.
@@ -228,7 +230,7 @@ if (turns !== null && runsTurns) {
     process.stderr.write("no HOME\\n");
     process.exit(2);
   }
-  const configDir = join(home, ".claude");
+  const configDir = process.env.CLAUDE_CONFIG_DIR || join(home, ".claude");
   const tmp = join(home, ".claude-client-tmp");
   mkdirSync(configDir, { recursive: true, mode: 0o700 });
   mkdirSync(tmp, { recursive: true });
@@ -380,7 +382,7 @@ for arg in "$@"; do
   esac
 done
 if [ "$input" = 1 ] && [ "$turn" = 1 ]; then
-  export CLAUDE_CONFIG_DIR="$HOME/.claude"
+  export CLAUDE_CONFIG_DIR="\${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
   export TMPDIR="$HOME/.claude-client-tmp"
   mkdir -p "$CLAUDE_CONFIG_DIR" "$TMPDIR" || exit 2
   chmod 700 "$CLAUDE_CONFIG_DIR" || exit 2

@@ -389,15 +389,26 @@ export const INFINITARY_ENTRYPOINT = "infinitary";
  * and nothing ambient, on the host search path (`hostEnv.ts`) so every
  * shell the client runs for a crewmate sees what the person installed.
  * Setting the variable even to ~/.claude would suffix the service name and
- * miss the everyday login (docs/claude-client.md).
+ * miss the everyday login (docs/claude-client.md). A further login names its
+ * own folder in `ownConfigDir`, the one case that sets the variable; gateway
+ * headers this process inherited are the person's default login's, so that
+ * run loses them.
  */
-export function claudeEnvFor(base: NodeJS.ProcessEnv = hostEnv()): NodeJS.ProcessEnv {
+export function claudeEnvFor(
+  base: NodeJS.ProcessEnv = hostEnv(),
+  ownConfigDir?: string,
+): NodeJS.ProcessEnv {
   const env = withoutAwsEnvironment(base);
   // Identify our own app, never an inherited SDK or first-party client.
   // Claude Code issue 97074's workaround requires an explicit overwrite.
   env.CLAUDE_CODE_ENTRYPOINT = INFINITARY_ENTRYPOINT;
-  // CD-1=B: the vendor's own default login, never a per-account store.
+  // CD-1=B: the vendor's own default login, unless this run is a further
+  // login's, whose folder the caller names; never an inherited one.
   delete env.CLAUDE_CONFIG_DIR;
+  if (ownConfigDir) {
+    env.CLAUDE_CONFIG_DIR = ownConfigDir;
+    delete env.ANTHROPIC_CUSTOM_HEADERS;
+  }
   // Ambient credentials would silently serve a key the user never connected
   // here. The machine login, and a token command an organization or the
   // person set up for Claude Code with the address it is sent to
@@ -446,7 +457,8 @@ export const NO_BROWSER = "/usr/bin/true";
  * so no PTY is needed on the happy path.
  */
 export const runClaude: RunClaude = (args, configDir, options = {}) => {
-  // Lease identity for callers; production spawn leaves CLAUDE_CONFIG_DIR unset.
+  // Lease identity for callers; the spawn leaves CLAUDE_CONFIG_DIR unset
+  // unless the caller names a further login's folder in `options.env`.
   void configDir;
   const executable = resolveClaudeExecutable();
   if (!executable) {
@@ -455,7 +467,10 @@ export const runClaude: RunClaude = (args, configDir, options = {}) => {
   return new Promise<ClaudeRunResult>((resolve, reject) => {
     const child = spawn(executable, args, {
       stdio: ["pipe", "pipe", "pipe"],
-      env: withoutAwsEnvironment({ ...claudeEnvFor(), ...options.env }),
+      env: withoutAwsEnvironment({
+        ...claudeEnvFor(undefined, options.env?.CLAUDE_CONFIG_DIR),
+        ...options.env,
+      }),
     });
     let stdout = "";
     let stderr = "";

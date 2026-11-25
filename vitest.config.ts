@@ -51,6 +51,9 @@ const isolatedUnit = [
   "src/core/axi/cli.test.ts",
   "src/core/axi/browserCommands.test.ts",
   "src/core/accounts/claudeAccounts.test.ts",
+  // It opens sessions through the Claude session factory, and importing the
+  // Claude SDK writes a process environment variable.
+  "src/core/accounts/claudeFurtherLogins.test.ts",
   // Each reads settings through the Claude SDK's own reader, and importing
   // the SDK writes a process environment variable.
   "src/core/claude/claudeAccess.test.ts",

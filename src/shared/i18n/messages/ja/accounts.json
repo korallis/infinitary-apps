@@ -1,10 +1,12 @@
 {
+  "accountsClaudeFurtherLoginNoAnswer": "Claude Code から応答がなかったため、Infinitary はサインインを開始しませんでした。もう一度お試しください。",
+  "accountsClaudeFurtherLoginUnfinished": "Claude にサインインできませんでした。もう一度お試しください。",
   "accountsClaudeLoginUnreadable": "Infinitary は {here} の Claude のログインを読み取れなかったため、その上に新しいサインインを始めませんでした。もう一度お試しください。繰り返し起きる場合は、Infinitary を終了して Dock から開いてください。",
   "accountsClaudeLoginUnreadableReopen": "Infinitary は {here} の Claude のログインを読み取れなかったため、その上に新しいサインインを始めませんでした。もう一度お試しください。繰り返し起きる場合は、Infinitary を終了してもう一度開いてください。",
   "accountsConnectAddAnother": "{provider} アカウントをもう1つ追加",
+  "accountsConnectAddClaudeLogin": "Claude のログインをもう1つ追加",
   "accountsConnectBrowser": "ブラウザでサインイン",
   "accountsConnectCancel": "キャンセル",
-  "accountsConnectClaudeLoginOn": "Claude は {here} のログインを使います",
   "accountsConnectClaudeLoginThere": "Claude はそちらのログインを使います",
   "accountsConnectConnected": "{provider} に接続済み",
   "accountsConnectConnecting": "接続中...",
