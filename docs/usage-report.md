@@ -38,7 +38,7 @@ An edit at the same address keeps a header whose value is left blank; a new addr
 A save that changes the address or the format drops what waits, which was built for the old one; an edit of the headers alone keeps it, and it leaves with the new headers.
 A computer without Secrets saves a connection only without headers.
 
-The connection batches for ten minutes rather than five seconds, merging the reporter's batches into one request per signal, because every send with headers is one brokered use, and each use writes a line to Secrets' history, which is kept until the person deletes it; at quit the app waits for the last send before it closes, so nothing waiting is lost.
+The connection batches for ten minutes rather than five seconds, merging the reporter's batches into one request per signal, because every send with headers is one brokered use, and each use writes a line to Secrets' history, which is kept until the person deletes it; at quit the app waits for the last sends, the reporter's and then the connection's, for at most five seconds in all (`QUIT_SEND_MS`), so a collector that answers gets what waited and one that never answers holds quit no longer.
 Its broker (`usage-report`) declares `signIn`, binds the saved address and each signal's body by digest, applies the headers inside Secrets and answers each signal's HTTP status; a body never reaches the journal.
 A connection without headers sends through the same guarded fetch with no use.
 A connection in Claude Code's format also carries Claude's own work, from the ledger rather than Claude's records (`claudeFromLedger`), since nothing passes Claude's records on to it; those rows have no line or commit counts.

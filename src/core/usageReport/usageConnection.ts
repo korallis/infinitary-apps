@@ -375,8 +375,8 @@ async function postAll(
 }
 
 /**
- * One minute's batch to the saved address, its kept headers applied inside
- * Secrets. It binds the saved address and each signal's body; a body never
+ * A batch to the saved address - what waited up to ten minutes, or the
+ * last send at quit - its kept headers applied inside Secrets. It binds the saved address and each signal's body; a body never
  * reaches the journal, only its digest.
  */
 function reportBroker(
@@ -470,13 +470,31 @@ export function usageReportRoutes(userData: string) {
       return keys;
     },
     reads,
-    stop: async (): Promise<void> => {
-      await connection?.stop();
-    },
+    /** The last sends as the app quits: the report's own flush, then what the connection holds. */
+    stop: (flushed: () => Promise<void>): Promise<void> =>
+      withinQuit(flushed().then(() => connection?.stop())),
   };
 }
 
-/** The saved connection; a file there that does not parse reads as none and `unreadable`. */
+/**
+ * Each post has its own timeout, and the report's flush and the
+ * connection's signals go one after another, so a collector that never
+ * answers could hold quit for half a minute; quit waits at most this long
+ * for all of it, and a send still running then is lost.
+ */
+export const QUIT_SEND_MS = 5_000;
+
+export function withinQuit(sends: Promise<unknown>): Promise<void> {
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    sends.then(() => undefined),
+    new Promise<void>((done) => {
+      deadline = setTimeout(done, QUIT_SEND_MS);
+      deadline.unref?.();
+    }),
+  ]).finally(() => clearTimeout(deadline));
+}
+
 /**
  * The person's Claude Code sign-in email as the report last read it, read
  * again at most once a minute in the background, so a destination built
@@ -507,6 +525,7 @@ function claudeEmail(): { current(): string | undefined } {
 
 const EMAIL_REREAD_MS = 60_000;
 
+/** The saved connection; a file there that does not parse reads as none and `unreadable`. */
 function read(file: string): { saved: SavedConnection | null; unreadable: boolean } {
   let text: string;
   try {

@@ -143,7 +143,7 @@ export type CoreServices = {
   slots: ModelSlots;
   /** The runtime catalog reads (docs/model-lists.md); never awaited on a user path. */
   servedModels: ServedModels;
-  /** Settles once the usage report's last send has ended, so its Secrets use ends recorded. */
+  /** Settles once the usage report's last sends have ended, or after `QUIT_SEND_MS` when they have not. */
   stopLivenessSweep: () => Promise<void>;
   /**
    * Stops the presentation pass with the core: a write that lands after the

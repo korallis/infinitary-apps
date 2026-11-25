@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { integrationKeys } from "../../../tests/helpers/integrationKeys";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { openInMemoryDatabase } from "../storage/db";
@@ -11,7 +11,13 @@ import { homeUsage } from "../storage/homeUsage";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import type { CompanyHosts } from "./companyDestination";
-import { USAGE_CONNECTION_FILE, type UsageConnection, usageConnection } from "./usageConnection";
+import {
+  QUIT_SEND_MS,
+  USAGE_CONNECTION_FILE,
+  type UsageConnection,
+  usageConnection,
+  withinQuit,
+} from "./usageConnection";
 
 /**
  * INF-6587's approved plan, piece 3: the reporting connection a person adds
@@ -406,5 +412,21 @@ describe("usageConnection", () => {
     expect(connection.view()).toBeNull();
     await damaged.keys.view();
     expect((await damaged.entries()).map((entry) => entry.ref)).toContain(kept);
+  });
+
+  it("lets quit go once the deadline passes while a send never answers", async () => {
+    vi.useFakeTimers();
+    try {
+      let gone = false;
+      void withinQuit(new Promise(() => undefined)).then(() => {
+        gone = true;
+      });
+      await vi.advanceTimersByTimeAsync(QUIT_SEND_MS - 1);
+      expect(gone).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(gone).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
