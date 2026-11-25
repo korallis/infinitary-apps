@@ -222,6 +222,9 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
         const before = saved;
         write(deps.file, next);
         saved = next;
+        // What waits was written in the old format for the old address; sent now it would
+        // reach the new place in the new shape, so it is dropped.
+        if (before?.endpoint !== next.endpoint || before?.format !== next.format) dropWaiting();
         await forgetUnnamed(before, next);
         return { saved: true, view: viewOf(saved) };
       } catch (caught) {
@@ -233,15 +236,19 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
     async remove() {
       const before = saved;
       // What waits was meant for the connection being removed: it is not sent.
-      if (timer) clearTimeout(timer);
-      timer = undefined;
-      waiting = {};
+      dropWaiting();
       rmSync(deps.file, { force: true });
       saved = null;
       await forgetUnnamed(before, null);
       return null;
     },
   };
+
+  function dropWaiting() {
+    if (timer) clearTimeout(timer);
+    timer = undefined;
+    waiting = {};
+  }
 
   async function forgetUnnamed(before: SavedConnection | null, after: SavedConnection | null) {
     const named = new Set(after?.headers.map((header) => header.ref));

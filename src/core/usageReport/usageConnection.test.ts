@@ -242,6 +242,34 @@ describe("usageConnection", () => {
     expect(moved).toEqual({ saved: false, problem: "header-value" });
   });
 
+  // docs/usage-report.md: nothing is ever sent in two formats, and a batch goes only where it was meant.
+  it("drops what waits when a save changes the format, and keeps it for an edit of the headers alone", async () => {
+    const { url, received } = await collector();
+    const { connection, usage } = setup();
+    await save(connection, url);
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+    await connection.save({
+      endpoint: url,
+      format: "standard",
+      headers: [{ name: "Authorization", value: "Bearer glc_invented-rotated-token" }],
+    });
+    await connection.stop();
+    expect(received.map((entry) => entry.path).sort()).toEqual(["/v1/metrics", "/v1/traces"]);
+    expect(received[0]?.headers.authorization).toBe("Bearer glc_invented-rotated-token");
+
+    received.length = 0;
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+    await connection.save({
+      endpoint: url,
+      format: "claude-code",
+      headers: [{ name: "Authorization" }],
+    });
+    await connection.stop();
+    expect(received).toEqual([]);
+  });
+
   it("forgets the kept headers and what waits when removed", async () => {
     const { url, received } = await collector();
     const { secrets, file, connection, usage } = setup();
