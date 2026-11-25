@@ -559,7 +559,11 @@ describe("the company's Claude Code setup as a destination", () => {
       metrics: "https://collector.example.com:4318/v1/metrics",
     });
     expect(destination?.certificates).toEqual({
-      logs: { ca: "/etc/otel/logs-ca.pem", cert: "/etc/otel/client.pem", key: "/etc/otel/client.key" },
+      logs: {
+        ca: "/etc/otel/logs-ca.pem",
+        cert: "/etc/otel/client.pem",
+        key: "/etc/otel/client.key",
+      },
       metrics: { cert: "/etc/otel/client.pem", key: "/etc/otel/client.key" },
     });
     expect(await source.reporting()).toEqual({ host: "collector.example.com:4318" });
