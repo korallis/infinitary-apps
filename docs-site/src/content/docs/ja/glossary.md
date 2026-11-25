@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: b246b808ab8643b5
 title: 用語集
 description: Infinitary が独自の意味で使う言葉を、それぞれ 1〜2 文で説明し、詳しく解説するページへのリンクを添えています。
 ---
@@ -68,7 +68,7 @@ git で管理されているプロジェクト内の、独立した変更の流�
 ### コマンド検索 {#command-search}
 
 Infinitary のあらゆるコマンドを見つけ、そのキーを表示する検索欄です。
-Mac では ⌘K、Linux では Ctrl+K を押します。
+Mac では ⌘K、Linux と Windows では Ctrl+K を押します。
 [キーボード](/ja/keyboard/#command-search)を参照してください。
 
 ### 作業を実行するコンピューター {#computer-that-runs-work}
@@ -166,7 +166,7 @@ GitHub、Gmail、MCP サーバーなど、プロジェクトの外にあるも�
 ### メッセージ欄 {#message-box}
 
 ウインドウの下部にある欄で、ここに入力して一等航海士に伝えるか、入力の代わりに話しかけます。
-どこからでも ⌘L（Linux では Ctrl+L）を押すと移動できます。
+どこからでも ⌘L（Linux と Windows では Ctrl+L）を押すと移動できます。
 [一等航海士](/ja/the-first-mate/#talking-to-your-first-mate)を参照してください。
 
 ## N {#n}

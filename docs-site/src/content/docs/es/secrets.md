@@ -1,5 +1,5 @@
 ---
-source: 0cf7ba43b1059baf
+source: a3a69a749c864ad8
 title: Secretos
 description: Guarda las contraseñas y claves que necesita tu tripulación, permite cada uso en una tarjeta y mira qué las usó.
 ---
@@ -19,7 +19,7 @@ Abre **Configuración** y luego **Secretos**, o busca **Abrir Secretos** en la b
 **Buscar secretos** encuentra uno por su nombre, su lugar o la tarea que lo usó por última vez.
 
 En una Mac, la línea debajo de la lista dice «Guardados en esta computadora. Tu tripulación los usa pero nunca los ve».
-En Linux, dice que tu tripulación solo los usa con tu aprobación, pero que cualquier programa que ejecutes puede alcanzarlos mientras el almacén de secretos de tu sistema esté desbloqueado.
+En Linux y Windows, dice que tu tripulación solo los usa con tu aprobación, pero que cualquier programa que ejecutes puede alcanzarlos mientras el almacén de secretos de tu sistema esté desbloqueado.
 
 Los secretos se quedan en la computadora donde vive tu primer oficial.
 Una computadora que controla a tu primer oficial desde otro lugar no tiene una sección Secretos propia.
@@ -67,7 +67,7 @@ Luego elige:
   Cualquier diferencia vuelve a preguntar.
 - **No permitir** lo rechaza, y la próxima ejecución vuelve a preguntar.
 
-Cada permiso te pide confirmar primero: en una Mac con Touch ID o tu contraseña, y en Linux con tu contraseña.
+Cada permiso te pide confirmar primero: en una Mac con Touch ID o tu contraseña, en Linux con tu contraseña, y en Windows con Windows Hello o tu contraseña de Windows.
 Lo que recibe un secreto puede guardarlo.
 Permitir nunca aprueba una acción aparte, como desplegar o enviar algo.
 El tripulante solo se entera de si la ejecución terminó, no de lo que imprimió.

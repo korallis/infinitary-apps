@@ -63,6 +63,14 @@ Homebrew quits Infinitary while it replaces it, so open Infinitary again when it
 If installing cannot finish, nothing changes and your crew's work carries on.
 The notice then shows a command that installs the same version by hand.
 
+## Windows
+
+1. Press **Update and restart**.
+2. Infinitary downloads the new installer, checks its checksum and saves your crew's work.
+3. Infinitary closes, the installer replaces it, and Infinitary opens again on the new version.
+
+If installing cannot finish, nothing changes and your crew's work carries on.
+
 ## Your other computers and your phone
 
 A computer you added updates from the computer where your first mate lives.
@@ -84,8 +92,9 @@ If this computer runs work for another, press **Leave** in Settings → **Device
   Never add `--zap`: it deletes your saved work.
 - **Linux**: remove the package with the software installer or package manager you installed it with.
   For an AppImage, delete the file.
+- **Windows**: in Windows Settings → **Apps** → **Installed apps**, choose **Uninstall** in Infinitary's menu.
 
-Your saved work stays in `~/Library/Application Support/infinitary` on a Mac, and in `~/.config/infinitary` on Linux.
+Your saved work stays in `~/Library/Application Support/infinitary` on a Mac, in `~/.config/infinitary` on Linux, and in `%APPDATA%\infinitary` on Windows.
 
 ### What deletes your saved work
 

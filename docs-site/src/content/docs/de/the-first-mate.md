@@ -1,5 +1,5 @@
 ---
-source: c1b9ffbe11bf0317
+source: 5f2ef647a1b8e42a
 title: Der erste Offizier
 description: Wer dein erster Offizier ist, was er tut und was nicht, wie du mit ihm sprichst und wie du das Modell wählst, mit dem er antwortet.
 ---
@@ -31,7 +31,7 @@ Klick auf die Antwort, um sie ganz zu lesen.
 Ein paar Dinge helfen:
 
 - **Von überall ins Nachrichtenfeld springen.**
-  Drück ⌘L (Ctrl+L unter Linux).
+  Drück ⌘L (Ctrl+L unter Linux und Windows).
 - **Deine letzte Nachricht zurückholen.**
   Drück ↑ in einem leeren Nachrichtenfeld.
 - **Viel Text einfügen.**
@@ -47,7 +47,7 @@ Bei anderen Dateiarten, etwa einem PDF, fügt das Feld den Speicherort der Datei
 
 Drück oder halt die Diktiertaste, um zu sprechen.
 Der Hinweis im Nachrichtenfeld nennt sie: „tippen oder rechte ⌥ drücken/halten zum Sprechen“.
-Unter Linux ist die Taste die rechte Ctrl-Taste.
+Unter Linux und Windows ist die Taste die rechte Ctrl-Taste.
 Was du sagst, wird auf deinem Computer in Text umgewandelt, und du kannst es vor dem Senden bearbeiten.
 Um die Taste zu ändern oder das Diktat auszuschalten, nutz **Diktat** unter [Einstellungen → Allgemein](/de/settings/#general).
 

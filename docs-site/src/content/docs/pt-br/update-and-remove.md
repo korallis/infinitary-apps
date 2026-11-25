@@ -1,5 +1,5 @@
 ---
-source: 81c1b11c48b639fa
+source: 8949d6275dea6548
 title: Atualizar e remover o Infinitary
 description: Como cada tipo de instalação recebe uma nova versão estável e como remover o Infinitary mantendo seu trabalho salvo.
 ---
@@ -64,6 +64,14 @@ O Homebrew fecha o Infinitary enquanto o substitui, então abra o Infinitary de 
 Se a instalação não puder terminar, nada muda e o trabalho da sua tripulação continua.
 O aviso então mostra um comando que instala a mesma versão manualmente.
 
+## Windows {#windows}
+
+1. Aperte **Atualizar e reiniciar**.
+2. O Infinitary baixa o novo instalador, verifica o checksum dele e salva o trabalho da sua tripulação.
+3. O Infinitary fecha, o instalador o substitui e o Infinitary abre de novo na nova versão.
+
+Se a instalação não puder terminar, nada muda e o trabalho da sua tripulação continua.
+
 ## Seus outros computadores e seu celular {#your-other-computers-and-your-phone}
 
 Um computador que você adicionou é atualizado a partir do computador onde fica o seu imediato.
@@ -85,8 +93,9 @@ Se este computador roda trabalho para outro, aperte **Sair** em Ajustes → **Di
   Nunca acrescente `--zap`: isso exclui seu trabalho salvo.
 - **Linux**: remova o pacote com o instalador de programas ou o gerenciador de pacotes que você usou para instalá-lo.
   Para um AppImage, exclua o arquivo.
+- **Windows**: em Configurações do Windows → **Aplicativos** → **Aplicativos instalados**, escolha **Desinstalar** no menu do Infinitary.
 
-Seu trabalho salvo fica em `~/Library/Application Support/infinitary` no Mac e em `~/.config/infinitary` no Linux.
+Seu trabalho salvo fica em `~/Library/Application Support/infinitary` no Mac, em `~/.config/infinitary` no Linux e em `%APPDATA%\infinitary` no Windows.
 
 ### O que exclui seu trabalho salvo {#what-deletes-your-saved-work}
 

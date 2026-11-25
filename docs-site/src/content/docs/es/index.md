@@ -1,11 +1,11 @@
 ---
-source: 309b0f7cf925f1d5
+source: 29243d0d86288aca
 title: Qué es Infinitary
 description: Infinitary es tu propio estudio de IA, una app de escritorio en la que un primer oficial y una tripulación de tripulantes de IA hacen el trabajo en tu propia computadora.
 ---
 
 Infinitary es tu propio estudio de IA.
-Es una app de escritorio para macOS y Linux.
+Es una app de escritorio para macOS, Linux y Windows.
 Hablas con un primer oficial, y una tripulación de tripulantes de IA hace el trabajo.
 
 ## Cómo avanza una tarea {#how-a-task-goes}

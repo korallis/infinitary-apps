@@ -8,7 +8,7 @@ Its tasks, cards and conversation stay there.
 From any computer you add, you can control your first mate, and any computer you add can run a project's work.
 
 You find all of this in Settings → **Devices**, under **Your devices**.
-Open Settings with ⌘, (Ctrl+, on Linux).
+Open Settings with ⌘, (Ctrl+, on Linux and Windows).
 
 ## The computer where your first mate lives
 
@@ -145,7 +145,7 @@ If a newer copy is in reach, this computer brings it in first.
 
 1. Press **Take over**.
 2. Press **Take over** again to confirm, or **Stay** to keep things as they are.
-3. On a Mac, confirm with Touch ID or your password.
+3. On a Mac, confirm with Touch ID or your password; on a Windows PC, with Windows Hello or your Windows password.
 
 Your first mate then starts on this computer, which becomes the computer where your first mate lives.
 Your other computers and your phone find it there by themselves, with no new link.

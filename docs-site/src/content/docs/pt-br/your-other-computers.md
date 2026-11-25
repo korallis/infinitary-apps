@@ -1,5 +1,5 @@
 ---
-source: bed187b080af2f4a
+source: 3e0fd8cde41ac0cf
 title: Seus outros computadores
 description: Adicione seus outros computadores para controlar seu imediato de qualquer um deles, deixar que eles rodem o trabalho dos seus projetos e manter uma cópia que possa assumir.
 ---
@@ -9,7 +9,7 @@ As tarefas, os cartões e a conversa dele ficam lá.
 De qualquer computador que você adicionar, você pode controlar seu imediato, e qualquer computador que você adicionar pode rodar o trabalho de um projeto.
 
 Você encontra tudo isso em Ajustes → **Dispositivos**, em **Seus dispositivos**.
-Abra os Ajustes com ⌘, (Ctrl+, no Linux).
+Abra os Ajustes com ⌘, (Ctrl+, no Linux e no Windows).
 
 ## O computador onde seu imediato mora {#the-computer-where-your-first-mate-lives}
 
@@ -146,7 +146,7 @@ Se uma cópia mais recente estiver ao alcance, este computador a traz primeiro.
 
 1. Pressione **Assumir**.
 2. Pressione **Assumir** de novo para confirmar, ou **Ficar** para deixar tudo como está.
-3. No Mac, confirme com Touch ID ou sua senha.
+3. No Mac, confirme com Touch ID ou sua senha; em um PC com Windows, com o Windows Hello ou sua senha do Windows.
 
 Seu imediato então começa neste computador, que passa a ser o computador onde seu imediato mora.
 Seus outros computadores e seu celular o encontram lá sozinhos, sem um novo link.

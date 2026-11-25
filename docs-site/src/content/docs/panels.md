@@ -54,7 +54,7 @@ Pick one there to bring it back to the rail.
 
 - Press F6 to move to the next part of the window, a panel included.
   Shift+F6 moves back.
-- Press ⌘, (Ctrl+, on Linux) to open **Settings**.
+- Press ⌘, (Ctrl+, on Linux and Windows) to open **Settings**.
 
 Some panels add commands of their own, such as **Find a task** and **Open Knowledge**.
 You find them in command search and can give them a key in **Settings**, **Keyboard**.

@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: b246b808ab8643b5
 title: 詞彙表
 description: Infinitary 賦予特定意思的詞語，每一個用一兩句話說明，並連結到解釋它的頁面。
 ---
@@ -68,7 +68,7 @@ description: Infinitary 賦予特定意思的詞語，每一個用一兩句話�
 ### 指令搜尋（Command search） {#command-search}
 
 一個能找到 Infinitary 裡任何指令並顯示它的按鍵的搜尋框。
-在 Mac 上按 ⌘K，在 Linux 上按 Ctrl+K。
+在 Mac 上按 ⌘K，在 Linux 和 Windows 上按 Ctrl+K。
 請看 [鍵盤](/zh-hant/keyboard/#command-search)。
 
 ### 執行工作的電腦（Computer that runs work） {#computer-that-runs-work}
@@ -166,7 +166,7 @@ description: Infinitary 賦予特定意思的詞語，每一個用一兩句話�
 ### 訊息框（Message box） {#message-box}
 
 視窗底部的方塊，你在這裡打字給大副，或用說的代替打字。
-在任何地方按 ⌘L（在 Linux 上是 Ctrl+L）就能移到它。
+在任何地方按 ⌘L（在 Linux 和 Windows 上是 Ctrl+L）就能移到它。
 請看 [大副](/zh-hant/the-first-mate/#talking-to-your-first-mate)。
 
 ## N {#n}

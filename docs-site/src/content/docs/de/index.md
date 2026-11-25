@@ -1,11 +1,11 @@
 ---
-source: 309b0f7cf925f1d5
+source: 29243d0d86288aca
 title: Was Infinitary ist
 description: Infinitary ist dein eigenes KI-Studio, eine Desktop-App, in der ein erster Offizier und eine Crew aus KI-Crewmitgliedern die Arbeit auf deinem eigenen Computer erledigen.
 ---
 
 Infinitary ist dein eigenes KI-Studio.
-Es ist eine Desktop-App für macOS und Linux.
+Es ist eine Desktop-App für macOS, Linux und Windows.
 Du sprichst mit einem ersten Offizier, und eine Crew aus KI-Crewmitgliedern erledigt die Arbeit.
 
 ## So läuft eine Aufgabe {#how-a-task-goes}

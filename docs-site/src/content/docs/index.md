@@ -4,7 +4,7 @@ description: Infinitary is your own AI studio, a desktop app where one first mat
 ---
 
 Infinitary is your own AI studio.
-It is a desktop app for macOS and Linux.
+It is a desktop app for macOS, Linux and Windows.
 You talk to one first mate, and a crew of AI crewmates does the work.
 
 ## How a task goes

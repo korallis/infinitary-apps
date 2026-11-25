@@ -1,11 +1,11 @@
 ---
-source: 309b0f7cf925f1d5
+source: 29243d0d86288aca
 title: O que é o Infinitary
 description: O Infinitary é o seu próprio estúdio de IA, um app para computador em que um imediato e uma tripulação de tripulantes de IA fazem o trabalho no seu próprio computador.
 ---
 
 O Infinitary é o seu próprio estúdio de IA.
-É um app para computador, para macOS e Linux.
+É um app para computador, para macOS, Linux e Windows.
 Você conversa com um imediato, e uma tripulação de tripulantes de IA faz o trabalho.
 
 ## Como uma tarefa acontece {#how-a-task-goes}

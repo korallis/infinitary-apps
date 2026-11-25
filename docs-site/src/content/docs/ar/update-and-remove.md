@@ -1,5 +1,5 @@
 ---
-source: 81c1b11c48b639fa
+source: 8949d6275dea6548
 title: تحديث Infinitary وإزالته
 description: كيف يحصل كل نوع من التثبيت على نسخة مستقرة جديدة، وكيف تزيل Infinitary مع الإبقاء على عملك المحفوظ.
 ---
@@ -64,6 +64,14 @@ brew update && brew upgrade --cask infinitary-labs/tap/infinitary
 إذا تعذّر إكمال التثبيت، لا يتغير شيء ويستمر عمل طاقمك.
 يعرض الإشعار حينها أمرًا يثبّت النسخة نفسها يدويًا.
 
+## Windows {#windows}
+
+1. اضغط **التحديث وإعادة التشغيل**.
+2. يُنزّل Infinitary المثبّت الجديد ويتحقق من مجموعه الاختباري ويحفظ عمل طاقمك.
+3. يُغلق Infinitary، ويستبدله المثبّت، ثم يُفتح Infinitary من جديد على النسخة الجديدة.
+
+إذا تعذّر إكمال التثبيت، فلا يتغير شيء ويستمر عمل طاقمك.
+
 ## حواسيبك الأخرى وهاتفك {#your-other-computers-and-your-phone}
 
 الحاسوب الذي أضفته يُحدَّث من الحاسوب الذي يقيم عليه نائب القبطان.
@@ -85,8 +93,9 @@ brew update && brew upgrade --cask infinitary-labs/tap/infinitary
   لا تُضف `--zap` أبدًا: فهو يحذف عملك المحفوظ.
 - **Linux**: أزل الحزمة باستخدام مثبّت البرامج أو مدير الحزم الذي ثبّتّها به.
   أما ملف AppImage فاحذف الملف.
+- **Windows**: في إعدادات Windows ← **التطبيقات** ← **التطبيقات المثبتة**، اختر **إلغاء التثبيت** من قائمة Infinitary.
 
-يبقى عملك المحفوظ في `~/Library/Application Support/infinitary` على Mac، وفي `~/.config/infinitary` على Linux.
+يبقى عملك المحفوظ في `~/Library/Application Support/infinitary` على Mac، وفي `~/.config/infinitary` على Linux، وفي `%APPDATA%\infinitary` على Windows.
 
 ### ما يحذف عملك المحفوظ {#what-deletes-your-saved-work}
 

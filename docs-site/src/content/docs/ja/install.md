@@ -1,10 +1,10 @@
 ---
-source: 1e13e1b47687c0aa
+source: 2633a75241365106
 title: インストール
-description: Mac または Linux 用の安定版 Infinitary をダウンロードするか、iPhone と iPad 用の非公開 TestFlight への招待をリクエストします。
+description: Mac、Linux、Windows 用の安定版 Infinitary をダウンロードするか、iPhone と iPad 用の非公開 TestFlight への招待をリクエストします。
 ---
 
-[Mac](https://getinfinitary.com/downloads/#macos) または [Linux](https://getinfinitary.com/downloads/#linux) 用の Infinitary 安定版をダウンロードしてください。
+[Mac](https://getinfinitary.com/downloads/#macos)、[Linux](https://getinfinitary.com/downloads/#linux)、[Windows](https://getinfinitary.com/downloads/#windows) 用の Infinitary 安定版をダウンロードしてください。
 ダウンロードしたファイルを検証したい場合は、その SHA-256 チェックサムを、ダウンロードページでそのファイルの横に表示されているものと比べてください。
 
 ## Mac の場合 {#on-a-mac}
@@ -19,6 +19,22 @@ Ubuntu または Debian では **.deb** パッケージを、Fedora では **.rp
 Arch または Omarchy では Arch パッケージのレシピを、NixOS では Nix のレシピを使います。
 そのほかの x64 Linux システムでは、**AppImage** をダウンロードし、ファイルのプロパティでプログラムとしての実行を許可してから開きます。
 
+## Windows の場合 {#on-windows}
+
+Windows 版の Infinitary は試験版です。
+Intel または AMD の 64 ビットプロセッサーを搭載した Windows 11 PC 用の **インストーラー (.exe)** をダウンロードしてください。
+このインストーラーはまだ Microsoft が検証する証明書で署名されていないため、Windows は発行元を認識できず、インストール前に 2 回警告します。
+
+1. ブラウザーがこのファイルは一般的にダウンロードされていないと表示したら、**保存** を選び、続けて **保持する** を選びます。
+2. 開くと、Windows が発行元不明として「Windows によって PC が保護されました」と表示します。
+   **詳細情報** を選び、続けて **実行** を選びます。
+
+スマート アプリ コントロールがオンの場合、Windows はこのビルドをブロックし、実行する方法を示しません。
+スマート アプリ コントロールはオンのままにして、署名済みのビルドをお待ちください。
+
+インストーラーは Infinitary をあなただけのためにインストールし、スタートメニューに追加して開きます。
+PC に Git for Windows がない場合、乗組員に必要なため、Infinitary が初回起動時にインストールを提案します。
+
 ## iPhone と iPad の場合 {#on-iphone-and-ipad}
 
 iPhone と iPad 用の Infinitary は、非公開の TestFlight で提供しています。
@@ -28,7 +44,7 @@ iPhone と iPad 用の Infinitary は、非公開の TestFlight で提供して�
 ## 必要なもの {#what-you-need}
 
 - **コンピューター。**
-  macOS 12 以降の Mac、または x64 プロセッサーを搭載した Linux コンピューター。
+  macOS 12 以降の Mac、x64 プロセッサーを搭載した Linux コンピューター、または x64 プロセッサーを搭載した Windows 11 PC（試験版）。
 - **AI のサブスクリプション。**
   一等航海士には、応答できるサブスクリプションが少なくとも 1 つ必要です：Codex、Grok、Claude、Kimi Code、Copilot、API キーを使う OpenRouter、または AWS へのサインインを使う Amazon Bedrock。
 - **Claude を使う場合は Claude Code。**

@@ -1,5 +1,5 @@
 ---
-source: bed187b080af2f4a
+source: 3e0fd8cde41ac0cf
 title: Deine anderen Computer
 description: Füge deine anderen Computer hinzu, damit du deinen ersten Offizier von jedem aus steuern kannst, sie die Arbeit deiner Projekte ausführen lassen kannst und eine Kopie behältst, die übernehmen kann.
 ---
@@ -9,7 +9,7 @@ Seine Aufgaben, Karten und Unterhaltung bleiben dort.
 Von jedem Computer, den du hinzufügst, kannst du deinen ersten Offizier steuern, und jeder Computer, den du hinzufügst, kann die Arbeit eines Projekts ausführen.
 
 Das alles findest du in den Einstellungen unter **Geräte**, bei **Deine Geräte**.
-Öffne die Einstellungen mit ⌘, (Strg+, unter Linux).
+Öffne die Einstellungen mit ⌘, (Strg+, unter Linux und Windows).
 
 ## Der Computer, auf dem dein erster Offizier lebt {#the-computer-where-your-first-mate-lives}
 
@@ -146,7 +146,7 @@ Wenn eine neuere Kopie in Reichweite ist, holt dieser Computer sie zuerst.
 
 1. Drück **Übernehmen**.
 2. Drück zur Bestätigung noch einmal **Übernehmen**, oder **Bleiben**, damit alles bleibt, wie es ist.
-3. Bestätige auf einem Mac mit Touch ID oder deinem Passwort.
+3. Bestätige auf einem Mac mit Touch ID oder deinem Passwort, auf einem Windows-PC mit Windows Hello oder deinem Windows-Passwort.
 
 Dein erster Offizier startet dann auf diesem Computer, der zum Computer wird, auf dem dein erster Offizier lebt.
 Deine anderen Computer und dein Telefon finden ihn dort von selbst, ohne neuen Link.

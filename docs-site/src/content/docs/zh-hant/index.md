@@ -1,11 +1,11 @@
 ---
-source: 309b0f7cf925f1d5
+source: 29243d0d86288aca
 title: Infinitary 是什麼
 description: Infinitary 是你自己的 AI 工作室，一款桌面程式，由一位大副和一群 AI 船員在你自己的電腦上完成工作。
 ---
 
 Infinitary 是你自己的 AI 工作室。
-它是一款適用於 macOS 和 Linux 的桌面程式。
+它是一款適用於 macOS、Linux 和 Windows 的桌面程式。
 你只跟一位大副說話，由一群 AI 船員完成工作。
 
 ## 一項任務怎麼進行 {#how-a-task-goes}

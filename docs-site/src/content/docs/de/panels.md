@@ -1,5 +1,5 @@
 ---
-source: c3a4eb8bec45d0bf
+source: 6bf1a1696857d960
 title: Panels
 description: Panels sitzen links und rechts im Fenster und zeigen deine Aufgaben, die Aktivität deiner Crew und alles, was du deinen ersten Offizier bauen lässt.
 ---
@@ -55,7 +55,7 @@ Wähl dort eines aus, um es zurück auf die Leiste zu holen.
 
 - Drück F6, um zum nächsten Teil des Fensters zu springen, auch zu einem Panel.
   Shift+F6 geht zurück.
-- Drück ⌘, (Ctrl+, unter Linux), um **Einstellungen** zu öffnen.
+- Drück ⌘, (Ctrl+, unter Linux und Windows), um **Einstellungen** zu öffnen.
 
 Manche Panels bringen eigene Befehle mit, etwa **Aufgabe suchen** und **Wissen öffnen**.
 Du findest sie in der Befehlssuche und kannst ihnen unter **Einstellungen**, **Tastatur** eine Taste geben.

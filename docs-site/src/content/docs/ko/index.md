@@ -1,11 +1,11 @@
 ---
-source: 309b0f7cf925f1d5
+source: 29243d0d86288aca
 title: Infinitary란
 description: Infinitary는 나만의 AI 스튜디오예요. 일등항해사 한 명과 AI 선원들이 내 컴퓨터에서 일하는 데스크톱 앱이에요.
 ---
 
 Infinitary는 나만의 AI 스튜디오예요.
-macOS와 Linux용 데스크톱 앱이에요.
+macOS, Linux, Windows용 데스크톱 앱이에요.
 일등항해사 한 명과 이야기하면, AI 선원들이 일을 해요.
 
 ## 작업이 진행되는 방식 {#how-a-task-goes}

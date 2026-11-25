@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: b246b808ab8643b5
 title: 术语表
 description: Infinitary 中带有特定含义的词，每个词用一两句话说明，并附上解释它的页面链接。
 ---
@@ -68,7 +68,7 @@ description: Infinitary 中带有特定含义的词，每个词用一两句话�
 ### 命令搜索（Command search） {#command-search}
 
 一个搜索框，可以找到 Infinitary 中的任何命令并显示它的按键。
-在 Mac 上按 ⌘K，在 Linux 上按 Ctrl+K。
+在 Mac 上按 ⌘K，在 Linux 和 Windows 上按 Ctrl+K。
 请参阅[键盘](/zh-hans/keyboard/#command-search)。
 
 ### 运行工作的电脑（Computer that runs work） {#computer-that-runs-work}
@@ -166,7 +166,7 @@ description: Infinitary 中带有特定含义的词，每个词用一两句话�
 ### 消息框（Message box） {#message-box}
 
 窗口底部的框，你在这里向大副输入文字，或用说话代替打字。
-在任何地方按 ⌘L（Linux 上按 Ctrl+L）都能跳到它。
+在任何地方按 ⌘L（Linux 和 Windows 上按 Ctrl+L）都能跳到它。
 请参阅[大副](/zh-hans/the-first-mate/#talking-to-your-first-mate)。
 
 ## N {#n}

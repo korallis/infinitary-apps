@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-name-windows-supported",
+      "reason": "Documentation only: the README and the docs site name Windows as a supported system, with its install, update and removal steps; the Windows download itself is the release change's note."
+    }
+  ]
+}

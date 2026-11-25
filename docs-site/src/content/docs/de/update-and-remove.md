@@ -1,5 +1,5 @@
 ---
-source: 81c1b11c48b639fa
+source: 8949d6275dea6548
 title: Infinitary aktualisieren und entfernen
 description: Wie jede Art von Installation eine neue stabile Version bekommt und wie du Infinitary entfernst, ohne deine gespeicherte Arbeit zu verlieren.
 ---
@@ -64,6 +64,14 @@ Homebrew beendet Infinitary, während es es ersetzt, öffne Infinitary also wied
 Wenn das Installieren nicht abgeschlossen werden kann, ändert sich nichts, und die Arbeit deiner Crew läuft weiter.
 Der Hinweis zeigt dann einen Befehl, der dieselbe Version von Hand installiert.
 
+## Windows {#windows}
+
+1. Drück **Aktualisieren und neu starten**.
+2. Infinitary lädt den neuen Installer herunter, prüft seine Prüfsumme und sichert die Arbeit deiner Crew.
+3. Infinitary schließt sich, der Installer ersetzt es, und Infinitary öffnet sich wieder mit der neuen Version.
+
+Wenn das Installieren nicht abgeschlossen werden kann, ändert sich nichts, und die Arbeit deiner Crew läuft weiter.
+
 ## Deine anderen Computer und dein Telefon {#your-other-computers-and-your-phone}
 
 Ein Computer, den du hinzugefügt hast, wird von dem Computer aus aktualisiert, auf dem dein erster Offizier lebt.
@@ -85,8 +93,9 @@ Wenn dieser Computer Arbeit für einen anderen ausführt, drück vorher **Verlas
   Häng nie `--zap` an: Es löscht deine gespeicherte Arbeit.
 - **Linux**: Entfern das Paket mit dem Software-Installer oder der Paketverwaltung, mit dem du es installiert hast.
   Bei einem AppImage lösch die Datei.
+- **Windows**: Wähl in den Windows-Einstellungen → **Apps** → **Installierte Apps** im Menü von Infinitary **Deinstallieren**.
 
-Deine gespeicherte Arbeit liegt auf einem Mac in `~/Library/Application Support/infinitary` und unter Linux in `~/.config/infinitary`.
+Deine gespeicherte Arbeit liegt auf einem Mac in `~/Library/Application Support/infinitary`, unter Linux in `~/.config/infinitary` und unter Windows in `%APPDATA%\infinitary`.
 
 ### Was deine gespeicherte Arbeit löscht {#what-deletes-your-saved-work}
 

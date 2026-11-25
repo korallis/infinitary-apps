@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: b246b808ab8643b5
 title: Glossário
 description: As palavras que o Infinitary usa com um sentido próprio, cada uma em uma ou duas frases, com um link para a página que a explica.
 ---
@@ -68,7 +68,7 @@ Veja [Sua primeira tarefa](/pt-br/your-first-task/#5-merge-it).
 ### Busca de comandos {#command-search}
 
 Uma caixa de busca que encontra qualquer comando no Infinitary e mostra as teclas dele.
-Pressione ⌘K no Mac, ou Ctrl+K no Linux.
+Pressione ⌘K no Mac, ou Ctrl+K no Linux e no Windows.
 Veja [Teclado](/pt-br/keyboard/#command-search).
 
 ### Computador que executa o trabalho {#computer-that-runs-work}
@@ -166,7 +166,7 @@ Veja [Cartões e decisões](/pt-br/cards-and-decisions/#merge-cards).
 ### Caixa de mensagem {#message-box}
 
 A caixa na parte de baixo da janela, onde você digita para o seu imediato ou fala em vez de digitar.
-Pressione ⌘L (Ctrl+L no Linux) para ir até ela de qualquer lugar.
+Pressione ⌘L (Ctrl+L no Linux e no Windows) para ir até ela de qualquer lugar.
 Veja [O imediato](/pt-br/the-first-mate/#talking-to-your-first-mate).
 
 ## N {#n}

@@ -1,5 +1,5 @@
 ---
-source: bed187b080af2f4a
+source: 3e0fd8cde41ac0cf
 title: Vos autres ordinateurs
 description: Ajoutez vos autres ordinateurs pour piloter votre second depuis n’importe lequel d’entre eux, leur confier le travail de vos projets et garder une copie capable de prendre le relais.
 ---
@@ -9,7 +9,7 @@ Ses tâches, ses cartes et sa conversation y restent.
 Depuis tout ordinateur que vous ajoutez, vous pouvez piloter votre second, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet.
 
 Vous trouvez tout cela dans Réglages → **Appareils**, sous **Vos appareils**.
-Ouvrez les Réglages avec ⌘, (Ctrl+, sous Linux).
+Ouvrez les Réglages avec ⌘, (Ctrl+, sous Linux et Windows).
 
 ## L’ordinateur où vit votre second {#the-computer-where-your-first-mate-lives}
 
@@ -146,7 +146,7 @@ Si une copie plus récente est à portée, cet ordinateur la récupère d’abor
 
 1. Appuyez sur **Prendre le relais**.
 2. Appuyez de nouveau sur **Prendre le relais** pour confirmer, ou sur **Rester** pour laisser les choses en l’état.
-3. Sur un Mac, confirmez avec Touch ID ou votre mot de passe.
+3. Sur un Mac, confirmez avec Touch ID ou votre mot de passe ; sur un PC Windows, avec Windows Hello ou votre mot de passe Windows.
 
 Votre second démarre alors sur cet ordinateur, qui devient l’ordinateur où vit votre second.
 Vos autres ordinateurs et votre téléphone l’y trouvent d’eux-mêmes, sans nouveau lien.

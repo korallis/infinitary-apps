@@ -1,5 +1,5 @@
 ---
-source: 81c1b11c48b639fa
+source: 8949d6275dea6548
 title: Actualizar y quitar Infinitary
 description: Cómo recibe cada tipo de instalación una nueva versión estable, y cómo quitar Infinitary conservando tu trabajo guardado.
 ---
@@ -64,6 +64,14 @@ Homebrew cierra Infinitary mientras lo reemplaza, así que vuelve a abrir Infini
 Si la instalación no puede terminar, no cambia nada y el trabajo de tu tripulación sigue adelante.
 El aviso muestra entonces un comando que instala la misma versión a mano.
 
+## Windows {#windows}
+
+1. Presiona **Actualizar y reiniciar**.
+2. Infinitary descarga el nuevo instalador, comprueba su suma de comprobación y guarda el trabajo de tu tripulación.
+3. Infinitary se cierra, el instalador lo reemplaza e Infinitary vuelve a abrirse en la nueva versión.
+
+Si la instalación no puede terminar, no cambia nada y el trabajo de tu tripulación sigue adelante.
+
 ## Tus otras computadoras y tu teléfono {#your-other-computers-and-your-phone}
 
 Una computadora que agregaste se actualiza desde la computadora donde vive tu primer oficial.
@@ -85,8 +93,9 @@ Si esta computadora hace trabajo para otra, presiona primero **Salir** en Config
   Nunca agregues `--zap`: borra tu trabajo guardado.
 - **Linux**: quita el paquete con el instalador de software o el gestor de paquetes con el que lo instalaste.
   Para una AppImage, borra el archivo.
+- **Windows**: en Configuración de Windows → **Aplicaciones** → **Aplicaciones instaladas**, elige **Desinstalar** en el menú de Infinitary.
 
-Tu trabajo guardado se queda en `~/Library/Application Support/infinitary` en una Mac, y en `~/.config/infinitary` en Linux.
+Tu trabajo guardado se queda en `~/Library/Application Support/infinitary` en una Mac, en `~/.config/infinitary` en Linux, y en `%APPDATA%\infinitary` en Windows.
 
 ### Qué elimina tu trabajo guardado {#what-deletes-your-saved-work}
 

@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: b246b808ab8643b5
 title: Glossaire
 description: Les mots qu’Infinitary emploie dans un sens qui lui est propre, chacun en une phrase ou deux, avec un lien vers la page qui l’explique.
 ---
@@ -68,7 +68,7 @@ Voir [Votre première tâche](/fr/your-first-task/#5-merge-it).
 ### Recherche de commandes {#command-search}
 
 Un champ de recherche qui trouve n’importe quelle commande d’Infinitary et affiche ses touches.
-Appuyez sur ⌘K sur un Mac, ou sur Ctrl+K sous Linux.
+Appuyez sur ⌘K sur un Mac, ou sur Ctrl+K sous Linux et Windows.
 Voir [Clavier](/fr/keyboard/#command-search).
 
 ### Ordinateur qui exécute le travail {#computer-that-runs-work}
@@ -166,7 +166,7 @@ Voir [Cartes et décisions](/fr/cards-and-decisions/#merge-cards).
 ### Zone de message {#message-box}
 
 La zone en bas de la fenêtre, où vous écrivez à votre second, ou parlez au lieu de taper.
-Appuyez sur ⌘L (Ctrl+L sous Linux) pour y aller depuis n’importe où.
+Appuyez sur ⌘L (Ctrl+L sous Linux et Windows) pour y aller depuis n’importe où.
 Voir [Le second](/fr/the-first-mate/#talking-to-your-first-mate).
 
 ## N {#n}

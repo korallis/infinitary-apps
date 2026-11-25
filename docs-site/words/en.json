@@ -4,10 +4,10 @@
   "sidebar.reference": "Reference",
   "sidebar.home": "What Infinitary is",
   "keyboard.title": "Keyboard",
-  "keyboard.description": "Every command you can run from the keyboard in Infinitary, and its keys in each preset on a Mac and on Linux.",
+  "keyboard.description": "Every command you can run from the keyboard in Infinitary, and its keys in each preset on a Mac and on Linux or Windows.",
   "keyboard.intro": "Everything in Infinitary works from the keyboard.\nTab moves between controls, and the arrows move inside a list.",
   "keyboard.search.heading": "Command search",
-  "keyboard.search": "Press <kbd>⌘K</kbd> on a Mac, or <kbd>Ctrl+K</kbd> on Linux, to open command search.\nType a few words, choose a command with the arrows and press Enter.\nEvery command on this page is there, with its key beside it, including the ones that have no key.",
+  "keyboard.search": "Press <kbd>⌘K</kbd> on a Mac, or <kbd>Ctrl+K</kbd> on Linux and Windows, to open command search.\nType a few words, choose a command with the arrows and press Enter.\nEvery command on this page is there, with its key beside it, including the ones that have no key.",
   "keyboard.presets.heading": "Presets",
   "keyboard.presets": "Infinitary comes with sets of keys called presets: {presets}.\nA new installation starts on {preset}.\nLegacy is offered only if you used Infinitary before presets existed.\nChoose a preset in **Settings**, under **Keyboard**.",
   "keyboard.change.heading": "Change a key",
@@ -16,7 +16,7 @@
   "keyboard.every": "A dash means the command has no key yet: run it from command search, or give it a key of your own.\nTwo keys with a space between them are pressed one after the other.",
   "keyboard.column.command": "Command",
   "keyboard.column.mac": "Mac",
-  "keyboard.column.linux": "Linux",
+  "keyboard.column.linux": "Linux and Windows",
   "keyboard.notTyping": "when not typing",
   "keyboard.separator": ", "
 }

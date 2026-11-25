@@ -1,5 +1,5 @@
 ---
-source: a59e47a363ec3b9e
+source: 41f102f135ae507e
 title: Cartes et décisions
 description: Comment votre second et votre équipage vous apportent réponses et décisions sous forme de cartes, et comment y répondre.
 ---
@@ -13,8 +13,8 @@ Les cartes apparaissent au milieu de la fenêtre, par-dessus votre second.
 Quand plusieurs cartes attendent, elles forment une pile, et vous en voyez une à la fois.
 Une nouvelle carte arrive sans écarter celle que vous lisez.
 
-- **Afficher la carte suivante** : ⇧⌘] (Ctrl+Shift+] sous Linux).
-- **Afficher la carte précédente** : ⇧⌘[ (Ctrl+Shift+[ sous Linux).
+- **Afficher la carte suivante** : ⇧⌘] (Ctrl+Shift+] sous Linux et Windows).
+- **Afficher la carte précédente** : ⇧⌘[ (Ctrl+Shift+[ sous Linux et Windows).
 
 Une tâche dont une carte vous attend est listée sous En attente de vous dans Tâches.
 Les touches de cette page sont les touches standard ; [Clavier](/fr/keyboard/) liste toutes les touches, pour chaque ensemble de touches que vous pouvez choisir.
@@ -36,7 +36,7 @@ La plupart des décisions ont aussi un discret bouton **Refuser**, pour dire non
 ## Répondre à une décision {#answering-a-decision}
 
 Appuyez sur un bouton pour choisir.
-⌘1 (Ctrl+1 sous Linux) appuie sur le bouton principal, et ⌘2 à ⌘4 sur les autres.
+⌘1 (Ctrl+1 sous Linux et Windows) appuie sur le bouton principal, et ⌘2 à ⌘4 sur les autres.
 
 Certaines cartes posent plusieurs questions dans leur corps, à côté de la partie que concerne chaque question.
 Choisissez une réponse pour chacune, puis appuyez sur un bouton pour les envoyer toutes ensemble.
@@ -60,7 +60,7 @@ Chaque carte de votre second ou d’un équipier a, sous son corps, un champ qui
 Une réponse va à celui qui a écrit la carte.
 La première réponse ouvre un fil à côté de la carte, et l’auteur y répond.
 Quand l’auteur modifie la carte en réponse, la carte est révisée sur place, et le fil le signale.
-Pour replier le fil dans la carte, appuyez sur ⌘\ (Ctrl+\ sous Linux).
+Pour replier le fil dans la carte, appuyez sur ⌘\ (Ctrl+\ sous Linux et Windows).
 
 La carte reste à sa place pendant que son auteur traite votre réponse.
 Un équipier redessine sa carte une seule fois, quand il a terminé.
@@ -72,8 +72,8 @@ Il masque la carte sans y répondre.
 Vos choix et tout ce que vous avez tapé restent avec elle.
 La carte attend sous En attente de vous dans Tâches, et revient quand son auteur la modifie.
 
-- **Mettre la carte de côté** : ⇧⌘M (Ctrl+Shift+M sous Linux).
-- **Mettre toutes les cartes de côté ou les ramener** : ⌥⇧⌘M (Ctrl+Alt+Shift+M sous Linux).
+- **Mettre la carte de côté** : ⇧⌘M (Ctrl+Shift+M sous Linux et Windows).
+- **Mettre toutes les cartes de côté ou les ramener** : ⌥⇧⌘M (Ctrl+Alt+Shift+M sous Linux et Windows).
 
 Pour ramener une carte, cliquez sur sa tâche dans Tâches.
 

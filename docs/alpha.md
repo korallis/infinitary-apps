@@ -461,7 +461,8 @@ The Keychain's items are tied to the signing team, so each saved item asks once 
 ## Download storage
 
 `packaging/release-source.json` owns the production download origin and hidden download-page address.
-The site keeps its private-alpha landing page and never links to `/alpha-downloads/`; the page is unindexed, not authenticated, and anyone with its address can download.
+The hidden download-page address, `/alpha-downloads/`, forwards to the site's official downloads page, `/downloads/`, keeping its query, and the site lists no alpha installers.
+The app keeps naming `/alpha-downloads/` as its release page, since older copies refuse a builds file that names another one (`src/core/update/releaseBuilds.ts`).
 The storage and serving Worker belong to `infinitary-infra`; creating or deploying them is separate from merging this release code.
 Repository variable `R2_BUCKET` and secrets `R2_ENDPOINT` (`https://<account-id>.r2.cloudflarestorage.com`), `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` activate direct publication.
 The endpoint stays secret because it contains the Cloudflare account identifier; the two upload keys are bucket-scoped.

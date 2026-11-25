@@ -1,5 +1,5 @@
 ---
-source: d57581294d6dfbfc
+source: 8639808a6f4bc6d7
 title: Projekte
 description: Wie du ein Projekt zu Infinitary hinzufügst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
 ---
@@ -71,7 +71,7 @@ Deine Dateien bleiben unverändert, bis du eine Änderung zusammenführst.
 ## Auf ein Projekt konzentrieren {#focus-on-one-project}
 
 Bei zwei oder mehr Projekten zeigt die obere Leiste eine Projektauswahl.
-Drück darauf oder drück ⇧⌘P (Ctrl+Shift+P unter Linux), um eine Reihe deiner Projekte zu öffnen.
+Drück darauf oder drück ⇧⌘P (Ctrl+Shift+P unter Linux und Windows), um eine Reihe deiner Projekte zu öffnen.
 Jede Auswahl zählt die Aufgaben, die auf dich warten, und die Aufgaben, die gerade in Arbeit sind.
 Wähl ein Projekt, um das Fenster darauf zu konzentrieren.
 

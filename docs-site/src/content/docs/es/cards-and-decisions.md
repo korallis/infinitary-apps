@@ -1,5 +1,5 @@
 ---
-source: a59e47a363ec3b9e
+source: 41f102f135ae507e
 title: Tarjetas y decisiones
 description: Cómo tu primer oficial y tu tripulación te traen respuestas y decisiones como tarjetas, y cómo responderlas.
 ---
@@ -13,8 +13,8 @@ Las tarjetas aparecen en el centro de la ventana, sobre tu primer oficial.
 Cuando hay más de una tarjeta esperando, forman una pila, y ves una a la vez.
 Una tarjeta nueva llega sin apartar la que estás leyendo.
 
-- **Mostrar la tarjeta siguiente**: ⇧⌘] (Ctrl+Shift+] en Linux).
-- **Mostrar la tarjeta anterior**: ⇧⌘[ (Ctrl+Shift+[ en Linux).
+- **Mostrar la tarjeta siguiente**: ⇧⌘] (Ctrl+Shift+] en Linux y Windows).
+- **Mostrar la tarjeta anterior**: ⇧⌘[ (Ctrl+Shift+[ en Linux y Windows).
 
 Una tarea con una tarjeta que te espera aparece en Esperándote, en Tareas.
 Las teclas de esta página son las estándar; [Teclado](/es/keyboard/) enumera cada tecla, para cada conjunto de teclas que puedes elegir.
@@ -36,7 +36,7 @@ La mayoría de las decisiones también tienen un discreto botón **Rechazar**, p
 ## Responder una decisión {#answering-a-decision}
 
 Presiona un botón para elegir.
-⌘1 (Ctrl+1 en Linux) presiona el botón principal, y de ⌘2 a ⌘4 los demás.
+⌘1 (Ctrl+1 en Linux y Windows) presiona el botón principal, y de ⌘2 a ⌘4 los demás.
 
 Algunas tarjetas hacen más de una pregunta en su cuerpo, junto a la parte a la que se refiere cada pregunta.
 Elige una respuesta para cada una y luego presiona un botón para enviarlas todas juntas.
@@ -60,7 +60,7 @@ Cada tarjeta de tu primer oficial o de un tripulante tiene, debajo de su cuerpo,
 Una respuesta le llega a quien escribió la tarjeta.
 La primera respuesta abre un hilo junto a la tarjeta, y el autor responde ahí.
 Cuando el autor cambia la tarjeta como respuesta, la tarjeta se revisa en su lugar, y el hilo lo dice.
-Para volver a plegar el hilo en la tarjeta, presiona ⌘\ (Ctrl+\ en Linux).
+Para volver a plegar el hilo en la tarjeta, presiona ⌘\ (Ctrl+\ en Linux y Windows).
 
 La tarjeta se queda en su lugar mientras su autor trabaja en tu respuesta.
 Un tripulante vuelve a dibujar su tarjeta una vez, cuando ha terminado.
@@ -72,8 +72,8 @@ Oculta la tarjeta sin responderla.
 Lo que elegiste y lo que escribiste se quedan con ella.
 La tarjeta espera en Esperándote, en Tareas, y vuelve cuando su autor la cambia.
 
-- **Apartar la tarjeta**: ⇧⌘M (Ctrl+Shift+M en Linux).
-- **Apartar todas las tarjetas o traerlas de vuelta**: ⌥⇧⌘M (Ctrl+Alt+Shift+M en Linux).
+- **Apartar la tarjeta**: ⇧⌘M (Ctrl+Shift+M en Linux y Windows).
+- **Apartar todas las tarjetas o traerlas de vuelta**: ⌥⇧⌘M (Ctrl+Alt+Shift+M en Linux y Windows).
 
 Para traer de vuelta una tarjeta, haz clic en su tarea en Tareas.
 

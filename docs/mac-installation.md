@@ -71,7 +71,8 @@ Do not manually replace a newer Alpha with an older Stable: choose Stable inside
 
 ## Release destinations and historical downloads
 
-`packaging/release-source.json` selects `downloads.getinfinitary.com` and the unlinked `getinfinitary.com/alpha-downloads/` page at build time.
+`packaging/release-source.json` selects `downloads.getinfinitary.com` and the `getinfinitary.com/alpha-downloads/` address at build time.
+The site forwards that address to its official downloads page, `getinfinitary.com/downloads/`; the app keeps naming it, since older copies refuse a builds file that names another release page.
 The public source moves to `infinitary-apps` at cutover.
 Direct installers and update metadata still live in Cloudflare R2, served through the download Worker.
 Until storage is configured, releases keep publishing Homebrew and Linux through the public taps and skip direct disk-image publication.

@@ -16,7 +16,8 @@ import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
  * The docs site's Keyboard page (docs/docs-site.md, "Generated pages"),
  * written from the app's own command list so it never says a key the app
  * does not have: every command a person can run from the keyboard, with the
- * keys Keyboard settings gives it in each preset, on a Mac and on Linux. The
+ * keys Keyboard settings gives it in each preset, on a Mac and on Linux or
+ * Windows, which share the Ctrl keys (desktopConventions). The
  * keys are the window's own resolution (`resolveBindings`) of a preset with
  * nothing changed, the app's own panels' commands included, so a key a
  * preset suggests that another command already holds is left out here as it

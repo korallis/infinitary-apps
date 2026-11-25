@@ -1,5 +1,5 @@
 ---
-source: d57581294d6dfbfc
+source: 8639808a6f4bc6d7
 title: Projetos
 description: Como adicionar um projeto ao Infinitary, focar a janela em um deles, escolher como as mudanças dele são mescladas e removê-lo.
 ---
@@ -71,7 +71,7 @@ Seus arquivos ficam como estão até você mesclar uma mudança.
 ## Focar em um projeto {#focus-on-one-project}
 
 Com dois projetos ou mais, a barra do topo mostra uma pílula de projeto.
-Pressione-a, ou pressione ⇧⌘P (Ctrl+Shift+P no Linux), para abrir uma fileira com seus projetos.
+Pressione-a, ou pressione ⇧⌘P (Ctrl+Shift+P no Linux e no Windows), para abrir uma fileira com seus projetos.
 Cada pílula conta as tarefas que aguardam você e as tarefas que estão trabalhando.
 Escolha um projeto para focar a janela nele.
 

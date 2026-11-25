@@ -67,7 +67,7 @@ See [Your first task](/your-first-task/#5-merge-it).
 ### Command search
 
 A search box that finds any command in Infinitary and shows its keys.
-Press ⌘K on a Mac, or Ctrl+K on Linux.
+Press ⌘K on a Mac, or Ctrl+K on Linux and Windows.
 See [Keyboard](/keyboard/#command-search).
 
 ### Computer that runs work
@@ -165,7 +165,7 @@ See [Cards and decisions](/cards-and-decisions/#merge-cards).
 ### Message box
 
 The box at the bottom of the window, where you type to your first mate or talk instead of typing.
-Press ⌘L (Ctrl+L on Linux) to go to it from anywhere.
+Press ⌘L (Ctrl+L on Linux and Windows) to go to it from anywhere.
 See [The first mate](/the-first-mate/#talking-to-your-first-mate).
 
 ## N

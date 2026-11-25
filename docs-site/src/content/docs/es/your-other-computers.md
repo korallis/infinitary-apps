@@ -1,5 +1,5 @@
 ---
-source: bed187b080af2f4a
+source: 3e0fd8cde41ac0cf
 title: Tus otras computadoras
 description: Agrega tus otras computadoras para controlar a tu primer oficial desde cualquiera de ellas, dejar que hagan el trabajo de tus proyectos y guardar una copia que pueda tomar el relevo.
 ---
@@ -9,7 +9,7 @@ Sus tareas, tarjetas y conversación se quedan ahí.
 Desde cualquier computadora que agregues puedes controlar a tu primer oficial, y cualquier computadora que agregues puede hacer el trabajo de un proyecto.
 
 Encuentras todo esto en Configuración → **Dispositivos**, en **Tus dispositivos**.
-Abre Configuración con ⌘, (Ctrl+, en Linux).
+Abre Configuración con ⌘, (Ctrl+, en Linux y Windows).
 
 ## La computadora donde vive tu primer oficial {#the-computer-where-your-first-mate-lives}
 
@@ -146,7 +146,7 @@ Si hay una copia más reciente al alcance, esta computadora la trae primero.
 
 1. Presiona **Tomar el relevo**.
 2. Presiona **Tomar el relevo** otra vez para confirmar, o **Quedarse** para dejar las cosas como están.
-3. En una Mac, confirma con Touch ID o tu contraseña.
+3. En una Mac, confirma con Touch ID o tu contraseña; en una PC con Windows, con Windows Hello o tu contraseña de Windows.
 
 Tu primer oficial empieza entonces en esta computadora, que pasa a ser la computadora donde vive tu primer oficial.
 Tus otras computadoras y tu teléfono la encuentran ahí por sí solos, sin un enlace nuevo.

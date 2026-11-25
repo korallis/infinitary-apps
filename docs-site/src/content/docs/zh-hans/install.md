@@ -1,10 +1,10 @@
 ---
-source: 1e13e1b47687c0aa
+source: 2633a75241365106
 title: 安装
-description: 下载适用于 Mac 或 Linux 的 Infinitary 稳定版，或申请 iPhone 和 iPad 版的 TestFlight 私密邀请。
+description: 下载适用于 Mac、Linux 或 Windows 的 Infinitary 稳定版，或申请 iPhone 和 iPad 版的 TestFlight 私密邀请。
 ---
 
-下载适用于 [Mac](https://getinfinitary.com/downloads/#macos) 或 [Linux](https://getinfinitary.com/downloads/#linux) 的 Infinitary 稳定版。
+下载适用于 [Mac](https://getinfinitary.com/downloads/#macos)、[Linux](https://getinfinitary.com/downloads/#linux) 或 [Windows](https://getinfinitary.com/downloads/#windows) 的 Infinitary 稳定版。
 如果你想验证下载的文件，请把它的 SHA-256 校验和与下载页面上该文件旁显示的校验和进行比对。
 
 ## 在 Mac 上 {#on-a-mac}
@@ -19,6 +19,22 @@ Ubuntu 或 Debian 请选择 **.deb** 安装包，Fedora 请选择 **.rpm** 安�
 Arch 或 Omarchy 请使用 Arch 软件包配方；NixOS 请使用 Nix 配方。
 在其他 x64 Linux 系统上，请下载 **AppImage**，在它的文件属性中允许它作为程序运行，然后打开它。
 
+## 在 Windows 上 {#on-windows}
+
+Windows 版 Infinitary 是实验版。
+下载适用于搭载 Intel 或 AMD 64 位处理器的 Windows 11 电脑的 **安装程序 (.exe)**。
+这个安装程序还没有用 Microsoft 验证的证书签名，所以 Windows 不认识它的发布者，会在安装前警告两次：
+
+1. 如果浏览器说这个文件不常被下载，选择 **保留**，然后选择 **仍然保留**。
+2. 打开它时，Windows 会显示“Windows 已保护你的电脑”，发布者未知。
+   选择 **更多信息**，然后选择 **仍要运行**。
+
+如果智能应用控制已打开，Windows 会阻止这个版本，并且不提供运行它的方法。
+请保持智能应用控制打开，等待签名版本。
+
+安装程序只为你一人安装 Infinitary，把它加到开始菜单并打开它。
+如果你的电脑没有 Git for Windows，Infinitary 会在首次启动时提议安装它，因为你的船员需要它。
+
 ## 在 iPhone 和 iPad 上 {#on-iphone-and-ipad}
 
 iPhone 和 iPad 版 Infinitary 正处于 TestFlight 私密测试阶段。
@@ -28,7 +44,7 @@ iPhone 和 iPad 版 Infinitary 正处于 TestFlight 私密测试阶段。
 ## 你需要什么 {#what-you-need}
 
 - **一台电脑。**
-  一台运行 macOS 12 或更高版本的 Mac，或一台使用 x64 处理器的 Linux 电脑。
+  一台运行 macOS 12 或更高版本的 Mac、一台使用 x64 处理器的 Linux 电脑，或一台使用 x64 处理器的 Windows 11 电脑（实验版）。
 - **一个 AI 订阅。**
   你的大副至少需要一个能够作答的订阅：Codex、Grok、Claude、Kimi Code、Copilot、使用 API 密钥的 OpenRouter，或使用你的 AWS 登录的 Amazon Bedrock。
 - **使用 Claude 需要 Claude Code。**

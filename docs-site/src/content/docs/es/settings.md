@@ -1,10 +1,10 @@
 ---
-source: 454b7a23fdc82430
+source: db813a09651ef6f1
 title: Configuración
 description: Lo que contiene cada sección de Configuración, con General y Apariencia explicadas aquí y un enlace para el resto.
 ---
 
-Abre Configuración con ⌘, (Ctrl+, en Linux), el botón **Configuración** de la parte superior de la ventana, o **Abrir Configuración** en la búsqueda de comandos.
+Abre Configuración con ⌘, (Ctrl+, en Linux y Windows), el botón **Configuración** de la parte superior de la ventana, o **Abrir Configuración** en la búsqueda de comandos.
 Las secciones aparecen en la columna de la izquierda.
 Las flechas arriba y abajo se mueven entre ellas, y Escape o **Atrás** salen de Configuración.
 

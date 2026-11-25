@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: b246b808ab8643b5
 title: 용어집
 description: Infinitary가 고유한 뜻으로 쓰는 말을 한두 문장으로 풀고, 자세히 설명하는 페이지로 연결해요.
 ---
@@ -68,7 +68,7 @@ git으로 관리하는 프로젝트에서 따로 이어지는 변경의 흐름�
 ### 명령 검색 {#command-search}
 
 Infinitary의 모든 명령을 찾고 그 키를 보여 주는 검색 상자예요.
-Mac에서는 ⌘K, Linux에서는 Ctrl+K를 누르세요.
+Mac에서는 ⌘K, Linux와 Windows에서는 Ctrl+K를 누르세요.
 [키보드](/ko/keyboard/#command-search)를 보세요.
 
 ### 일을 실행하는 컴퓨터 {#computer-that-runs-work}
@@ -166,7 +166,7 @@ GitHub, Gmail, MCP 서버처럼 프로젝트 밖에 있는 것과의 연결로, 
 ### 메시지 상자 {#message-box}
 
 창 아래쪽의 상자로, 일등항해사에게 입력하거나 입력 대신 말하는 곳이에요.
-어디서든 ⌘L(Linux에서는 Ctrl+L)을 누르면 그곳으로 가요.
+어디서든 ⌘L(Linux와 Windows에서는 Ctrl+L)을 누르면 그곳으로 가요.
 [일등항해사](/ko/the-first-mate/#talking-to-your-first-mate)를 보세요.
 
 ## N {#n}

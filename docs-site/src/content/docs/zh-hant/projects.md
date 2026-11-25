@@ -1,5 +1,5 @@
 ---
-source: d57581294d6dfbfc
+source: 8639808a6f4bc6d7
 title: 專案
 description: 如何把專案加入 Infinitary、讓視窗聚焦在一個專案、選擇變更的合併方式，以及移除專案。
 ---
@@ -71,7 +71,7 @@ Bitbucket 專案也可以選擇批次 pull request，它的合併會遵循它在
 ## 聚焦在一個專案 {#focus-on-one-project}
 
 有兩個以上的專案時，頂端列會顯示一個專案標籤。
-按一下它，或按 ⇧⌘P（Linux 上是 Ctrl+Shift+P），就會打開一列你的專案。
+按一下它，或按 ⇧⌘P（Linux 和 Windows 上是 Ctrl+Shift+P），就會打開一列你的專案。
 每個標籤都會計算等你處理的任務數和進行中的任務數。
 選一個專案，讓視窗聚焦在它上面。
 

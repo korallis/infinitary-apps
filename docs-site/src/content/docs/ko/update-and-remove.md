@@ -1,5 +1,5 @@
 ---
-source: 81c1b11c48b639fa
+source: 8949d6275dea6548
 title: Infinitary 업데이트와 제거
 description: 설치 방식마다 새 안정 버전을 받는 방법과, 저장된 작업을 남겨 둔 채 Infinitary를 제거하는 방법이에요.
 ---
@@ -64,6 +64,14 @@ Homebrew는 앱을 바꾸는 동안 Infinitary를 종료하므로, 끝나면 Inf
 설치를 마치지 못하면 아무것도 바뀌지 않고 선원들의 작업은 계속 진행돼요.
 그러면 안내에 같은 버전을 직접 설치하는 명령이 보여요.
 
+## Windows {#windows}
+
+1. **업데이트 후 다시 시작**을 누르세요.
+2. Infinitary가 새 설치 프로그램을 내려받아 체크섬을 확인하고 선원들의 작업을 저장해요.
+3. Infinitary가 닫히고 설치 프로그램이 교체한 뒤, 새 버전의 Infinitary가 다시 열려요.
+
+설치를 끝낼 수 없으면 아무것도 바뀌지 않고 선원들의 작업은 계속돼요.
+
 ## 다른 컴퓨터와 휴대폰 {#your-other-computers-and-your-phone}
 
 추가한 컴퓨터는 일등항해사가 있는 컴퓨터에서 업데이트를 받아요.
@@ -85,8 +93,9 @@ Homebrew는 앱을 바꾸는 동안 Infinitary를 종료하므로, 끝나면 Inf
   `--zap`은 절대 붙이지 마세요: 저장된 작업이 지워져요.
 - **Linux**: 설치할 때 쓴 소프트웨어 설치 프로그램이나 패키지 관리자로 패키지를 제거하세요.
   AppImage라면 파일을 지우세요.
+- **Windows**: Windows 설정 → **앱** → **설치된 앱**에서 Infinitary 메뉴의 **제거**를 고르세요.
 
-저장된 작업은 Mac에서는 `~/Library/Application Support/infinitary`에, Linux에서는 `~/.config/infinitary`에 남아 있어요.
+저장된 작업은 Mac에서는 `~/Library/Application Support/infinitary`에, Linux에서는 `~/.config/infinitary`에, Windows에서는 `%APPDATA%\infinitary`에 남아 있어요.
 
 ### 저장된 작업을 지우는 것 {#what-deletes-your-saved-work}
 

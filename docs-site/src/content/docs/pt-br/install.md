@@ -1,10 +1,10 @@
 ---
-source: 1e13e1b47687c0aa
+source: 2633a75241365106
 title: Instalar
-description: Baixe a versão estável do Infinitary para Mac ou Linux, ou peça um convite privado do TestFlight para iPhone e iPad.
+description: Baixe a versão estável do Infinitary para Mac, Linux ou Windows, ou peça um convite privado do TestFlight para iPhone e iPad.
 ---
 
-Baixe a versão estável do Infinitary para [Mac](https://getinfinitary.com/downloads/#macos) ou [Linux](https://getinfinitary.com/downloads/#linux).
+Baixe a versão estável do Infinitary para [Mac](https://getinfinitary.com/downloads/#macos), [Linux](https://getinfinitary.com/downloads/#linux) ou [Windows](https://getinfinitary.com/downloads/#windows).
 Se quiser verificar um download, compare o checksum SHA-256 dele com o que aparece ao lado desse arquivo na página de downloads.
 
 ## No Mac {#on-a-mac}
@@ -19,6 +19,22 @@ Escolha o pacote **.deb** para Ubuntu ou Debian, ou o pacote **.rpm** para Fedor
 Para Arch ou Omarchy, use a receita de pacote do Arch; para NixOS, use a receita do Nix.
 Em outros sistemas Linux x64, baixe o **AppImage**, permita que ele seja executado como programa nas propriedades do arquivo e depois abra-o.
 
+## No Windows {#on-windows}
+
+O Infinitary para Windows é experimental.
+Baixe o **instalador (.exe)** para um PC com Windows 11 e processador Intel ou AMD de 64 bits.
+O instalador ainda não é assinado com um certificado que a Microsoft verifica, então o Windows não conhece o editor dele e avisa duas vezes antes de instalar:
+
+1. Se o seu navegador disser que o arquivo não é baixado com frequência, escolha **Manter** e depois **Manter assim mesmo**.
+2. Quando você o abre, o Windows diz “O Windows protegeu o computador” com um editor desconhecido.
+   Escolha **Mais informações** e depois **Executar assim mesmo**.
+
+Se o Controle Inteligente de Aplicativos estiver ativado, o Windows bloqueia esta versão e não oferece como executá-la.
+Mantenha o Controle Inteligente de Aplicativos ativado e espere a versão assinada.
+
+O instalador instala o Infinitary só para você, adiciona-o ao menu Iniciar e o abre.
+Se o seu PC não tiver o Git for Windows, o Infinitary oferece instalá-lo na primeira abertura, porque sua tripulação precisa dele.
+
 ## No iPhone e no iPad {#on-iphone-and-ipad}
 
 O Infinitary para iPhone e iPad está no TestFlight privado.
@@ -28,7 +44,7 @@ Veja [iPhone e iPad](/pt-br/iphone-and-ipad/) para saber como conectar-se ao seu
 ## Do que você precisa {#what-you-need}
 
 - **Um computador.**
-  Um Mac com macOS 12 ou posterior, ou um computador Linux com processador x64.
+  Um Mac com macOS 12 ou posterior, um computador Linux com processador x64, ou um PC com Windows 11 e processador x64 (experimental).
 - **Uma assinatura de IA.**
   Seu imediato precisa de pelo menos uma assinatura que consiga responder: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter com uma chave de API, ou Amazon Bedrock com seu login da AWS.
 - **Claude Code, para o Claude.**

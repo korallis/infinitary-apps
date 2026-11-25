@@ -1,10 +1,10 @@
 ---
-source: 454b7a23fdc82430
+source: db813a09651ef6f1
 title: Einstellungen
 description: Was jeder Bereich der Einstellungen enthält – Allgemein und Erscheinungsbild hier erklärt, für den Rest ein Link.
 ---
 
-Öffne die Einstellungen mit ⌘, (Strg+, unter Linux), mit der Schaltfläche **Einstellungen** oben im Fenster oder mit **Einstellungen öffnen** in der Befehlssuche.
+Öffne die Einstellungen mit ⌘, (Strg+, unter Linux und Windows), mit der Schaltfläche **Einstellungen** oben im Fenster oder mit **Einstellungen öffnen** in der Befehlssuche.
 Die Bereiche stehen links untereinander.
 Die Pfeiltasten nach oben und unten wechseln zwischen ihnen, und Escape oder **Zurück** verlässt die Einstellungen.
 

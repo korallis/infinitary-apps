@@ -1,10 +1,10 @@
 ---
-source: 454b7a23fdc82430
+source: db813a09651ef6f1
 title: Ajustes
 description: O que cada seção dos Ajustes contém, com Geral e Aparência explicadas aqui e um link para as demais.
 ---
 
-Abra os Ajustes com ⌘, (Ctrl+, no Linux), com o botão **Ajustes** no topo da janela ou com **Abrir Ajustes** na busca de comandos.
+Abra os Ajustes com ⌘, (Ctrl+, no Linux e no Windows), com o botão **Ajustes** no topo da janela ou com **Abrir Ajustes** na busca de comandos.
 As seções ficam listadas à esquerda.
 As setas para cima e para baixo passam de uma para outra, e Escape ou **Voltar** sai dos Ajustes.
 

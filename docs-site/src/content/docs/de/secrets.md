@@ -1,5 +1,5 @@
 ---
-source: 0cf7ba43b1059baf
+source: a3a69a749c864ad8
 title: Geheimnisse
 description: Bewahre die Passwörter und Schlüssel auf, die deine Crew braucht, erlaube jede Nutzung auf einer Karte und sieh, was sie genutzt hat.
 ---
@@ -19,7 +19,7 @@ Jeder Wert geht direkt in Geheimnisse auf deinem Computer: Infinitary zeigt ihn 
 **Geheimnisse durchsuchen** findet eines über seinen Namen, seinen Ort oder die Aufgabe, die es zuletzt genutzt hat.
 
 Auf einem Mac steht in der Zeile unter der Liste: „Auf diesem Computer gespeichert. Deine Crew nutzt sie, sieht sie aber nie.“
-Unter Linux steht dort, dass deine Crew sie nur mit deiner Freigabe nutzt, dass aber jedes Programm, das du ausführst, sie erreichen kann, solange der Geheimnisspeicher deines Systems entsperrt ist.
+Unter Linux und Windows steht dort, dass deine Crew sie nur mit deiner Freigabe nutzt, dass aber jedes Programm, das du ausführst, sie erreichen kann, solange der Geheimnisspeicher deines Systems entsperrt ist.
 
 Geheimnisse bleiben auf dem Computer, auf dem dein erster Offizier lebt.
 Ein Computer, der deinen ersten Offizier von woanders aus steuert, hat keinen eigenen Bereich Geheimnisse.
@@ -67,7 +67,7 @@ Wähl dann:
   Alles andere fragt erneut.
 - **Nicht erlauben** lehnt ab, und der nächste Lauf fragt erneut.
 
-Jedes Erlauben bittet dich zuerst um eine Bestätigung: auf einem Mac mit Touch ID oder deinem Passwort, unter Linux mit deinem Passwort.
+Jedes Erlauben bittet dich zuerst um eine Bestätigung: auf einem Mac mit Touch ID oder deinem Passwort, unter Linux mit deinem Passwort und unter Windows mit Windows Hello oder deinem Windows-Passwort.
 Was ein Geheimnis erhält, kann es behalten.
 Erlauben bestätigt nie eine eigene Handlung, etwa ein Deployment oder das Senden von etwas.
 Das Crewmitglied erfährt nur, ob der Lauf zu Ende gegangen ist, nicht, was er ausgegeben hat.

@@ -1,5 +1,5 @@
 ---
-source: c1b9ffbe11bf0317
+source: 5f2ef647a1b8e42a
 title: O imediato
 description: Quem é o seu imediato, o que ele faz e o que não faz, como falar com ele e como escolher o modelo com que ele responde.
 ---
@@ -31,7 +31,7 @@ Clique na resposta para lê-la inteira.
 Algumas coisas ajudam:
 
 - **Ir para a caixa de mensagem de qualquer lugar.**
-  Pressione ⌘L (Ctrl+L no Linux).
+  Pressione ⌘L (Ctrl+L no Linux e no Windows).
 - **Trazer de volta sua última mensagem.**
   Pressione ↑ com a caixa de mensagem vazia.
 - **Colar bastante texto.**
@@ -47,7 +47,7 @@ Para outros tipos de arquivo, como um PDF, a caixa adiciona como texto o local d
 
 Pressione ou segure a tecla de ditado para falar.
 A dica na caixa de mensagem diz qual é: “digite, ou pressione/segure o ⌥ direito para falar”.
-No Linux, a tecla é o Ctrl direito.
+No Linux e no Windows, a tecla é o Ctrl direito.
 O que você diz vira texto no seu próprio computador, e você pode editá-lo antes de enviar.
 Para trocar a tecla ou desativar o ditado, use **Ditado** em [Ajustes → Geral](/pt-br/settings/#general).
 

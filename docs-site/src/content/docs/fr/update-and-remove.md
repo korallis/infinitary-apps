@@ -1,5 +1,5 @@
 ---
-source: 81c1b11c48b639fa
+source: 8949d6275dea6548
 title: Mettre à jour et supprimer Infinitary
 description: Comment chaque type d’installation reçoit une nouvelle version stable, et comment supprimer Infinitary en gardant votre travail enregistré.
 ---
@@ -64,6 +64,14 @@ Homebrew quitte Infinitary pendant qu’il le remplace, alors rouvrez Infinitary
 Si l’installation ne peut pas aboutir, rien ne change et le travail de votre équipage continue.
 L’avis affiche alors une commande qui installe la même version à la main.
 
+## Windows {#windows}
+
+1. Appuyez sur **Mettre à jour et redémarrer**.
+2. Infinitary télécharge le nouveau programme d’installation, vérifie sa somme de contrôle et enregistre le travail de votre équipage.
+3. Infinitary se ferme, le programme d’installation le remplace, et Infinitary se rouvre sur la nouvelle version.
+
+Si l’installation ne peut pas aboutir, rien ne change et le travail de votre équipage continue.
+
 ## Vos autres ordinateurs et votre téléphone {#your-other-computers-and-your-phone}
 
 Un ordinateur que vous avez ajouté se met à jour depuis l’ordinateur où vit votre second.
@@ -85,8 +93,9 @@ Si cet ordinateur exécute le travail d’un autre, appuyez d’abord sur **Quit
   N’ajoutez jamais `--zap` : cela supprime votre travail enregistré.
 - **Linux** : supprimez le paquet avec l’installateur de logiciels ou le gestionnaire de paquets qui a servi à l’installer.
   Pour une AppImage, supprimez le fichier.
+- **Windows** : dans Paramètres Windows → **Applications** → **Applications installées**, choisissez **Désinstaller** dans le menu d’Infinitary.
 
-Votre travail enregistré reste dans `~/Library/Application Support/infinitary` sur un Mac, et dans `~/.config/infinitary` sous Linux.
+Votre travail enregistré reste dans `~/Library/Application Support/infinitary` sur un Mac, dans `~/.config/infinitary` sous Linux, et dans `%APPDATA%\infinitary` sous Windows.
 
 ### Ce qui supprime votre travail enregistré {#what-deletes-your-saved-work}
 

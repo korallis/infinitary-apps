@@ -1,5 +1,5 @@
 ---
-source: 0cf7ba43b1059baf
+source: a3a69a749c864ad8
 title: Segredos
 description: Guarde as senhas e chaves de que sua tripulação precisa, permita cada uso em um cartão e veja o que as usou.
 ---
@@ -19,7 +19,7 @@ Abra **Ajustes** e depois **Segredos**, ou procure **Abrir Segredos** na busca d
 **Buscar segredos** encontra um pelo nome, pelo lugar ou pela tarefa que o usou por último.
 
 No Mac, a linha abaixo da lista diz “Guardados neste computador. Sua tripulação os usa, mas nunca os vê.”
-No Linux, ela diz que sua tripulação só os usa com a sua aprovação, mas que qualquer programa que você executa pode alcançá-los enquanto o cofre de segredos do seu sistema estiver desbloqueado.
+No Linux e no Windows, ela diz que sua tripulação só os usa com a sua aprovação, mas que qualquer programa que você executa pode alcançá-los enquanto o cofre de segredos do seu sistema estiver desbloqueado.
 
 Os segredos ficam no computador onde seu imediato mora.
 Um computador que controla seu imediato de outro lugar não tem uma seção Segredos própria.
@@ -67,7 +67,7 @@ Depois escolha:
   Qualquer coisa diferente pergunta de novo.
 - **Não permitir** recusa, e a próxima execução pergunta de novo.
 
-Cada permissão pede que você confirme antes: no Mac com Touch ID ou sua senha, e no Linux com sua senha.
+Cada permissão pede que você confirme antes: no Mac com Touch ID ou sua senha, no Linux com sua senha, e no Windows com o Windows Hello ou sua senha do Windows.
 O que recebe um segredo pode guardá-lo.
 Permitir nunca aprova uma ação separada, como implantar ou enviar algo.
 O tripulante fica sabendo só se a execução terminou, não o que ela imprimiu.

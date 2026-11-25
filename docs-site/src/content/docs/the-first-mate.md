@@ -30,7 +30,7 @@ Click the reply to read all of it.
 A few things help:
 
 - **Go to the message box from anywhere.**
-  Press ⌘L (Ctrl+L on Linux).
+  Press ⌘L (Ctrl+L on Linux and Windows).
 - **Bring back your last message.**
   Press ↑ in an empty message box.
 - **Paste a lot of text.**
@@ -46,7 +46,7 @@ For other kinds of file, such as a PDF, the box adds the file's location on your
 
 Press or hold the dictation key to talk.
 The hint in the message box names it: "type, or press/hold right ⌥ to talk".
-On Linux the key is right Ctrl.
+On Linux and Windows the key is right Ctrl.
 What you say is turned into text on your computer, and you can edit it before sending.
 To change the key, or turn dictation off, use **Dictation** in [Settings → General](/settings/#general).
 

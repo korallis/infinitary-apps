@@ -1,5 +1,5 @@
 ---
-source: 0cf7ba43b1059baf
+source: a3a69a749c864ad8
 title: Secrets
 description: Gardez les mots de passe et les clés dont votre équipage a besoin, autorisez chaque utilisation sur une carte et voyez ce qui les a utilisés.
 ---
@@ -19,7 +19,7 @@ Ouvrez **Réglages**, puis **Secrets**, ou cherchez **Ouvrir Secrets** dans la r
 **Rechercher des secrets** en trouve un par son nom, son emplacement ou la tâche qui l’a utilisé en dernier.
 
 Sur un Mac, la ligne sous la liste indique « Gardés sur cet ordinateur. Votre équipage les utilise mais ne les voit jamais. »
-Sous Linux, elle indique que votre équipage ne les utilise qu’avec votre approbation, mais que tout programme que vous exécutez peut y accéder tant que le stockage de secrets de votre système est déverrouillé.
+Sous Linux et Windows, elle indique que votre équipage ne les utilise qu’avec votre approbation, mais que tout programme que vous exécutez peut y accéder tant que le stockage de secrets de votre système est déverrouillé.
 
 Les secrets restent sur l’ordinateur où vit votre second.
 Un ordinateur qui contrôle votre second depuis ailleurs n’a pas de section Secrets à lui.
@@ -67,7 +67,7 @@ Choisissez ensuite :
   Tout ce qui diffère demande de nouveau.
 - **Ne pas autoriser** refuse, et la prochaine exécution demande de nouveau.
 
-Chaque autorisation vous demande d’abord de confirmer : sur un Mac avec Touch ID ou votre mot de passe, et sous Linux avec votre mot de passe.
+Chaque autorisation vous demande d’abord de confirmer : sur un Mac avec Touch ID ou votre mot de passe, sous Linux avec votre mot de passe, et sous Windows avec Windows Hello ou votre mot de passe Windows.
 Ce qui reçoit un secret peut le garder.
 Autoriser n’approuve jamais une action distincte, comme déployer ou envoyer quelque chose.
 L’équipier apprend seulement si l’exécution s’est terminée, pas ce qu’elle a affiché.

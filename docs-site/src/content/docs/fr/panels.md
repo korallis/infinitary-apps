@@ -1,5 +1,5 @@
 ---
-source: c3a4eb8bec45d0bf
+source: 6bf1a1696857d960
 title: Panneaux
 description: Les panneaux se trouvent sur les côtés gauche et droit de la fenêtre et affichent vos tâches, l’activité de votre équipage et tout ce que vous demandez à votre second de construire.
 ---
@@ -55,7 +55,7 @@ Choisissez-en un là pour le ramener sur la colonne.
 
 - Appuyez sur F6 pour passer à la partie suivante de la fenêtre, panneaux compris.
   Shift+F6 revient en arrière.
-- Appuyez sur ⌘, (Ctrl+, sous Linux) pour ouvrir les **Réglages**.
+- Appuyez sur ⌘, (Ctrl+, sous Linux et Windows) pour ouvrir les **Réglages**.
 
 Certains panneaux ajoutent leurs propres commandes, comme **Rechercher une tâche** et **Ouvrir Connaissances**.
 Vous les trouvez dans la recherche de commandes et pouvez leur attribuer une touche dans **Réglages**, **Clavier**.

@@ -1,5 +1,5 @@
 ---
-source: c3a4eb8bec45d0bf
+source: 6bf1a1696857d960
 title: Paneles
 description: Los paneles están a los lados izquierdo y derecho de la ventana y muestran tus tareas, la actividad de tu tripulación y cualquier otra cosa que pidas a tu primer oficial que construya.
 ---
@@ -55,7 +55,7 @@ Elige uno ahí para devolverlo a la barra.
 
 - Presiona F6 para ir a la siguiente parte de la ventana, incluido un panel.
   Shift+F6 vuelve atrás.
-- Presiona ⌘, (Ctrl+, en Linux) para abrir **Configuración**.
+- Presiona ⌘, (Ctrl+, en Linux y Windows) para abrir **Configuración**.
 
 Algunos paneles agregan comandos propios, como **Buscar una tarea** y **Abrir Conocimiento**.
 Los encuentras en la búsqueda de comandos y puedes asignarles una tecla en **Configuración**, **Teclado**.

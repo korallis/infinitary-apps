@@ -130,7 +130,7 @@ One demo video serves every scope; its recording script is in "Demonstration scr
 **Scope justification:**
 
 ```text
-Infinitary is a desktop AI assistant that runs on the user's own computer (macOS and Linux). The user connects their Google account in Settings → Integrations, then asks the assistant in plain words for help with their own mail. With gmail.modify the app:
+Infinitary is a desktop AI assistant that runs on the user's own computer (macOS, Linux and Windows). The user connects their Google account in Settings → Integrations, then asks the assistant in plain words for help with their own mail. With gmail.modify the app:
 
 1. Searches the mailbox with the user's Gmail search words and lists each result's sender, recipients, subject, date, labels and snippet (users.messages.list; users.messages.get with format=metadata; users.labels.list to show label names).
 2. Reads one chosen message in full to summarize it or answer questions about it, reporting attachment names, types and sizes (users.messages.get with format=full).
@@ -413,7 +413,7 @@ The in-app disclosure and accept before the sign-in starts is Google's notice ([
 Prompt-injection protection is the fence on data from outside, the per-action approval cards and revocable allowances, and the notice's account of what stays open ("Prompt injection" below, INF-951).
 Deleting Google-derived content is Delete Gmail and Calendar content and the 30-day replacement ([Task retention](task-retention.md#words-from-outside), INF-952); the same on a computer that runs work is INF-1094.
 Google's Workspace policy also asks for tokens encrypted at rest.
-The refresh token is sealed in the protected Secrets owner under a root key held in the macOS Keychain or the Linux Secret Service ([Secrets](secrets.md)), and the access token is never written to disk.
+The refresh token is sealed in the protected Secrets owner under a root key held in the macOS Keychain, the Linux Secret Service or Windows Credential Manager ([Secrets](secrets.md)), and the access token is never written to disk.
 
 ## Prompt injection
 
@@ -512,7 +512,7 @@ Do not invent an assurance level, penetration test, certification, scan result o
 | 6.4.1: subdomain takeover | Unproven: no verified homepage/domain inventory is supplied here. | Domain owner and hosting evidence required; check DNS and decommissioned services before publishing. |
 | 6.5.1: secret logging | Partial: integration results redact kept token values and connection metadata excludes them. Message bodies can themselves contain sensitive information, and sessions keep Google's results for 30 days. | `secrets.ts`, `store.ts`, `service.ts`; assess logs and saved records with disposable credentials. |
 | 6.6.1: clearing client storage | Tokens are not stored in renderer localStorage. Disconnect removes local token/facts files; Google content in saved conversations, on this computer and on the computers that run its work, goes after 30 days or on the Settings delete, while agents' own words stay. | `store.ts`, `savedOutsideData.ts`, `docs/task-retention.md`; demonstrate deletion of derived copies before claiming complete clearance. |
-| 6.7.1: secret storage | Partly met: the refresh token is sealed in the protected Secrets owner under a root key in the macOS Keychain or the Linux Secret Service and used only through a brokered request; the access token stays in memory. On Linux, a program of the same user can read the Secret Service while it is unlocked. | `src/core/integrations/secrets.ts`, `docs/secrets.md` "Native custody" and "App services"; assess encrypted record storage separately. |
+| 6.7.1: secret storage | Partly met: the refresh token is sealed in the protected Secrets owner under a root key in the macOS Keychain, the Linux Secret Service or Windows Credential Manager and used only through a brokered request; the access token stays in memory. On Linux, a program of the same user can read the Secret Service while it is unlocked, and on Windows, Credential Manager whenever the user is signed in. | `src/core/integrations/secrets.ts`, `docs/secrets.md` "Native custody" and "App services"; assess encrypted record storage separately. |
 
 The Workspace policy additionally requires protection against prompt injection and limits general-model training and permanent copies.
 These obligations are not discharged by a CASA table or by telling an agent to regard mail as untrusted; "Prompt injection" above is the app's protection and the ways out it leaves open.

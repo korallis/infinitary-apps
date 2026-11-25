@@ -1,5 +1,5 @@
 ---
-source: a59e47a363ec3b9e
+source: 41f102f135ae507e
 title: Cartões e decisões
 description: Como o seu imediato e a sua tripulação trazem respostas e decisões para você em cartões, e como respondê-los.
 ---
@@ -13,8 +13,8 @@ Os cartões aparecem no meio da janela, por cima do seu imediato.
 Quando há mais de um cartão esperando, eles formam uma pilha, e você vê um de cada vez.
 Um cartão novo chega sem tirar do lugar o que você está lendo.
 
-- **Mostrar o próximo cartão**: ⇧⌘] (Ctrl+Shift+] no Linux).
-- **Mostrar o cartão anterior**: ⇧⌘[ (Ctrl+Shift+[ no Linux).
+- **Mostrar o próximo cartão**: ⇧⌘] (Ctrl+Shift+] no Linux e no Windows).
+- **Mostrar o cartão anterior**: ⇧⌘[ (Ctrl+Shift+[ no Linux e no Windows).
 
 Uma tarefa com um cartão esperando por você aparece em Aguardando você, em Tarefas.
 As teclas desta página são as padrão; [Teclado](/pt-br/keyboard/) lista todas as teclas, para cada conjunto de teclas que você pode escolher.
@@ -36,7 +36,7 @@ A maioria das decisões também tem um botão discreto, **Recusar**, para dizer 
 ## Responder a uma decisão {#answering-a-decision}
 
 Pressione um botão para escolher.
-⌘1 (Ctrl+1 no Linux) pressiona o botão principal, e ⌘2 a ⌘4, os outros.
+⌘1 (Ctrl+1 no Linux e no Windows) pressiona o botão principal, e ⌘2 a ⌘4, os outros.
 
 Alguns cartões fazem mais de uma pergunta no corpo, ao lado da parte de que cada pergunta trata.
 Escolha uma resposta para cada uma e depois pressione um botão para enviar todas juntas.
@@ -60,7 +60,7 @@ Todo cartão do seu imediato ou de um tripulante tem, embaixo do corpo, um campo
 Uma resposta vai para quem escreveu o cartão.
 A primeira resposta abre uma conversa ao lado do cartão, e o autor responde ali.
 Quando o autor muda o cartão em resposta, o cartão é revisado no mesmo lugar, e a conversa avisa.
-Para recolher a conversa de volta para dentro do cartão, pressione ⌘\ (Ctrl+\ no Linux).
+Para recolher a conversa de volta para dentro do cartão, pressione ⌘\ (Ctrl+\ no Linux e no Windows).
 
 O cartão fica no lugar enquanto o autor trabalha na sua resposta.
 Um tripulante redesenha o cartão uma única vez, quando termina.
@@ -72,8 +72,8 @@ Ele esconde o cartão sem respondê-lo.
 Suas escolhas e o que você digitou ficam com ele.
 O cartão espera em Aguardando você, em Tarefas, e volta quando o autor o muda.
 
-- **Deixar o cartão de lado**: ⇧⌘M (Ctrl+Shift+M no Linux).
-- **Deixar todos os cartões de lado ou trazê-los de volta**: ⌥⇧⌘M (Ctrl+Alt+Shift+M no Linux).
+- **Deixar o cartão de lado**: ⇧⌘M (Ctrl+Shift+M no Linux e no Windows).
+- **Deixar todos os cartões de lado ou trazê-los de volta**: ⌥⇧⌘M (Ctrl+Alt+Shift+M no Linux e no Windows).
 
 Para trazer um cartão de volta, clique na tarefa dele em Tarefas.
 

@@ -20,7 +20,7 @@ The sidebar has three groups: Start, Using Infinitary and Reference.
 Two pages are written from the app's own data, so neither tells a person something the app does not do.
 
 - **Keyboard** (`keyboard.mdx`) is written by `node scripts/docs-site-keyboard.ts` from the app's command list (`KEYBOARD_COMMANDS` in `src/shared/keyboardCommands.ts`), the presets (`src/shared/keyPresets.ts`) and the app's own panels' commands (`src/panels/*/manifest.json`), each named in the words the window gives it (`commandEntry`).
-  Each preset is a tab, and each command shows the keys the window resolves for that preset with nothing changed, on a Mac and on Linux (`resolveBindings`), so a key the app leaves out is left out here too.
+  Each preset is a tab, and each command shows the keys the window resolves for that preset with nothing changed, on a Mac and on Linux or Windows (`resolveBindings`), so a key the app leaves out is left out here too.
   A command that acts in a Settings section some builds do not offer (`section`) is left out.
   Each shipped language has its own Keyboard page, with each command in the words the app's catalog gives it in that language and the page's own sentences from the language's words file ("Languages").
   The pages are committed, and `pnpm check` runs `node scripts/docs-site-keyboard.ts --check`, so a change to a command's words or keys regenerates every language's page in the same pull request.

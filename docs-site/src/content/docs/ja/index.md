@@ -1,11 +1,11 @@
 ---
-source: 309b0f7cf925f1d5
+source: 29243d0d86288aca
 title: Infinitary とは
 description: Infinitary は自分専用の AI スタジオです。一人の一等航海士と AI の乗組員たちが、あなた自身のコンピューターで作業するデスクトップアプリです。
 ---
 
 Infinitary は、自分専用の AI スタジオです。
-macOS と Linux 用のデスクトップアプリです。
+macOS、Linux、Windows 用のデスクトップアプリです。
 話す相手は一人の一等航海士だけで、作業は AI の乗組員たちが行います。
 
 ## タスクの流れ {#how-a-task-goes}

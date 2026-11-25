@@ -1,5 +1,5 @@
 ---
-source: c1b9ffbe11bf0317
+source: 5f2ef647a1b8e42a
 title: El primer oficial
 description: Quién es tu primer oficial, qué hace y qué no hace, cómo hablarle y cómo elegir el modelo con el que responde.
 ---
@@ -31,7 +31,7 @@ Haz clic en la respuesta para leerla completa.
 Algunas cosas ayudan:
 
 - **Ir al cuadro de mensaje desde cualquier lugar.**
-  Presiona ⌘L (Ctrl+L en Linux).
+  Presiona ⌘L (Ctrl+L en Linux y Windows).
 - **Recuperar tu último mensaje.**
   Presiona ↑ en un cuadro de mensaje vacío.
 - **Pegar mucho texto.**
@@ -47,7 +47,7 @@ Para otros tipos de archivo, como un PDF, el cuadro agrega como texto la ubicaci
 
 Presiona o mantén presionada la tecla de dictado para hablar.
 La indicación del cuadro de mensaje la nombra: «escribe, o presiona o mantén ⌥ derecha para hablar».
-En Linux la tecla es Ctrl derecha.
+En Linux y Windows la tecla es Ctrl derecha.
 Lo que dices se convierte en texto en tu computadora, y puedes editarlo antes de enviarlo.
 Para cambiar la tecla, o desactivar el dictado, usa **Dictado** en [Configuración → General](/es/settings/#general).
 

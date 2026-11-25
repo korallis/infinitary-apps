@@ -1,5 +1,5 @@
 ---
-source: d57581294d6dfbfc
+source: 8639808a6f4bc6d7
 title: 项目
 description: 如何把项目添加到 Infinitary、让窗口聚焦于一个项目、选择它的改动如何合并，以及如何移除它。
 ---
@@ -71,7 +71,7 @@ Bitbucket 项目也可以选择批量拉取请求，它的合并遵循它的主�
 ## 聚焦于一个项目 {#focus-on-one-project}
 
 有两个或更多项目时，顶栏会显示一个项目标签。
-点击它，或按 ⇧⌘P（Linux 上为 Ctrl+Shift+P），即可打开一排你的项目。
+点击它，或按 ⇧⌘P（Linux 和 Windows 上为 Ctrl+Shift+P），即可打开一排你的项目。
 每个标签都会计数等你处理的任务和正在进行的任务。
 选择一个项目，窗口就会聚焦于它。
 

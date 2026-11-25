@@ -1,5 +1,5 @@
 ---
-source: 81c1b11c48b639fa
+source: 8949d6275dea6548
 title: 更新和移除 Infinitary
 description: 每种安装方式如何获得新的稳定版，以及如何移除 Infinitary 并保留你已保存的工作。
 ---
@@ -64,6 +64,14 @@ Homebrew 在替换 Infinitary 时会退出它，所以完成后请再次打开 I
 如果安装无法完成，什么都不会改变，你的船员的工作会继续进行。
 通知随后会显示一条命令，可以手动安装同一个版本。
 
+## Windows {#windows}
+
+1. 点击 **更新并重启**。
+2. Infinitary 下载新的安装程序，检查它的校验和，并保存船员的工作。
+3. Infinitary 关闭，安装程序替换它，然后新版本的 Infinitary 再次打开。
+
+如果安装无法完成，什么都不会改变，船员的工作会继续进行。
+
 ## 你的其他电脑和你的手机 {#your-other-computers-and-your-phone}
 
 你添加的电脑会从大副所在的电脑更新。
@@ -85,8 +93,9 @@ Homebrew 在替换 Infinitary 时会退出它，所以完成后请再次打开 I
   千万不要加 `--zap`：它会删除你已保存的工作。
 - **Linux**：用你安装它时所用的软件安装器或软件包管理器移除软件包。
   如果是 AppImage，删除这个文件即可。
+- **Windows**：在 Windows 设置 → **应用** → **已安装的应用** 中，从 Infinitary 的菜单里选择 **卸载**。
 
-你已保存的工作留在 Mac 上的 `~/Library/Application Support/infinitary` 中，以及 Linux 上的 `~/.config/infinitary` 中。
+你已保存的工作留在 Mac 上的 `~/Library/Application Support/infinitary` 中，Linux 上的 `~/.config/infinitary` 中，以及 Windows 上的 `%APPDATA%\infinitary` 中。
 
 ### 什么会删除你已保存的工作 {#what-deletes-your-saved-work}
 

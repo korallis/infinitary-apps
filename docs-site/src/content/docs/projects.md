@@ -70,7 +70,7 @@ Your files stay as they are until you merge a change.
 ## Focus on one project
 
 With two projects or more, the top bar shows a project pill.
-Press it, or press ⇧⌘P (Ctrl+Shift+P on Linux), to open a row of your projects.
+Press it, or press ⇧⌘P (Ctrl+Shift+P on Linux and Windows), to open a row of your projects.
 Each pill counts the tasks that wait on you and the tasks that are working.
 Pick a project to focus the window on it.
 

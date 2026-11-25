@@ -3,7 +3,7 @@ title: Settings
 description: What each section of Settings holds, with General and Appearance explained here and a link for the rest.
 ---
 
-Open Settings with ⌘, (Ctrl+, on Linux), the **Settings** button at the top of the window, or **Open Settings** in command search.
+Open Settings with ⌘, (Ctrl+, on Linux and Windows), the **Settings** button at the top of the window, or **Open Settings** in command search.
 The sections are listed down the left.
 The up and down arrows move between them, and Escape or **Back** leaves Settings.
 

@@ -1,5 +1,5 @@
 ---
-source: a59e47a363ec3b9e
+source: 41f102f135ae507e
 title: Karten und Entscheidungen
 description: Wie dein erster Offizier und deine Crew dir Antworten und Entscheidungen als Karten bringen und wie du sie beantwortest.
 ---
@@ -13,8 +13,8 @@ Karten erscheinen in der Mitte des Fensters, über deinem ersten Offizier.
 Wenn mehr als eine Karte wartet, bilden sie einen Stapel, und du siehst jeweils eine.
 Eine neue Karte kommt an, ohne die zur Seite zu schieben, die du gerade liest.
 
-- **Nächste Karte anzeigen**: ⇧⌘] (Ctrl+Shift+] unter Linux).
-- **Vorherige Karte anzeigen**: ⇧⌘[ (Ctrl+Shift+[ unter Linux).
+- **Nächste Karte anzeigen**: ⇧⌘] (Ctrl+Shift+] unter Linux und Windows).
+- **Vorherige Karte anzeigen**: ⇧⌘[ (Ctrl+Shift+[ unter Linux und Windows).
 
 Eine Aufgabe mit einer Karte, die auf dich wartet, steht in „Aufgaben“ unter „Wartet auf dich“.
 Die Tasten auf dieser Seite sind die Standardtasten; [Tastatur](/de/keyboard/) listet jede Taste auf, für jeden Tastensatz, den du wählen kannst.
@@ -36,7 +36,7 @@ Die meisten Entscheidungen haben außerdem eine dezente Schaltfläche **Ablehnen
 ## Eine Entscheidung beantworten {#answering-a-decision}
 
 Drück eine Schaltfläche, um zu wählen.
-⌘1 (Ctrl+1 unter Linux) drückt die Hauptschaltfläche, und ⌘2 bis ⌘4 die anderen.
+⌘1 (Ctrl+1 unter Linux und Windows) drückt die Hauptschaltfläche, und ⌘2 bis ⌘4 die anderen.
 
 Manche Karten stellen in ihrem Text mehr als eine Frage, jeweils neben dem Teil, auf den sich die Frage bezieht.
 Wähl für jede eine Antwort und drück dann eine Schaltfläche, um alle zusammen zu senden.
@@ -60,7 +60,7 @@ Jede Karte von deinem ersten Offizier oder einem Crewmitglied hat unter ihrem Te
 Eine Antwort geht an den, der die Karte geschrieben hat.
 Die erste Antwort öffnet neben der Karte einen Verlauf, und der Verfasser antwortet dort.
 Ändert der Verfasser die Karte als Antwort, wird die Karte an Ort und Stelle überarbeitet, und der Verlauf sagt das.
-Um den Verlauf wieder in die Karte einzuklappen, drück ⌘\ (Ctrl+\ unter Linux).
+Um den Verlauf wieder in die Karte einzuklappen, drück ⌘\ (Ctrl+\ unter Linux und Windows).
 
 Die Karte bleibt an ihrem Platz, während ihr Verfasser an deiner Antwort arbeitet.
 Ein Crewmitglied zeichnet seine Karte einmal neu, wenn es fertig ist.
@@ -72,8 +72,8 @@ Es blendet die Karte aus, ohne sie zu beantworten.
 Deine Auswahl und alles, was du getippt hast, bleiben bei ihr.
 Die Karte wartet in „Aufgaben“ unter „Wartet auf dich“ und kommt zurück, wenn ihr Verfasser sie ändert.
 
-- **Karte beiseitelegen**: ⇧⌘M (Ctrl+Shift+M unter Linux).
-- **Alle Karten beiseitelegen oder zurückholen**: ⌥⇧⌘M (Ctrl+Alt+Shift+M unter Linux).
+- **Karte beiseitelegen**: ⇧⌘M (Ctrl+Shift+M unter Linux und Windows).
+- **Alle Karten beiseitelegen oder zurückholen**: ⌥⇧⌘M (Ctrl+Alt+Shift+M unter Linux und Windows).
 
 Um eine Karte zurückzuholen, klick in „Aufgaben“ auf ihre Aufgabe.
 
