@@ -12,6 +12,7 @@ Under the header, when the Claude Code settings on the first mate's computer nam
 While that collector keeps failing, its first and latest failure a minute or more apart with no batch taken between them, the same line in `--warn` takes its place, says Claude work is not reaching that host, and says why: the host keeps turning the reports away (`settingsUsageReportingRefused`), the app cannot connect to it securely (`settingsUsageReportingSecure`), or the app cannot reach it (`settingsUsageReportingUnreachable`).
 The first two end by pointing the captain to the reporting settings their company gave them.
 It names no certificate or connection detail, and leaves when the collector takes the work again.
+When the captain has added a reporting connection in Settings → Intelligence, a second `--text-sm --fg-3` line under the company line or its warning names that connection's host (`settingsUsageReportsConnectionTo`); it shows alone when there is no company collector.
 
 **Filters.**
 Under the header, a row of two labeled selects in `--text-sm` on `--bg-2` with a `--line-1` hairline and `--radius-m`: Period (Last 7 days, Last 30 days, All recorded time) and Work (All work, Task work, First mate, Other work), then the dates in `--fg-3`: "Sep 6–Oct 5 · Local dates", or "Since Sep 6 · Local dates" for all time.
