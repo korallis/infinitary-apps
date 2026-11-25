@@ -60,6 +60,7 @@
   "panelChangeShowInDock": "Dockに表示",
   "panelChangeShowWhatsNew": "新機能を表示",
   "panelChangeStartAtLogin": "ログイン時に起動",
+  "panelChangeSummaryPoint": "長い会話を要約するタイミング",
   "panelChangeTheme": "テーマ",
   "panelChangeUpdateChannel": "受け取るアップデート",
   "panelChangeUpdateCheck": "アップデートを確認",

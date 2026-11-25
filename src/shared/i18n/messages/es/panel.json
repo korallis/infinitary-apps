@@ -60,6 +60,7 @@
   "panelChangeShowInDock": "Mostrar en el Dock",
   "panelChangeShowWhatsNew": "Mostrar las novedades",
   "panelChangeStartAtLogin": "Abrir al iniciar sesión",
+  "panelChangeSummaryPoint": "Cuándo se resumen las conversaciones largas",
   "panelChangeTheme": "Tema",
   "panelChangeUpdateChannel": "Qué actualizaciones recibes",
   "panelChangeUpdateCheck": "Buscar actualizaciones",

@@ -46667,6 +46667,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Start at login`;
   }
+  function panelChangeSummaryPoint() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `متى تُلخَّص المحادثات الطويلة`;
+      case "de":
+        return `Wann lange Unterhaltungen zusammengefasst werden`;
+      case "es":
+        return `Cuándo se resumen las conversaciones largas`;
+      case "fr":
+        return `Quand les longues conversations sont résumées`;
+      case "ja":
+        return `長い会話を要約するタイミング`;
+      case "ko":
+        return `긴 대화를 요약하는 시점`;
+      case "pt-BR":
+        return `Quando conversas longas são resumidas`;
+      case "zh-Hans":
+        return `长对话何时总结`;
+      case "zh-Hant":
+        return `長對話何時摘要`;
+      case "en-XA":
+        return `[Ŵĥéñ ļöñĝ çöñṽéŕšáţîöñš áŕé šûɱɱáŕîžéð ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When long conversations are summarized‬`;
+    }
+    return `When long conversations are summarized`;
+  }
   function panelChangeTheme() {
     switch (currentLanguage()) {
       case "ar":
@@ -112531,6 +112558,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelChangeShowInDock,
     panelChangeShowWhatsNew,
     panelChangeStartAtLogin,
+    panelChangeSummaryPoint,
     panelChangeTheme,
     panelChangeUpdateChannel,
     panelChangeUpdateCheck,
@@ -116091,6 +116119,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelChangeShowInDock": [],
     "panelChangeShowWhatsNew": [],
     "panelChangeStartAtLogin": [],
+    "panelChangeSummaryPoint": [],
     "panelChangeTheme": [],
     "panelChangeUpdateChannel": [],
     "panelChangeUpdateCheck": [],

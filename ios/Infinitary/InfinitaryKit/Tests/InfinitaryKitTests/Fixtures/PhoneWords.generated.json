@@ -1481,6 +1481,7 @@
   {"said":{"m":"panelChangeShowInDock"},"words":"Show in the Dock"},
   {"said":{"m":"panelChangeShowWhatsNew"},"words":"Show what's new"},
   {"said":{"m":"panelChangeStartAtLogin"},"words":"Start at login"},
+  {"said":{"m":"panelChangeSummaryPoint"},"words":"When long conversations are summarized"},
   {"said":{"m":"panelChangeTheme"},"words":"Theme"},
   {"said":{"m":"panelChangeUpdateChannel"},"words":"Which updates you get"},
   {"said":{"m":"panelChangeUpdateCheck"},"words":"Check for updates"},
