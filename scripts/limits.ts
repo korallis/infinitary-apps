@@ -424,6 +424,10 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/prompts/cardContract.ts": {
     CLAUDE_TOOL_DESCRIPTION_CAP: outside("none needed: the client's own cap; tests keep descriptions under it"),
   },
+  "src/core/quota/cliProxy/proxyPools.ts": {
+    CREDENTIALS_LIMIT_BYTES: physical("refused unread as oversized; the proxy reads unavailable, reason named"),
+    MODELS_LIMIT_BYTES: physical("refused unread; its models join no pool and their slots alone admit them"),
+  },
   "src/core/quota/grpcWeb.ts": {
     MAX_FIELD_NUMBER: outside("none needed: the format's own bound; a bad message reads as protocol"),
   },

@@ -231,9 +231,14 @@ export function buildModelsCatalog(
     byQuotaId.set(provider.provider, rows);
   }
   const catalog: CatalogModelView[] = models.flatMap((model) => {
-    const quotaId = allowanceProviderOf(model.provider);
+    // A pooled connection model reads its connection's row of that pool,
+    // under the connection's own provider id.
+    const quotaId = model.pool ? model.provider : allowanceProviderOf(model.provider);
     if (!quotaId) return [];
-    const effective = effectiveAcrossAccounts(byQuotaId.get(quotaId) ?? [], at, model.id);
+    const rows = (byQuotaId.get(quotaId) ?? []).filter(
+      (row) => !model.pool || row.pool?.kind === model.pool,
+    );
+    const effective = effectiveAcrossAccounts(rows, at, model.id);
     return [
       {
         provider: quotaId,

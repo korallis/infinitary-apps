@@ -25,7 +25,7 @@ import { hereAs } from "@shared/deviceNames";
 import * as m from "@shared/i18n/messages.generated";
 import type { IntegrationsView } from "@shared/integrations";
 import { catalogEntry, type ProviderView } from "@shared/providers";
-import type { QuotaSnapshotView } from "@shared/quota";
+import { QUOTA_POOL_NAMES, type QuotaSnapshotView } from "@shared/quota";
 import { hostTakesBatches, projectDeliveryChoices, type RepoView } from "@shared/repos";
 import type { RunbookView } from "@shared/runbooks";
 import { runbooksSummary } from "@shared/runbookWords";
@@ -208,8 +208,26 @@ function accountRow(
   firstmate: boolean,
   now: number,
 ): PhoneAccountRow {
-  const row = quota?.providers.find((entry) => entry.accountId === account.id);
+  const rows = quota?.providers.filter((entry) => entry.accountId === account.id) ?? [];
+  const row = rows[0];
   const view = rowView(account, row, now);
+  // A connection to a CLI proxy has a row per pool it serves: the phone shows
+  // each pool's meters under its name, and how its logins stand as the state.
+  const pools = rows.length > 1 && rows.every((entry) => entry.pool) ? rows : undefined;
+  if (pools) {
+    const views = pools.map((entry) => ({ entry, view: rowView(account, entry, now) }));
+    view.meters = views.flatMap(({ entry, view: each }) =>
+      each.meters.map((meter) => ({
+        ...meter,
+        id: `${entry.pool?.kind}:${meter.id}`,
+        label: `${QUOTA_POOL_NAMES[entry.pool?.kind ?? "claude"]} ${meter.label}`,
+      })),
+    );
+    const lines = views.flatMap(({ entry, view: each }) =>
+      each.pool ? [`${QUOTA_POOL_NAMES[entry.pool?.kind ?? "claude"]}: ${each.pool}`] : [],
+    );
+    if (!view.stateText && lines.length > 0) view.stateText = lines.join(" · ");
+  } else if (!view.stateText && view.pool) view.stateText = view.pool;
   const stale = view.kind === "stale";
   // The first-run sentence already says where to sign in; every other waiting row gets the line.
   const saysWhere = view.stateText === SUBSCRIPTIONS_WORDS.claudeFirstRun;

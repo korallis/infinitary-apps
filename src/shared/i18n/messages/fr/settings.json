@@ -1373,6 +1373,43 @@
   "settingsSubscriptionsPaused": "en pause",
   "settingsSubscriptionsPersonalResourcesDescription": "Les nouvelles conversations des équipiers utilisent les instructions et compétences globales du {computer} où vit votre second, avec les compétences des plugins d’agent que vous y avez activés. Les autres {computers} qui exécutent du travail en gardent une copie, renvoyée seulement quand elle change. Les règles de l’équipage régissent la livraison ; votre fichier guide le style et le jugement.",
   "settingsSubscriptionsPersonalResourcesTitle": "Instructions et compétences globales",
+  "settingsSubscriptionsPoolAccounts": {
+    "plural": "count",
+    "one": "{count} compte regroupé dans votre app proxy",
+    "many": "{count} de comptes regroupés dans votre app proxy",
+    "other": "{count} comptes regroupés dans votre app proxy"
+  },
+  "settingsSubscriptionsPoolSignInBy": {
+    "plural": "count",
+    "one": "{count} doit se reconnecter avant {time}",
+    "many": "{count} doivent se reconnecter avant {time}",
+    "other": "{count} doivent se reconnecter avant {time}"
+  },
+  "settingsSubscriptionsPoolSignedOut": {
+    "plural": "count",
+    "one": "{count} doit se reconnecter dans votre app proxy",
+    "many": "{count} doivent se reconnecter dans votre app proxy",
+    "other": "{count} doivent se reconnecter dans votre app proxy"
+  },
+  "settingsSubscriptionsPoolSpent": {
+    "plural": "count",
+    "one": "{count} épuisé jusqu’à {time}",
+    "many": "{count} épuisés jusqu’à {time}",
+    "other": "{count} épuisés jusqu’à {time}"
+  },
+  "settingsSubscriptionsPoolSwitchedOff": {
+    "plural": "count",
+    "one": "{count} désactivé",
+    "many": "{count} désactivés",
+    "other": "{count} désactivés"
+  },
+  "settingsSubscriptionsPoolUnread": {
+    "plural": "count",
+    "one": "{count} pas encore lu",
+    "many": "{count} pas encore lus",
+    "other": "{count} pas encore lus"
+  },
+  "settingsSubscriptionsPoolUsage": "Usage regroupé",
   "settingsSubscriptionsReading": "lecture…",
   "settingsSubscriptionsRefresh": "Actualiser",
   "settingsSubscriptionsRefreshing": "Actualisation...",

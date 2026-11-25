@@ -40,6 +40,8 @@ export type ClaudeAccess = {
    * refusal recorded under the old one. Never what the command prints.
    */
   digest: string;
+  /** The address requests go to, when the settings name one (`ANTHROPIC_BASE_URL`). */
+  address?: string;
 };
 
 /** The keys of the person's own settings a session is handed, when they set any. */
@@ -171,7 +173,13 @@ export async function readClaudeAccess(
       : undefined;
   return {
     ...(source && command
-      ? { access: { source, digest: accessDigest(source, command, address) } }
+      ? {
+          access: {
+            source,
+            digest: accessDigest(source, command, address),
+            ...(address ? { address } : {}),
+          },
+        }
       : gateway
         ? { gateway }
         : {}),

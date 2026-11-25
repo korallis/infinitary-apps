@@ -152,9 +152,10 @@ export const CREDITS_SWITCH_PROVIDERS: readonly string[] = ["claude", "codex"];
  * with the switch and says its credits are available. Undefined offers none.
  */
 export function creditsOfferOf(
-  row: Pick<QuotaProviderView, "provider" | "credits"> | undefined,
+  row: Pick<QuotaProviderView, "provider" | "credits" | "pool"> | undefined,
 ): { usedPercent?: number; balance?: string } | undefined {
-  if (!row || !CREDITS_SWITCH_PROVIDERS.includes(row.provider)) return undefined;
+  // A proxy's pool keeps its credits with the proxy: Infinitary never turns them on.
+  if (!row || row.pool || !CREDITS_SWITCH_PROVIDERS.includes(row.provider)) return undefined;
   if (row.credits?.state !== "available") return undefined;
   return {
     ...(row.credits.usedPercent !== undefined ? { usedPercent: row.credits.usedPercent } : {}),
@@ -169,11 +170,55 @@ export function creditsOfferOf(
  * the account pick, the first mate's pause and the quota gate read.
  */
 export function answersOnCredits(
-  row: Pick<QuotaProviderView, "provider" | "keepGoingOnCredits" | "credits"> | undefined,
+  row: Pick<QuotaProviderView, "provider" | "keepGoingOnCredits" | "credits" | "pool"> | undefined,
 ): boolean {
-  if (!row?.keepGoingOnCredits || !CREDITS_SWITCH_PROVIDERS.includes(row.provider)) return false;
+  if (!row?.keepGoingOnCredits || row.pool || !CREDITS_SWITCH_PROVIDERS.includes(row.provider))
+    return false;
   return row.credits?.state !== "off" && row.credits?.state !== "spent";
 }
+
+/**
+ * The pools a CLI proxy's logins fold into (docs/quota.md, "A proxy's
+ * pooled logins"): every Claude login it holds is one allowance, and every
+ * ChatGPT login another.
+ */
+export const QUOTA_POOL_KINDS = ["claude", "chatgpt"] as const;
+export type QuotaPoolKind = (typeof QUOTA_POOL_KINDS)[number];
+
+/** Each pool's name on its row. */
+// i18n-exempt: product names, the same in every language
+export const QUOTA_POOL_NAMES: Record<QuotaPoolKind, string> = {
+  claude: "Claude",
+  chatgpt: "ChatGPT",
+};
+
+/**
+ * How a pooled row's logins stand, beside its pooled windows: each count is
+ * a number of the proxy's logins of that pool. Unread, switched-off and
+ * sign-in-ended logins are counted here and never weigh in the windows as
+ * zero; a spent login weighs as zero until `backAtMs`.
+ */
+export const quotaPoolViewSchema = z.object({
+  kind: z.enum(QUOTA_POOL_KINDS),
+  logins: z.number().int().nonnegative(),
+  /** Serving logins whose limits were read: they make the pooled windows. */
+  read: z.number().int().nonnegative(),
+  /** Serving logins nothing has read yet. */
+  unread: z.number().int().nonnegative(),
+  /** Logins whose allowance is spent until they come back. */
+  spent: z.number().int().nonnegative(),
+  /** The earliest moment a spent login serves again. */
+  backAtMs: z.number().optional(),
+  /** Logins switched off in the proxy. */
+  switchedOff: z.number().int().nonnegative(),
+  /** Logins whose sign-in ended in the proxy: they cannot serve. */
+  signInEnded: z.number().int().nonnegative(),
+  /** Serving logins the proxy says need signing in again there. */
+  signInSoon: z.number().int().nonnegative(),
+  /** The earliest moment one of those stops serving. */
+  signInByMs: z.number().optional(),
+});
+export type QuotaPoolView = z.infer<typeof quotaPoolViewSchema>;
 
 export const quotaProviderViewSchema = z.object({
   /** Quota provider id: codex, grok, claude, copilot. */
@@ -239,6 +284,12 @@ export const quotaProviderViewSchema = z.object({
    * (`answersOnCredits`). Absent is off.
    */
   keepGoingOnCredits: z.boolean().optional(),
+  /**
+   * The row is a CLI proxy's pool of logins (`quotaPoolViewSchema`): its
+   * windows are the pooled share left, and the logins' standing rides here.
+   * The proxy's own sign-ins never make the row `auth_required`.
+   */
+  pool: quotaPoolViewSchema.optional(),
   /**
    * Disclosed uncertainty, in the user's words, for a row with no window.
    * The surface renders it instead of a silent blank, and it is never a

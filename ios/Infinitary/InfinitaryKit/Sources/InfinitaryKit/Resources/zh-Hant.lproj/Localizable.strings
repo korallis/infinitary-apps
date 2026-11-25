@@ -3895,6 +3895,7 @@
 "settingsSubscriptionsPaused" = "已暫停";
 "settingsSubscriptionsPersonalResourcesDescription" = "新的船員對話會使用你的大副所在 %1$@ 上的全域指示和技能，以及你在那裡開啟的代理程式外掛的技能。執行工作的其他 %2$@ 會保留一份副本，只在內容變更時重新傳送。船員規則決定交付方式；你的檔案引導風格和判斷。";
 "settingsSubscriptionsPersonalResourcesTitle" = "全域指示和技能";
+"settingsSubscriptionsPoolUsage" = "合併用量";
 "settingsSubscriptionsReading" = "讀取中…";
 "settingsSubscriptionsRefresh" = "重新整理";
 "settingsSubscriptionsRefreshing" = "重新整理中...";

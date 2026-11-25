@@ -1373,6 +1373,43 @@
   "settingsSubscriptionsPaused": "pausada",
   "settingsSubscriptionsPersonalResourcesDescription": "As novas conversas dos tripulantes usam as instruções e habilidades globais do {computer} onde mora seu imediato, junto com as habilidades dos plugins de agente que você ativou lá. Os outros {computers} que executam trabalho guardam uma cópia, enviada de novo só quando ela muda. As regras da tripulação regem a entrega; seu arquivo orienta o estilo e o julgamento.",
   "settingsSubscriptionsPersonalResourcesTitle": "Instruções e habilidades globais",
+  "settingsSubscriptionsPoolAccounts": {
+    "plural": "count",
+    "one": "{count} conta agrupada no seu app de proxy",
+    "many": "{count} de contas agrupadas no seu app de proxy",
+    "other": "{count} contas agrupadas no seu app de proxy"
+  },
+  "settingsSubscriptionsPoolSignInBy": {
+    "plural": "count",
+    "one": "{count} precisa fazer login de novo até {time}",
+    "many": "{count} precisam fazer login de novo até {time}",
+    "other": "{count} precisam fazer login de novo até {time}"
+  },
+  "settingsSubscriptionsPoolSignedOut": {
+    "plural": "count",
+    "one": "{count} precisa fazer login de novo no seu app de proxy",
+    "many": "{count} precisam fazer login de novo no seu app de proxy",
+    "other": "{count} precisam fazer login de novo no seu app de proxy"
+  },
+  "settingsSubscriptionsPoolSpent": {
+    "plural": "count",
+    "one": "{count} esgotada até {time}",
+    "many": "{count} esgotadas até {time}",
+    "other": "{count} esgotadas até {time}"
+  },
+  "settingsSubscriptionsPoolSwitchedOff": {
+    "plural": "count",
+    "one": "{count} desativada",
+    "many": "{count} desativadas",
+    "other": "{count} desativadas"
+  },
+  "settingsSubscriptionsPoolUnread": {
+    "plural": "count",
+    "one": "{count} ainda não lida",
+    "many": "{count} ainda não lidas",
+    "other": "{count} ainda não lidas"
+  },
+  "settingsSubscriptionsPoolUsage": "Uso agrupado",
   "settingsSubscriptionsReading": "lendo…",
   "settingsSubscriptionsRefresh": "Atualizar",
   "settingsSubscriptionsRefreshing": "Atualizando...",

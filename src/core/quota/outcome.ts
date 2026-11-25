@@ -3,6 +3,7 @@ import {
   KEYCHAIN_VALUE_FAILURE_DETAIL,
   type KeychainValueFailure,
   type QuotaCreditsView,
+  type QuotaPoolView,
   type QuotaSavedResetsView,
   type QuotaWindowView,
 } from "@shared/quota";
@@ -19,6 +20,8 @@ export type ProviderOutcome = {
   /** Paying past the allowance, when the reading says it. */
   credits?: QuotaCreditsView;
   savedResets?: QuotaSavedResetsView;
+  /** A CLI proxy's pool of logins the windows were pooled from. */
+  pool?: QuotaPoolView;
   plan?: string;
   account?: string;
   /** User-facing disclosure for a row with no window. */

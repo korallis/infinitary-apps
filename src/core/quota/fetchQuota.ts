@@ -162,6 +162,7 @@ async function fetchOneAccount(
     ...(outcome.windows.length > 0 ? { measuredAt: now } : {}),
     ...(outcome.credits ? { credits: outcome.credits } : {}),
     ...(outcome.savedResets ? { savedResets: outcome.savedResets } : {}),
+    ...(outcome.pool ? { pool: outcome.pool } : {}),
     ...(outcome.plan ? { plan: outcome.plan } : {}),
     ...(outcome.account ? { account: outcome.account } : {}),
     ...(outcome.detail ? { detail: outcome.detail } : {}),

@@ -1,4 +1,4 @@
-import { servedProviderOf } from "@shared/quota";
+import { type QuotaPoolKind, servedProviderOf } from "@shared/quota";
 import type { ProviderOutcome } from "./outcome";
 
 /**
@@ -77,6 +77,11 @@ export type QuotaCatalogModel = {
   provider: string;
   id: string;
   name: string;
+  /**
+   * A custom connection's model a CLI proxy serves from one of its pools:
+   * its catalog row reads the connection's row of that pool.
+   */
+  pool?: QuotaPoolKind;
 };
 
 /**

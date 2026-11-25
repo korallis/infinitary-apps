@@ -3651,6 +3651,150 @@
       <string>%1$ld مهمة</string>
     </dict>
   </dict>
+  <key>settingsSubscriptionsPoolAccounts</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>حسابات مجمّعة في تطبيق الوكيل: %1$ld</string>
+      <key>one</key>
+      <string>حسابات مجمّعة في تطبيق الوكيل: %1$ld</string>
+      <key>two</key>
+      <string>حسابات مجمّعة في تطبيق الوكيل: %1$ld</string>
+      <key>few</key>
+      <string>حسابات مجمّعة في تطبيق الوكيل: %1$ld</string>
+      <key>many</key>
+      <string>حسابات مجمّعة في تطبيق الوكيل: %1$ld</string>
+      <key>other</key>
+      <string>حسابات مجمّعة في تطبيق الوكيل: %1$ld</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSignInBy</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد قبل %2$@: %1$ld</string>
+      <key>one</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد قبل %2$@: %1$ld</string>
+      <key>two</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد قبل %2$@: %1$ld</string>
+      <key>few</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد قبل %2$@: %1$ld</string>
+      <key>many</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد قبل %2$@: %1$ld</string>
+      <key>other</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد قبل %2$@: %1$ld</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSignedOut</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: %1$ld</string>
+      <key>one</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: %1$ld</string>
+      <key>two</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: %1$ld</string>
+      <key>few</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: %1$ld</string>
+      <key>many</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: %1$ld</string>
+      <key>other</key>
+      <string>تحتاج إلى تسجيل الدخول من جديد في تطبيق الوكيل: %1$ld</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSpent</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>مستنفدة حتى %2$@: %1$ld</string>
+      <key>one</key>
+      <string>مستنفدة حتى %2$@: %1$ld</string>
+      <key>two</key>
+      <string>مستنفدة حتى %2$@: %1$ld</string>
+      <key>few</key>
+      <string>مستنفدة حتى %2$@: %1$ld</string>
+      <key>many</key>
+      <string>مستنفدة حتى %2$@: %1$ld</string>
+      <key>other</key>
+      <string>مستنفدة حتى %2$@: %1$ld</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolSwitchedOff</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>متوقفة: %1$ld</string>
+      <key>one</key>
+      <string>متوقفة: %1$ld</string>
+      <key>two</key>
+      <string>متوقفة: %1$ld</string>
+      <key>few</key>
+      <string>متوقفة: %1$ld</string>
+      <key>many</key>
+      <string>متوقفة: %1$ld</string>
+      <key>other</key>
+      <string>متوقفة: %1$ld</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsPoolUnread</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>لم تُقرأ بعد: %1$ld</string>
+      <key>one</key>
+      <string>لم تُقرأ بعد: %1$ld</string>
+      <key>two</key>
+      <string>لم تُقرأ بعد: %1$ld</string>
+      <key>few</key>
+      <string>لم تُقرأ بعد: %1$ld</string>
+      <key>many</key>
+      <string>لم تُقرأ بعد: %1$ld</string>
+      <key>other</key>
+      <string>لم تُقرأ بعد: %1$ld</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsSavedResets</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

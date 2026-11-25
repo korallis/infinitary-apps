@@ -15,7 +15,7 @@ import {
   WEEKLY_WINDOW_SECONDS,
 } from "../pace";
 
-const USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";
+export const CODEX_USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";
 const JWT_CLAIM = "https://api.openai.com/auth";
 
 export function chatgptAccountId(token: string): string | undefined {
@@ -192,7 +192,7 @@ export async function fetchCodexQuota(
   const token = auth.apiKey;
   if (!token) return CREDENTIAL_UNAVAILABLE;
   const accountId = chatgptAccountId(token);
-  const result = await http(USAGE_URL, {
+  const result = await http(CODEX_USAGE_URL, {
     headers: requestHeaders(auth, {
       ...(accountId ? { "chatgpt-account-id": accountId } : {}),
     }),

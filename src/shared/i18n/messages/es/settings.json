@@ -1373,6 +1373,43 @@
   "settingsSubscriptionsPaused": "en pausa",
   "settingsSubscriptionsPersonalResourcesDescription": "Las nuevas conversaciones de los tripulantes usan las instrucciones y habilidades globales de la {computer} donde vive tu primer oficial, junto con las habilidades de los plugins de agente que activaste allí. Otras {computers} que ejecutan trabajo guardan una copia, que se vuelve a enviar solo cuando cambia. Las reglas de la tripulación rigen la entrega; tu archivo orienta el estilo y el criterio.",
   "settingsSubscriptionsPersonalResourcesTitle": "Instrucciones y habilidades globales",
+  "settingsSubscriptionsPoolAccounts": {
+    "plural": "count",
+    "one": "{count} cuenta agrupada en tu app de proxy",
+    "many": "{count} de cuentas agrupadas en tu app de proxy",
+    "other": "{count} cuentas agrupadas en tu app de proxy"
+  },
+  "settingsSubscriptionsPoolSignInBy": {
+    "plural": "count",
+    "one": "{count} debe volver a iniciar sesión antes de {time}",
+    "many": "{count} deben volver a iniciar sesión antes de {time}",
+    "other": "{count} deben volver a iniciar sesión antes de {time}"
+  },
+  "settingsSubscriptionsPoolSignedOut": {
+    "plural": "count",
+    "one": "{count} debe volver a iniciar sesión en tu app de proxy",
+    "many": "{count} deben volver a iniciar sesión en tu app de proxy",
+    "other": "{count} deben volver a iniciar sesión en tu app de proxy"
+  },
+  "settingsSubscriptionsPoolSpent": {
+    "plural": "count",
+    "one": "{count} agotada hasta {time}",
+    "many": "{count} agotadas hasta {time}",
+    "other": "{count} agotadas hasta {time}"
+  },
+  "settingsSubscriptionsPoolSwitchedOff": {
+    "plural": "count",
+    "one": "{count} desactivada",
+    "many": "{count} desactivadas",
+    "other": "{count} desactivadas"
+  },
+  "settingsSubscriptionsPoolUnread": {
+    "plural": "count",
+    "one": "{count} sin leer todavía",
+    "many": "{count} sin leer todavía",
+    "other": "{count} sin leer todavía"
+  },
+  "settingsSubscriptionsPoolUsage": "Uso agrupado",
   "settingsSubscriptionsReading": "leyendo…",
   "settingsSubscriptionsRefresh": "Actualizar",
   "settingsSubscriptionsRefreshing": "Actualizando...",

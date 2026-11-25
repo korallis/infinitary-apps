@@ -36,6 +36,12 @@ export type StandIns = {
     kimiUsageUrl?: string;
     copilotUsageUrl?: string;
   };
+  /**
+   * A CLI proxy app's settings file the quota sensor reads instead of
+   * finding a running proxy app (docs/quota.md, "A proxy's pooled logins").
+   * An unpackaged run with none reads no proxy.
+   */
+  cliProxySettings?: string;
   /** Local Bedrock endpoint owned by the hermetic launcher. */
   bedrockUrl?: string;
   /** Absolute path of the disposable AWS CLI used by recovery journeys. */
@@ -114,6 +120,7 @@ export function readStandIns(
       kimiUsageUrl: text(env, "KIMI_USAGE_URL"),
       copilotUsageUrl: text(env, "COPILOT_USAGE_URL"),
     },
+    cliProxySettings: text(env, "CLI_PROXY_SETTINGS"),
     bedrockUrl: text(env, "BEDROCK_TEST_URL"),
     awsCli: text(env, "AWS_CLI"),
     placedClaudePolicy: text(env, "PLACED_CLAUDE_POLICY_FIXTURE"),

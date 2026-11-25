@@ -28,6 +28,7 @@ import {
   creditsLine,
   EMPTY_QUOTA_TEXT,
   noReaderText,
+  poolLine,
   SUBSCRIPTIONS_WORDS,
   savedResetsLine,
 } from "./subscriptionsWords";
@@ -111,6 +112,8 @@ export type RowView = {
   credits?: string;
   /** Saved resets the account holds and where they are used, in one line (`savedResetsLine`). */
   savedResets?: string;
+  /** How a CLI proxy's pooled logins stand, in one line (`poolLine`). */
+  pool?: string;
   /** The one-line state for a row with no meter to show. */
   stateText?: string;
   stateTone?: "danger";
@@ -316,7 +319,9 @@ export function rowView(
       // behind "as of Nd ago".
       if (row.detail) view.stateText = row.detail;
     } else {
-      view.stateText = row.detail ?? emptyQuotaText(row.status);
+      // A pool no login of which was read yet says how its logins stand.
+      view.stateText =
+        row.detail ?? (row.pool ? poolLine(row.pool, now) : emptyQuotaText(row.status));
       // Access set up for Claude Code is never measured, so its hold would
       // never show behind the allowance line: the hold says it instead.
       return account.access ? withHold(view, account, now) : view;
@@ -341,6 +346,7 @@ export function rowView(
   if (credits) view.credits = credits;
   const savedResets = row ? savedResetsLine(row.provider, row.savedResets) : undefined;
   if (savedResets) view.savedResets = savedResets;
+  if (row?.pool) view.pool = poolLine(row.pool, now);
   return withHold(view, account, now);
 }
 

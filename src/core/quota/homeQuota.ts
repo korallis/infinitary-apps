@@ -1,9 +1,11 @@
+import { readFile } from "node:fs/promises";
 import type { CutOff } from "@shared/authFailure";
 import {
   accountIdFromNeedsReauthCard,
   needsReauthCopy,
   REFRESH_TOKEN_LAPSED,
 } from "@shared/credentialHealth";
+import { isCustomApiProvider } from "@shared/customApi";
 import {
   BEDROCK_PROFILE_UNAVAILABLE,
   BEDROCK_PROVIDER_ID,
@@ -30,6 +32,14 @@ import { UsageStore } from "../storage/usageStore";
 import { type QuotaCatalogModel, quotaEntryForPiProvider } from "./auth";
 import { buildModelsCatalog, effectiveFromProvider } from "./catalog";
 import { managedFromClaudeStore } from "./claudeAuthResolve";
+import { createProxyAppReader, type ProxyApp, readProxySettings } from "./cliProxy/proxyApp";
+import { createProxyPoolReader, type ProxyReading } from "./cliProxy/proxyPools";
+import {
+  type PooledConnection,
+  poolOutcome,
+  proxyCatalogModels,
+  proxyConnectionRows,
+} from "./cliProxy/proxyQuota";
 import { CreditsWatch, stampSnapshot, stampSwitch } from "./creditsSwitch";
 import { createQuotaFetcher } from "./fetchQuota";
 import { createFixtureRefresh } from "./fixture";
@@ -125,7 +135,7 @@ function pushedOnly(vault: AccountVault, account: { id: string; providerId: stri
 
 export function startHomeQuota(options: {
   host: Pick<HostCapabilities, "keychain">;
-  standIns: Pick<StandIns, "quotaFixtureDir" | "quotaEndpoints">;
+  standIns: Pick<StandIns, "quotaFixtureDir" | "quotaEndpoints" | "cliProxySettings">;
   db: AppDatabase;
   vault: AccountVault;
   served: ServedModels;
@@ -162,9 +172,43 @@ export function startHomeQuota(options: {
     }
     return [...byId.entries()].map(([id, name]) => ({ provider: providerId, id, name }));
   };
+  // The CLI proxy on this computer (docs/quota.md, "A proxy's pooled
+  // logins"): read before each refresh; the Claude row, the custom
+  // connections' rows and the catalog read that reading until the next.
+  const proxyApp = proxyAppFor(options.standIns);
+  const readProxy = proxyApp
+    ? createProxyPoolReader({ app: proxyApp, http: createQuotaHttp() })
+    : undefined;
+  let proxy: ProxyReading | undefined;
+  const refreshProxy = async () => {
+    if (!readProxy) return;
+    try {
+      proxy = await readProxy();
+    } catch {
+      proxy = undefined;
+    }
+  };
+  const pooledConnections = (): PooledConnection[] => {
+    const views = vault.customViews();
+    return vault.list().flatMap((account) => {
+      if (!account.enabled || !isCustomApiProvider(account.providerId)) return [];
+      const view = views.find((entry) => entry.accountId === account.id);
+      if (!view) return [];
+      return [
+        {
+          accountId: account.id,
+          accountLabel: account.label,
+          providerId: account.providerId,
+          baseUrl: view.baseUrl,
+          modelIds: view.models.map((model) => model.id),
+        },
+      ];
+    });
+  };
   const catalogModels = () => [
     ...auth.catalogModels(vault.piModelRuntimes()),
     ...servedCatalogModels(CLAUDE_PROVIDER_ID, CLAUDE_MODELS),
+    ...proxyCatalogModels(proxy, pooledConnections()),
   ];
   const resolveQuotaAuth = async (accountId: string, resolve?: { allowPrompt?: boolean }) => {
     // A Claude account's usage credential is the machine's default
@@ -175,10 +219,15 @@ export function startHomeQuota(options: {
       // A further login's sign-in is its client's alone: its store is never read.
       if (vault.claudeConfigDir(accountId) !== undefined) return undefined;
       // Access set up for Claude Code serves no subscription allowance, and
-      // its sign-in is not the store's: the store is not read.
+      // its sign-in is not the store's: the store is not read. When its
+      // address is the CLI proxy, the proxy's Claude pool is its allowance.
       const access = await options.claudeAccess?.();
       if (access) {
-        quotaUnresolved.set(accountId, claudeAccessOutcome(access.source));
+        quotaUnresolved.set(
+          accountId,
+          poolOutcome(proxy, "claude", access.address, Date.now()) ??
+            claudeAccessOutcome(access.source),
+        );
         return undefined;
       }
       const read = await readClaudeStore(claudeDir, {
@@ -231,8 +280,8 @@ export function startHomeQuota(options: {
     );
   // Dev/e2e can point the quota sensor at fixture files instead of live APIs.
   const fixtureDir = options.standIns.quotaFixtureDir;
-  const quotaRefresh: QuotaRefresh = fixtureDir
-    ? createFixtureRefresh(fixtureDir)
+  const fetchQuota = fixtureDir
+    ? undefined
     : createQuotaFetcher({
         // One sensor call per enabled account, resolved from that account's
         // own store (broker phase 2).
@@ -305,6 +354,7 @@ export function startHomeQuota(options: {
         // Session-pushed readings still merge for any provider the HTTP
         // sensor does not cover.
         pushed: (now) => [
+          ...proxyConnectionRows(proxy, pooledConnections(), now),
           ...vault
             .list()
             .filter((account) => account.providerId === BEDROCK_PROVIDER_ID)
@@ -352,6 +402,12 @@ export function startHomeQuota(options: {
           ...pushedOnlyViews(now),
         ],
       });
+  const quotaRefresh: QuotaRefresh = fetchQuota
+    ? async (reason) => {
+        await refreshProxy();
+        return fetchQuota(reason);
+      }
+    : createFixtureRefresh(fixtureDir ?? "");
   const quota = new QuotaService({
     refresh: quotaRefresh,
     db,
@@ -531,4 +587,20 @@ export function quotaContextLine(snapshot: QuotaSnapshotView | undefined): strin
       ];
     });
   return parts.length > 0 ? parts.join("; ") : "unknown";
+}
+
+/**
+ * Where the CLI proxy app's settings are read from: a stand-in file on a
+ * development or test run that names one, the running proxy app's own in a
+ * packaged app, and nowhere on any other run, so a test never reads the
+ * proxy of the computer it runs on.
+ */
+function proxyAppFor(
+  standIns: Pick<StandIns, "quotaEndpoints" | "cliProxySettings" | "quotaFixtureDir">,
+): (() => Promise<ProxyApp | undefined>) | undefined {
+  if (standIns.quotaFixtureDir) return undefined;
+  const standIn = standIns.cliProxySettings;
+  if (standIn) return () => readFile(standIn, "utf8").then(readProxySettings, () => undefined);
+  // `quotaEndpoints` is present on every unpackaged run (`readStandIns`).
+  return standIns.quotaEndpoints === undefined ? createProxyAppReader() : undefined;
 }

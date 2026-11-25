@@ -303,3 +303,42 @@ An ambiguous local profile failure says that Infinitary could not use the AWS si
 The sign-in action opens AWS's own sign-in for an existing AWS IAM Identity Center or console profile, or asks for a replacement Bedrock API key.
 Before work resumes after profile sign-in, Infinitary rechecks Claude model access in that account’s region and saves the new list.
 AWS may bill those checks.
+
+## A proxy's pooled logins
+
+A CLI proxy on this computer (EasyCLIProxyAPI, a build of CLIProxyAPI) can hold several Claude logins and several ChatGPT logins and send each request to one of them.
+Infinitary reads such a proxy's own limit readings and shows, routes and pauses by one Claude pool and one ChatGPT pool, never by a single login (`src/core/quota/cliProxy/`).
+
+- **Finding the proxy.**
+  A packaged app looks for the running proxy program in the process list (`findProxyPrograms`, at most once every five minutes while none runs) and reads `config.toml` beside it (`readProxySettings`): the port, the management key and the first client key, from the top-level lines before any table.
+  A proxy whose `host` is not this computer is not read.
+  The keys stay in memory: they are never logged, saved or shown, and go only to `http://127.0.0.1:<port>`.
+  A development or test run reads no proxy unless `CLI_PROXY_SETTINGS` names a settings file (`proxyAppFor` in `src/core/quota/homeQuota.ts`), so a test never reads the proxy of the computer it runs on.
+- **Only reads.**
+  Every request goes through `guardedProxyHttp`, which refuses before sending anything but `GET /v8/management/credentials` (`/v0/management/auth-files` on a proxy before version 8, after a 404), `GET /v1/models`, and a `POST /v0/management/api-call` that reads one login's usage from Anthropic's or ChatGPT's usage address with no body.
+  The usage queue is never asked, since asking empties it, and nothing that changes the proxy is sent.
+- **Each login.**
+  `parseProxyCredentials` keeps each login's pool, state and last limit reading, and drops its email, label, file path, id and id token.
+  A login switched off in the proxy is `switched_off`; one whose renewal fails and whose sign-in has expired is `sign_in_ended`; one on a quota cooldown of the whole login is `spent` until the proxy tries it again; any other serves, with the time it stops serving when the proxy says it needs signing in again.
+  Its reading is the limit headers of its last answer: Anthropic's unified headers (a used fraction and a reset in Unix seconds per window) or ChatGPT's `x-codex-*` headers (a used percent, a reset and the window's length, which names it).
+- **A login the proxy has not read.**
+  A serving login with no reading is asked once through the proxy's request tool, which puts the login's own token in place of `$TOKEN$`, so Infinitary never holds it (`fillUnread`).
+  Its answer stands in until the proxy reads the login itself; a failed ask is tried again no sooner than ten minutes later (`UNREAD_RETRY_MS`).
+- **The pool.**
+  `poolReading` (`src/shared/quotaSignals.ts`) makes each window's share left the mean of every serving, read login's share, weighted by the proxy's own login weight, with each spent login counted at zero.
+  A login whose window already reset counts as full.
+  Unread, switched-off and sign-in-ended logins are counted on the row and never weigh as zero: unknown is not empty.
+  The window refills at the earliest moment a spent login comes back or a read login resets.
+  With no login serving and one spent, the pool reads 0% until the first comes back; with serving logins all unread, it has no window.
+  The row carries the counts as `pool` (`quotaPoolViewSchema`), and the proxy's sign-ins never make it `auth_required`: they are renewed in the proxy app.
+  A pool's credits stay the proxy's: Keep going on credits is never offered on it (`creditsOfferOf`, `answersOnCredits`).
+- **Where the pools show.**
+  The Claude row whose access for Claude Code sends its requests to the proxy (`ClaudeAccess.address`) reads the Claude pool (`poolOutcome`).
+  A custom connection whose base address is the proxy gets one row per pool its models are served from, under its own provider id, the pool named by the owner the proxy's model list gives each model (`owned_by`: anthropic is Claude, openai is ChatGPT); a model of any other owner belongs to no pool (`proxyConnectionRows`).
+  A proxy that did not answer gives such a connection one unread row.
+  Settings shows each pool's meters and a line saying how its logins stand (`poolLine` in `src/renderer/src/settings/subscriptionsWords.ts`), on the Claude row and under the connection; the phone shows the same.
+- **Routing and pausing.**
+  Each pooled model of a connection has a catalog row that reads its pool's row (`proxyCatalogModels`, `pool` on `QuotaCatalogModel`), so routing weighs its pool's reading instead of admitting it by its level alone, and a spent pool takes its models out as any spent allowance does (`allowanceSpent`).
+  A model of no pool is still admitted by its level alone.
+- **When it is read.**
+  The proxy is read before each quota refresh (`refreshProxy`), and its reading serves the rows and the catalog until the next.
