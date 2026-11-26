@@ -1,13 +1,17 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { extname, join } from "node:path";
+import { extname, join, relative, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  adherenceStep,
   baseRef,
   biomeStep,
   checkScripts,
   LANE_MEMORY_BYTES,
+  packageProgram,
   quickCheckLanes,
+  runsOf,
   sideBySide,
 } from "../scripts/check-changed.ts";
 import { ciModeRefusal } from "../scripts/checks-mode.ts";
@@ -165,12 +169,87 @@ describe("where the heavy checks run", () => {
       return [...names].map(([, file]) => file ?? "").sort();
     };
     // The paths as the full lint's Biome takes them, with no word on which to check.
-    const full = checked("pnpm", ["exec", "biome", "check", "--no-errors-on-unmatched", ...files]);
+    const full = checked("node", [
+      packageProgram("@biomejs/biome", "biome"),
+      "check",
+      "--no-errors-on-unmatched",
+      ...files,
+    ]);
     const mjs = full.filter((file) => file.endsWith(".mjs"));
     expect(mjs, full.join(" ")).not.toEqual([]);
     const step = biomeStep(files);
     expect(step).toBeDefined();
     expect(checked(step?.command ?? "", step?.args ?? [])).toEqual(full);
+  });
+
+  // The bug a Windows PC found: the quick check started Biome and the
+  // adherence lint as `pnpm exec`, and pnpm there is a .cmd file, which Node
+  // starts only through a shell, so both steps answered `spawn pnpm ENOENT`
+  // and linted nothing. One of the project's own renderer files stands in for
+  // a branch's change, and ESLint's JSON report names each file it judged.
+  it("starts the adherence lint on the changed renderer files as a program of its own", () => {
+    const [file = ""] = execFileSync("git", ["ls-files", "src/renderer/*.tsx"], {
+      encoding: "utf8",
+    }).split("\n");
+    const step = adherenceStep([file]);
+    const result = spawnSync(step?.command ?? "", [...(step?.args ?? []), "--format", "json"], {
+      encoding: "utf8",
+    });
+    expect(result.error?.message).toBeUndefined();
+    const judged = (JSON.parse(result.stdout) as { filePath: string }[]).map(({ filePath }) =>
+      relative(process.cwd(), filePath).split(sep).join("/"),
+    );
+    expect(judged).toEqual([file]);
+  });
+
+  // A lint whose package cannot be read is that lint's failure, as a lint that
+  // finds an error is, and the checks after it still run and report. A folder
+  // with no packages installed stands in for the package that cannot be read.
+  it("reports a lint whose package it cannot read as that step's failure and runs the checks after it", () => {
+    const quickCheck = pathToFileURL(resolve("scripts/check-changed.ts")).href;
+    const script = `
+      import { adherenceStep, biomeStep, run, sideBySide } from ${JSON.stringify(quickCheck)};
+      const next = { label: "next", command: "node", args: ["-e", "console.log('the next check ran')"] };
+      const results = await sideBySide([biomeStep(["a.ts"]), adherenceStep(["a.ts"]), next], 1, run);
+      console.log(JSON.stringify(results.map(({ step, ok, output }) => [step.label, ok, output])));
+    `;
+    const result = spawnSync("node", ["--input-type=module", "-e", script], {
+      cwd: scratchDir("infinitary-no-packages-"),
+      encoding: "utf8",
+    });
+    const results = JSON.parse(result.stdout || "[]") as [string, boolean, string][];
+    expect(
+      results.map(([label, ok]) => [label, ok]),
+      result.stderr,
+    ).toEqual([
+      ["biome", false],
+      ["adherence", false],
+      ["next", true],
+    ]);
+    expect(results[0]?.[2]).toContain("biome");
+    expect(results[1]?.[2]).toContain("eslint");
+    expect(results[2]?.[2]).toContain("the next check ran");
+  });
+
+  // The bug a wide change meets on a Windows PC: Windows starts a program with
+  // a command line of at most 32,767 characters, and Biome was handed every
+  // changed file in one, so past about 650 files it answered
+  // `spawn ENAMETOOLONG`. Every file of the project stands in for the change.
+  it("hands a lint only as many changed files at once as a Windows command line holds", () => {
+    const files = execFileSync("git", ["ls-files"], { encoding: "utf8", maxBuffer: 64 * 1024 ** 2 })
+      .split("\n")
+      .filter(Boolean);
+    const runs = runsOf(files, "win32");
+    expect(runs.flat()).toEqual(files);
+    for (const some of runs) {
+      const step = biomeStep(some);
+      const line = [step?.command, ...(step?.args ?? [])].map((word) => `"${word}"`).join(" ");
+      expect(line.length).toBeLessThan(32_767);
+    }
+    // The budget is Windows's own: on Linux and macOS a lint takes every
+    // file in one run and reports on them together.
+    expect(runsOf(files, "linux")).toEqual([files]);
+    expect(runsOf(files, "darwin")).toEqual([files]);
   });
 
   // The bug a main check found: its push checkout holds one commit and no main

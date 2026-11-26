@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "quick-check-on-windows",
+      "reason": "Internal: the changed-files check starts Biome and ESLint through Node and reads each release note file's name with the path library, so it runs on a Windows PC; nothing a person using the app sees changes."
+    }
+  ]
+}
