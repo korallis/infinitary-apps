@@ -2001,6 +2001,36 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     },
   );
 
+  it("reads a file hand-over's line and its message in the first turn they wake, behind a full page of override notices", async () => {
+    const { h, relaunched, prompts, read } = await relaunchedInBacklog();
+    const waiting = h.inbox.pending("t-move").length;
+    for (let i = 0; waiting + i < 50; i++)
+      h.inbox.enqueue("t-move", {
+        facts: {
+          kind: "task-override-changed",
+          task: { id: "t-move", key: "INA-1", title: "Move" },
+          override: { words: `Override note ${i}.`, holds: ["asks-first"], until: "task" },
+        },
+      });
+    seedTask(h.tasks, { id: "t-finder", title: "Find the screenshot", status: "idle" });
+    const picture = join(scratchDir("infinitary-handed-"), "clipped card.png");
+    writeFileSync(picture, "a picture of the clipped card");
+    await keepHandoverFiles([picture], crewmateHandoverDir(h.paths, "t-finder"));
+    await relaunched.steer.steerAfterFiles("t-finder", "t-move", "look at it", {
+      response: { mode: "guidance-only" as const },
+    });
+    await vi.waitFor(() => expect(relaunched.steer.handingOver("t-move")).toBe(false));
+    await tick();
+    expect(prompts()).toEqual([]);
+
+    read(60);
+    await vi.waitFor(() => expect(prompts()).toHaveLength(1));
+    expect(prompts()[0]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+    expect(prompts()[0]).toMatch(/Files handed to you from [^\n]*\n\nlook at it/);
+    expect(prompts()[0]).toContain("Override note 0.");
+    await relaunched.disposeAll();
+  });
+
   // docs/inbox.md: a refused delivery spends the try of the rows it was made for.
   it("backs off the kept sent message behind a full page, with the rows that would have gone with it, when its conversation does not open at the lane's sweep", async () => {
     const { h, relaunched, prompts, read } = await relaunchedInBacklog();
