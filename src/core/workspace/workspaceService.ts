@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readdirSync, realpathSync } from "node:fs";
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import { contributionOriginMatches } from "@shared/contributions";
@@ -1469,7 +1469,8 @@ export class WorkspaceService {
 
   /** Out of its path in one rename, deleted in the background; in place when the rename fails. */
   private async discardDir(dir: string): Promise<void> {
-    if (!existsSync(dir)) return;
+    // The entry itself, never where it leads: a link whose folder has gone is still there to remove.
+    if (!(await lstat(dir).catch(() => null))) return;
     const target = join(
       this.paths.worktreeTrashDir,
       `${basename(dir)}-${randomUUID().slice(0, 8)}`,

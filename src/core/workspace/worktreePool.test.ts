@@ -292,6 +292,29 @@ describe("warm worktree pool: a closed task's tree is reused, never dirty", () =
     expect(existsSync(join(second.cwd, "node_modules"))).toBe(false);
   });
 
+  it("on Windows, drops a dependency tree that is itself a link, leading nowhere or out of the working copy, and never what it leads to", async () => {
+    const repo = await project();
+    for (const name of ["app", "lib"]) mkdirSync(join(repo, "packages", name), { recursive: true });
+    writeFileSync(join(repo, "packages", "lib", "package.json"), '{ "name": "lib" }\n');
+    await commitFile(repo, join("packages", "app", "package.json"), '{ "name": "app" }\n');
+    const { workspace } = service(ON_WINDOWS);
+    const first = await workspace.createTaskWorktree("cdec1111", repo);
+    const gone = tmp("infinitary-pool-gone-");
+    symlinkSync(gone, join(first.cwd, "packages", "app", "node_modules"), folderLinkType());
+    rmSync(gone, { recursive: true });
+    const theirs = tmp("infinitary-pool-elsewhere-");
+    writeFileSync(join(theirs, "theirs.txt"), "not the pool's\n");
+    symlinkSync(theirs, join(first.cwd, "packages", "lib", "node_modules"), folderLinkType());
+    await closeTask(workspace, first);
+
+    const second = await workspace.createTaskWorktree("cdec2222", repo);
+    expect(second.acquired?.source).toBe("pool");
+    expect(readdirSync(join(second.cwd, "packages", "app"))).toEqual(["package.json"]);
+    expect(readdirSync(join(second.cwd, "packages", "lib"))).toEqual(["package.json"]);
+    await workspace.deletionsSettled();
+    expect(readFileSync(join(theirs, "theirs.txt"), "utf8")).toBe("not the pool's\n");
+  });
+
   it("on Windows, a dependency tree the project keeps in git stays when the others are dropped", async () => {
     const repo = await project();
     const kept = join("fixtures", "node_modules", "kept", "index.js");
