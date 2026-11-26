@@ -15,6 +15,13 @@ The load supervisor (`scripts/load-supervisor.c`) is a POSIX program, so a Windo
 The installer and the program carry the committed `packaging/build/icon.ico`, rendered from the same picture as the Mac and Linux icons (`scripts/render-app-ico.mjs`); electron-builder ships it unchanged, so the build runs no icon tool of its own.
 The task commands (`resources/axi-bin/`) are POSIX shell scripts that talk to the app over loopback with curl, so they run in Git Bash unchanged.
 
+## A working copy on a Windows PC
+
+A fresh working copy installs with a plain `pnpm install` on a PC with no Visual Studio build tools and no other C++ compiler.
+No package compiles at install: `pnpm-workspace.yaml` keeps better-sqlite3's node-gyp build off, since the package carries its own build for Windows x64 and node-gyp would look for Visual Studio only to compile nothing (`tests/install-native-builds.test.ts`).
+The project's postinstall then runs whole: it downloads Electron for Windows, and its two Mac-only steps, the app's own git and the local signing check, do nothing.
+The git step is a TypeScript script and ends by itself there, never through `process.exit`: Node 24 on Windows aborts on an exit that early in such a script, and the step's status then fails the install (`tests/bundled-git-step.test.ts`).
+
 ## The installer
 
 The installer is one click for one person: it asks no question and never asks for administrator rights (`requestedExecutionLevel: asInvoker`, `perMachine: false`).
@@ -105,7 +112,8 @@ With more than one round each job's name ends `; round N of M` and each round ke
 The machine must have a standard person signed in at its desktop with Explorer running, no Git installed, and a runner that runs as that person; it is removed when the job ends.
 The portable Git sits in the job's temporary folder and on its own steps' search path only, so the app, opened through Explorer, never sees it.
 Its PowerShell steps run in Windows PowerShell 5.1, the one Windows ships, since the machine has no PowerShell 7.
-The machine has no Python or compiler either, so the job installs the project's packages without their build scripts and compiles only the message catalogs the journey reads; the journey runs the installed app, never a build of its own.
+The machine has no Python or compiler either.
+The job installs the project's packages without their build scripts and compiles only the message catalogs the journey reads; the journey runs the installed app, never a build of its own.
 The job checks the installer against the `sums` line the build job reported, not only the artifact's own `SHA256SUMS`, refuses an artifact holding any other file, runs that one checked file by its full path silently as a double-click does (`/S --force-run`), and runs `tests/windows/installed-windows.spec.ts` with `playwright.windows.config.ts`.
 The job's git never asks for a sign-in, since a prompt on the machine's desktop waits for a press nobody makes, and the journey's config keeps Playwright from reading git, which on a batch's pull request run would fetch the base commit without credentials.
 The job uploads its evidence even when its timeout cancels it.

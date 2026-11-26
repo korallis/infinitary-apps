@@ -381,6 +381,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   Linux dependency installs use `.github/actions/node-headers`, which finds the running Node archive's `include/node` headers and refuses an image missing them; only the install receives that root as `NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR`.
   Uppercase preserves the setting through pnpm's lifecycle environment filter.
   That setting belongs only to the install, so later Electron rebuilds keep their own headers.
+  An install starts no node-gyp build: `pnpm-workspace.yaml` keeps better-sqlite3's off, since its package carries a build for each system (`tests/install-native-builds.test.ts`), so nothing in the install reads that root.
   `ci.yml` also forces a better-sqlite3 source build with an empty header cache and an unreachable header server, then writes and reads a database.
   The same workflow contract test evaluates the cache input for both runners.
   Every install restores what it downloads from GitHub's release server from the Actions cache first, and every package step restores electron-builder's tools ("Downloads from GitHub's release server").

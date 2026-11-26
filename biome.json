@@ -542,6 +542,7 @@
         "!tests/corpus-tools-plain-node.test.ts",
         "!tests/generate-self-source.test.ts",
         "!tests/install-clones.test.ts",
+        "!tests/bundled-git-step.test.ts",
         "!tests/mac-app-launcher.test.ts",
         "!tests/local-codesign.test.ts",
         "!tests/mac-check-lock.test.ts",

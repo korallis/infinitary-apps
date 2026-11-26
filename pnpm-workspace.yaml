@@ -13,7 +13,15 @@ supportedArchitectures:
 allowBuilds:
   electron: true
   esbuild: true
-  better-sqlite3: true
+  # better-sqlite3 has a binding.gyp and no install script, so allowing its
+  # build has pnpm run `node-gyp rebuild` at every install. That compiles
+  # nothing: the package carries its own Node-API build for each system, its
+  # binding.gyp skips the compile beside one, and its loader takes that build
+  # first. node-gyp still needs a C++ toolchain before it reads the file, so a
+  # Windows PC without Visual Studio's build tools failed the whole install
+  # there, before the project's own postinstall
+  # (tests/install-native-builds.test.ts).
+  better-sqlite3: false
   # koffi is a direct dep for the host Keychain FFI (CD-5=B) and also arrives
   # transitively via pi-tui. It must be allowed to install its prebuilds.
   koffi: true
