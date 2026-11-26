@@ -274,13 +274,16 @@ export function markCredits(
   /** The snapshot's pools of the person's own logins (`QuotaSnapshotView.pools`). */
   pools?: readonly QuotaProviderView[],
 ): ModelsCatalogView {
-  // A pooled provider's models answer on a login of the pool alone: a
-  // paused account outside it serves nothing, whatever its switch says.
+  // A pooled provider's models answer on a login of the pool that serves,
+  // as `pooledView` reads them: a paused account outside it, and a login
+  // whose sign-in ended or whose reading is not current, serves nothing,
+  // whatever its switch says.
   const credited = new Set(
     providers
       .filter((row) => {
+        if (!answersOnCredits(row)) return false;
         const pool = accountsPoolOf(pools, row.provider);
-        return answersOnCredits(row) && (!pool || inAccountsPool(pool, row.accountId));
+        return !pool || (inAccountsPool(pool, row.accountId) && row.status === "ok" && !row.stale);
       })
       .map((row) => row.provider),
   );

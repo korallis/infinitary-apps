@@ -118,7 +118,7 @@ describe("a model of a provider whose own logins pool", () => {
 
   // The review's ask: a paused login is outside the pool and must not make
   // a spent pool's model read as serving on credits.
-  it("is marked as on credits by a login of its pool, never by a paused one outside it", () => {
+  it("is marked as on credits by a serving login of its pool, never by a paused or signed-out one", () => {
     const credits = { keepGoingOnCredits: true, credits: { state: "available" as const } };
     const marked = (rows: QuotaProviderView[], memberIds: string[]) => {
       const pools = accountPools(
@@ -133,6 +133,17 @@ describe("a model of a provider whose own logins pool", () => {
     const paused = [login("personal", 0), login("work", 0), login("old", 0, credits)];
     expect(marked(paused, ["personal", "work"])).toMatchObject({ effectivePercentRemaining: 0 });
     expect(marked(paused, ["personal", "work"])?.onCredits).toBeUndefined();
+
+    // A login of the pool whose sign-in ended keeps its switch and serves
+    // nothing: beside a spent login, the model is spent, not on credits.
+    const ended: QuotaProviderView = {
+      ...login("ended", 0, credits),
+      status: "auth_required",
+      windows: [],
+    };
+    const signedOut = marked([login("personal", 0), ended], ["personal", "ended"]);
+    expect(signedOut).toMatchObject({ effectivePercentRemaining: 0 });
+    expect(signedOut?.onCredits).toBeUndefined();
 
     // The same switch on a login of the pool does mark it.
     const member = [login("personal", 0, credits), login("work", 0), login("old", 0)];
