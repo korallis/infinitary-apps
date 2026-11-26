@@ -18,6 +18,7 @@ import { captureLoginPath, resetLoginPathForTests } from "../hostEnv";
 import { writeLoginShellStub } from "../loginShellStub";
 import { appPathsFor } from "../paths";
 import { git } from "./git";
+import { runInstall } from "./installProcess";
 import { branchNameRefusal, nameTaskBranch, taskBranchStem } from "./taskBranches";
 import { keptRefFor, WorkspaceService } from "./workspaceService";
 
@@ -268,10 +269,13 @@ describe("dependency install at commission (interaction P0, WI-7)", () => {
      * that never checks its writes does, so only being ended ends it;
      * `orphan` puts a program that ends at once between the two, so nothing
      * leads from the first program to the last and Windows cannot find it
-     * to end it. Whatever is still running is ended when the test finishes,
-     * failed or out of time included.
+     * to end it; `apart` prints as `loud` does, and its second program
+     * holds none of the install's output and does not end with the first
+     * (Node ends a program's own with it unless they are started detached),
+     * so that output closes while it runs on. Whatever is still running is
+     * ended when the test finishes, failed or out of time included.
      */
-    function unendingPnpm(mode: "quiet" | "loud" | "orphan") {
+    function unendingPnpm(mode: "quiet" | "loud" | "orphan" | "apart") {
       const dir = scratchDir("infinitary-pnpm-unending-");
       const log = join(dir, "started.log");
       const script = join(dir, "unending.cjs");
@@ -283,7 +287,7 @@ const log = ${JSON.stringify(log)};
 const [mode, role = "top"] = process.argv.slice(2);
 const under = () => (existsSync(log) ? readFileSync(log, "utf8").split("\\n").filter((line) => line.startsWith("under ")).length : 0);
 const start = (next, detached) =>
-  spawn(process.execPath, [__filename, mode, next], { stdio: "inherit", detached, windowsHide: true });
+  spawn(process.execPath, [__filename, mode, next], { stdio: mode === "apart" ? "ignore" : "inherit", detached, windowsHide: true });
 if (role === "middle") {
   start("under", true).unref();
   process.exit(0);
@@ -291,8 +295,8 @@ if (role === "middle") {
 const before = under();
 appendFileSync(log, role + " " + process.pid + "\\n");
 if (role === "top") {
-  start(mode === "orphan" ? "middle" : "under", false);
-  if (mode === "loud") {
+  start(mode === "orphan" ? "middle" : "under", mode === "apart");
+  if (mode === "loud" || mode === "apart") {
     process.stdout.on("error", () => {});
     const wait = setInterval(() => {
       if (under() === before) return;
@@ -329,7 +333,7 @@ setTimeout(() => {}, 600000);
           }
         }
       });
-      return { bin, started, running };
+      return { bin, script, started, running };
     }
 
     it("has ended every program an install started by the time it reports running past its time", {
@@ -373,6 +377,35 @@ setTimeout(() => {}, 600000);
       expect(pnpm.started("top")).toHaveLength(1);
       expect(pnpm.running(pnpm.started("top"))).toEqual([]);
       // The program Windows could not find is why no second attempt may start.
+      expect(pnpm.running(pnpm.started("under"))).toHaveLength(1);
+    });
+
+    it("reports a stopped run as still running when Windows could not end its programs, though its output has closed", {
+      timeout: 60_000,
+    }, async () => {
+      const pnpm = unendingPnpm("apart");
+      const env = { ...process.env };
+      // taskkill is started from Windows' own folder: named wrongly, it
+      // cannot start, and all that is left is to end the program at the top.
+      const systemRoot = process.env.SystemRoot;
+      process.env.SystemRoot = join(scratchDir("infinitary-no-windows-"), "missing");
+      try {
+        const failure = await runInstall(
+          process.execPath,
+          [pnpm.script, "apart"],
+          { cwd: lockfileFolder(), env, timeoutMs: 60_000, maxBuffer: 1024 },
+          "win32",
+        ).catch((caught: unknown) => caught);
+        expect(failure).toMatchObject({
+          code: "ERR_CHILD_PROCESS_STDIO_MAXBUFFER",
+          stillRunning: true,
+        });
+      } finally {
+        if (systemRoot === undefined) delete process.env.SystemRoot;
+        else process.env.SystemRoot = systemRoot;
+      }
+      expect(pnpm.running(pnpm.started("top"))).toEqual([]);
+      // The program that holds none of the run's output is why it is not over.
       expect(pnpm.running(pnpm.started("under"))).toHaveLength(1);
     });
   });

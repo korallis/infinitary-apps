@@ -291,8 +291,8 @@ export class WorkspaceService {
       await this.pnpm(cwd, [...base, "--offline"]);
       return { outcome: "offline", ms: Date.now() - started };
     } catch (caught) {
-      // The shared store lacks something: fetch it - unless programs of the
-      // first run could not be ended, which a second run would write beside.
+      // The shared store lacks something: fetch it - unless the first run's
+      // programs were not confirmed ended, which a second run would write beside.
       if ((caught as InstallFailure).stillRunning) {
         return { outcome: "failed", ms: Date.now() - started, error: installError(caught) };
       }

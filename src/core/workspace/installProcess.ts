@@ -16,8 +16,9 @@ export type InstallRun = {
 
 /**
  * What a failed run carries: `stderr`; `killed` once the time limit stopped
- * it, as `execFile`'s does; and `stillRunning` when programs it started
- * could not be ended, so nothing else may write into its folder yet.
+ * it, as `execFile`'s does; and `stillRunning` when Windows did not confirm
+ * that the programs it started have ended, or they still hold its output,
+ * so nothing else may write into its folder yet.
  */
 export type InstallFailure = Error & { stderr?: string; killed?: boolean; stillRunning?: boolean };
 
@@ -44,9 +45,13 @@ const END_LIMIT_MS = 10_000;
  * which reads as not installed (`spawn pnpm ENOENT`). The working copy is
  * not searched, so a project's own file named like the program never runs.
  * A batch file runs through cmd.exe, and a run stopped at its time limit or
- * for printing too much has every program under it ended before it fails:
- * ending cmd.exe alone would leave the install writing into the working
- * copy while the next attempt starts.
+ * for printing too much has Windows end every program under it before it
+ * fails: ending cmd.exe alone would leave the install writing into the
+ * working copy while the next attempt starts. Where Windows does not
+ * confirm that, the failure says so (`stillRunning`). A program whose
+ * parent ended before it, and which holds none of the run's output, is
+ * beyond both checks: Windows finds a tree's programs through their
+ * parents.
  */
 export async function runInstall(
   file: string,
@@ -73,6 +78,8 @@ export async function runInstall(
     const command = `${file} ${args.join(" ")}`;
     let stderr = "";
     let stopped: InstallFailure | undefined;
+    let treeEnded: boolean | undefined;
+    let closed = false;
     let settled = false;
     let giveUp: ReturnType<typeof setTimeout> | undefined;
     const settle = (failure?: InstallFailure): void => {
@@ -83,15 +90,28 @@ export async function runInstall(
       if (failure) reject(Object.assign(failure, { stderr }));
       else resolve();
     };
+    // A stopped run fails once taskkill has answered and every program
+    // holding its output has gone. Neither is enough alone: when taskkill
+    // fails, only the program at the top is ended, the output closes with
+    // it, and a program under it that holds none of the output runs on.
+    const failStopped = (): void => {
+      if (!stopped || !closed || treeEnded === undefined) return;
+      settle(treeEnded ? stopped : Object.assign(stopped, { stillRunning: true }));
+    };
     // taskkill finds a run's programs through the one at its top, so the tree
-    // is ended while that one still runs, and the run fails only once every
-    // program holding its output has gone - or the wait for that runs out.
+    // is ended while that one still runs. The wait for its answer and for
+    // the output to close has a limit of its own.
     const stop = (failure: InstallFailure): void => {
       if (stopped || settled) return;
       stopped = failure;
       clearTimeout(timer);
       if (child.pid === undefined) child.kill();
-      else void endWindowsTree(child.pid, () => child.kill(), END_LIMIT_MS / 2);
+      else {
+        void endWindowsTree(child.pid, () => child.kill(), END_LIMIT_MS / 2).then((ended) => {
+          treeEnded = ended;
+          failStopped();
+        });
+      }
       giveUp = setTimeout(() => {
         child.stdout?.destroy();
         child.stderr?.destroy();
@@ -119,7 +139,8 @@ export async function runInstall(
     );
     child.once("error", (error) => settle(error));
     child.once("close", (code) => {
-      if (stopped) settle(stopped);
+      closed = true;
+      if (stopped) failStopped();
       else if (code === 0) settle();
       else settle(Object.assign(new Error(`Command failed: ${command}\n${stderr}`), { code }));
     });
