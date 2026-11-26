@@ -408,6 +408,21 @@ export class CrewWatch {
     }
   }
 
+  /**
+   * A conversation a login move or a kept sent message was opening for the
+   * lane's due rows did not open (`LoginMoves`): as after this sweep's own
+   * failed opening, the rows spend a try and back off one grace, and the
+   * delivery that reaches the task is still their first. Waiting for a
+   * model, or an opening that was not accepted, spends nothing.
+   */
+  openingFailed(taskId: string, caught: unknown): void {
+    if (caught instanceof ModelWaitError || caught instanceof NotAcceptedError) return;
+    const due = this.core.facts.deliverableRows(taskId, this.core.now());
+    const untried = due.filter((row) => row.lastAttemptAt === null).map((row) => row.id);
+    this.core.options.inbox.release(this.core.turns.claimRows(due));
+    this.core.options.inbox.neverAttempted(untried);
+  }
+
   async sweepTaskLane(taskId: string, now: number): Promise<void> {
     if (this.core.options.inbox.isServiceRecipient(taskId)) return;
     const spent = this.core.options.inbox.spent(taskId, INBOX_ATTEMPT_MAX);
@@ -416,11 +431,7 @@ export class CrewWatch {
     // but for a message someone sent while a Move click was unchecked, which
     // keeps its wake until a delivery takes it (`LoginMoves.keepsSent`).
     if (this.core.facts.inBacklog(taskId)) {
-      const due = this.core.facts.deliverableRows(taskId, now);
-      if (due.length > 0)
-        this.core.loginMoves.paySent(taskId, () =>
-          this.core.options.inbox.release(due.map((row) => row.id)),
-        );
+      this.core.loginMoves.paySent(taskId);
       return;
     }
     if (

@@ -49,14 +49,14 @@ export type LowLoginsOptions = {
   /**
    * Binds each of them to the named login, where it moves between turns
    * (`LoginMoves.moveOff`); with `unnamedOnly`, only those no other login
-   * is named for.
+   * is named for. `click` is the answered card's raising, kept with each move.
    */
-  moveOff: (from: string, to: string, unnamedOnly?: boolean) => unknown;
+  moveOff: (from: string, to: string, unnamedOnly?: boolean, click?: string) => unknown;
   /**
    * The tasks still to move off a login stay on it; with `to`, only those
-   * named for that login (`LoginMoves.forget`).
+   * `click` named for that login (`LoginMoves.forget`).
    */
-  forget: (from: string, to?: string) => void;
+  forget: (from: string, to?: string, click?: string) => void;
   /**
    * Each provider's card the card store still has open from the last
    * launch: the login it asks about and the one it offers, where it says.
@@ -69,11 +69,14 @@ export type LowLoginsOptions = {
   /**
    * The captain's answer on the provider's saved card that still stands:
    * the login the card asked about, the login a Move click named (absent
-   * for Wait for the refill), and the refill time the card named. Undefined
-   * once `endAnswer` ended it or the card went up again; saved, so a launch
-   * reads it as the last one left it.
+   * for Wait for the refill), the refill time the card named, and the
+   * card's raising the answer was given on. Undefined once `endAnswer`
+   * ended it or the card went up again; saved, so a launch reads it as the
+   * last one left it.
    */
-  answered: (providerId: string) => { from: string; to?: string; refillsAt?: number } | undefined;
+  answered: (
+    providerId: string,
+  ) => { from: string; to?: string; refillsAt?: number; askId?: string } | undefined;
   /** The answer is over: its move is made or refused, or its run-out ended. Saved. */
   endAnswer: (providerId: string) => void;
   /** When a login's allowance refills, in milliseconds, when known. */
@@ -173,9 +176,11 @@ export class LowLogins {
     // click, cut off after its pin was saved: its tasks' moves still stand.
     const inUse = choice !== "ask" || pin === from || pin === accountId;
     const moves = asks && inUse && low && runsLow(low) && to && hasRoom(to);
+    // The raising this click answered: its own moves, apart from an earlier click's to the same login.
+    const click = this.options.answered(provider.id)?.askId;
     if (moves) {
       // `spread` asked only about work no login was named for (`ask`).
-      void this.options.moveOff(from, accountId, choice === "spread");
+      void this.options.moveOff(from, accountId, choice === "spread", click);
       // The pin moves only when it is the low login: under `spread` new work is not bound to it.
       if (pin === from) {
         this.options.setPin(provider.id, accountId);
@@ -184,8 +189,8 @@ export class LowLogins {
         );
       }
     }
-    // Refused, the click leaves no task named for the login it named.
-    else this.options.forget(from, accountId);
+    // Refused, the click leaves no task it named for that login.
+    else this.options.forget(from, accountId, click);
     this.options.endAnswer(provider.id);
     return moves ? "moved" : "refused";
   }

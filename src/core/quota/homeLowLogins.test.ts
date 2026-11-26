@@ -2,7 +2,7 @@ import type { Card } from "@shared/cards";
 import type { FmEvent } from "@shared/events";
 import { wordSaidMarks } from "@shared/i18n/said";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LOGIN_LOW_WAIT } from "../orchestrator/loginCards";
+import { LOGIN_LOW_WAIT, loginLowAsked } from "../orchestrator/loginCards";
 import { moveLoginActionId } from "../orchestrator/loginMove";
 import type { LoginMoves } from "../orchestrator/loginMoves";
 import { startLowLogins } from "./homeLowLogins";
@@ -54,6 +54,8 @@ function home(
   const order: string[] = [];
   /** For each move of tasks, whether it was only of tasks no login was named for. */
   const scoped: boolean[] = [];
+  /** The card raising each move of tasks, and each dropping of a click's moves, was made for. */
+  const clicks: string[] = [];
   const events: FmEvent[] = [];
   const state = {
     pin: "personal" as string | undefined,
@@ -75,17 +77,20 @@ function home(
     tasksOn: () => ["task-1"],
     unnamedOn: () => (named !== undefined ? [] : ["task-1"]),
     // As `LoginMoves.moveOff`: a record that cannot be written throws before the promise.
-    moveOff: (from: string, to: string, unnamedOnly?: boolean) => {
+    moveOff: (from: string, to: string, unnamedOnly?: boolean, click?: string) => {
       if (state.movesUnwritable) throw new Error("the record could not be written");
       scoped.push(unnamedOnly === true);
+      clicks.push(`moves by ${click}`);
       moved.push(`${from} to ${to}`);
       order.push(`tasks ${from} to ${to}`);
       named = from;
       return Promise.resolve();
     },
-    forget: (from: string, to?: string) => {
-      if (to !== undefined) discarded.push(`${from} to ${to}`);
-      else if (named === from) named = undefined;
+    forget: (from: string, to?: string, click?: string) => {
+      if (to !== undefined) {
+        discarded.push(`${from} to ${to}`);
+        clicks.push(`dropped by ${click}`);
+      } else if (named === from) named = undefined;
     },
   } as unknown as LoginMoves;
   const watch = startLowLogins({
@@ -151,6 +156,7 @@ function home(
     withdrawn,
     order,
     scoped,
+    clicks,
     state,
     loginMoves,
     saved,
@@ -532,6 +538,35 @@ describe("the home's watch after a relaunch, while the login a Move click left i
     ask.watch.read();
     ask.loginMoves.onClick?.("spare");
     expect(ask.scoped).toEqual([false]);
+  });
+
+  // INA-9: an earlier click's task keeps the login named for it, so a click's moves carry its own raising.
+  it("names a click's moves, and drops a refused click's, by the card raising the click answered", () => {
+    const logins = [
+      login("personal", "Personal", 4),
+      login("work", "Work", 2),
+      login("spare", "Spare", 60),
+    ];
+    const t = home(logins);
+    t.state.choice = "spread";
+    t.watch.read();
+    const first = loginLowAsked(t.raised[0]?.body ?? "")?.askId;
+    expect(first).toBeTruthy();
+    t.saved.chosen = moveLoginActionId("personal", "spare");
+    t.loginMoves.onClick?.("spare");
+    expect(t.clicks).toEqual([`moves by ${first}`]);
+
+    // A later raising, whose click is refused: Spare has lost its room.
+    const later = home(logins);
+    later.state.choice = "spread";
+    later.watch.read();
+    const second = loginLowAsked(later.raised[0]?.body ?? "")?.askId;
+    expect(second).not.toBe(first);
+    later.saved.chosen = moveLoginActionId("personal", "spare");
+    logins[2] = login("spare", "Spare", 3);
+    later.loginMoves.onClick?.("spare");
+    expect(later.discarded).toEqual(["personal to spare"]);
+    expect(later.clicks).toEqual([`dropped by ${second}`]);
   });
 
   it("refuses the click without waiting for the reading once the choice no longer asks", () => {

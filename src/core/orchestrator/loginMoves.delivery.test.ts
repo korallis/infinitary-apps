@@ -31,7 +31,7 @@ import { SUPERVISOR_STEER } from "./crewRuntime";
 import { crewmateRestartText } from "./crewSession";
 import type { AccountAttachment, CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { BACKLOG_STEER_LINE } from "./crewTurns";
-import { loginLowCard, loginLowCardId } from "./loginCards";
+import { loginLowAsked, loginLowCard, loginLowCardId } from "./loginCards";
 
 fakeCrewTimersEachTest();
 
@@ -1286,8 +1286,6 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
       pin: "acct_personal",
       quitsAtPin: true,
     };
-    const named = { from: "acct_personal", to: "acct_spare" };
-    const bothNamed = { "t-move": named, "t-other": named };
     const first = watching(h, h.supervisor, vault, () => [
       reading("acct_personal", "Personal", 4),
       reading("acct_work", "Work", 40),
@@ -1295,6 +1293,11 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     ]);
     first.read();
     const cardId = loginLowCardId("openai-codex");
+    // Each move is saved with the card raising its click answered.
+    const click = loginLowAsked(h.supervisor.cards.stored(cardId)?.body ?? "")?.askId;
+    expect(click).toBeTruthy();
+    const named = { from: "acct_personal", to: "acct_spare", click };
+    const bothNamed = { "t-move": named, "t-other": named };
     expect(h.supervisor.cards.stored(cardId)?.actions?.[0]?.label).toBe("Move to Spare");
 
     // The click; the app quits as the pin is about to be saved.
@@ -1486,7 +1489,9 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     first.read();
     await tick();
     write.mockRestore();
-    const named = { from: "acct_personal", to: "acct_spare" };
+    const click = loginLowAsked(h.supervisor.cards.stored(cardId)?.body ?? "")?.askId;
+    expect(click).toBeTruthy();
+    const named = { from: "acct_personal", to: "acct_spare", click };
     expect(settings.getLoginMoves()).toEqual({ "t-move": named, "t-other": named });
     expect(vault.pin).toBe("acct_spare");
     expect(Object.keys(settings.getLoginAnswersOver())).toEqual(["openai-codex"]);
@@ -1822,41 +1827,47 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     await relaunched.disposeAll();
   });
 
-  it("keeps a sent message's wake when the conversation does not open after the click is refused, waits out the back-off and delivers it then", async () => {
-    const { h, relaunched, prompts, accounts, read } = await relaunchedInBacklog();
-    await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
-      "recorded-held",
-    );
-    const open = vi
-      .spyOn(relaunched.sessions, "resumeTask")
-      .mockRejectedValueOnce(new Error("could not open"))
-      .mockRejectedValueOnce(new Error("could not open"));
-    // Spare has 3% left now: the click is refused and the task stays on Personal.
-    read(3);
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
-    await tick();
-    expect(prompts()).toEqual([]);
+  // docs/inbox.md: a refused delivery backs off, and the host's own notice waits in the backlog for a Start.
+  it.each([
+    { click: "accepted", spare: 60, account: "acct_spare" },
+    { click: "refused", spare: 3, account: "acct_personal" },
+  ])(
+    "backs a kept sent message off at once when its conversation does not open after the click is $click, starts no turn for a host notice due beside it, and delivers it when it is due",
+    async ({ spare, account }) => {
+      const { h, relaunched, prompts, accounts, read } = await relaunchedInBacklog();
+      await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+        "recorded-held",
+      );
+      const open = vi
+        .spyOn(relaunched.sessions, "resumeTask")
+        .mockRejectedValueOnce(new Error("could not open"));
+      const now = Date.now();
+      read(spare);
+      await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+      await tick();
+      expect(prompts()).toEqual([]);
+      expect(h.tasks.get("t-move")?.accountId).toBe(account);
+      const next = Math.max(...h.inbox.allFor("t-move").map((row) => row.nextAttemptAt ?? 0));
+      expect(next).toBeGreaterThan(now);
 
-    const now = Date.now();
-    await relaunched.watch.sweepTaskLane("t-move", now);
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(2));
-    await tick();
-    expect(prompts()).toEqual([]);
-    const next = Math.max(...h.inbox.allFor("t-move").map((row) => row.nextAttemptAt ?? 0));
-    expect(next).toBeGreaterThan(now);
-    // Before the back-off ends nothing is tried.
-    await relaunched.watch.sweepTaskLane("t-move", now);
-    await tick();
-    expect(open).toHaveBeenCalledTimes(2);
+      // The host's own notice is due now; the sent message is not.
+      await expect(
+        relaunched.steer.steerInternal("t-move", "Checks passed.", SUPERVISOR_STEER),
+      ).resolves.toBe("recorded-held");
+      await relaunched.watch.sweepTaskLane("t-move", now);
+      await tick();
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(prompts()).toEqual([]);
 
-    vi.setSystemTime(next);
-    await relaunched.watch.sweepTaskLane("t-move", next);
-    await vi.waitFor(() => expect(prompts()).toHaveLength(1));
-    expect(prompts()[0]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
-    expect(prompts()[0]).toContain("Check the footer too.");
-    expect(accounts()).toEqual(["acct_personal"]);
-    await relaunched.disposeAll();
-  });
+      vi.setSystemTime(next);
+      await relaunched.watch.sweepTaskLane("t-move", next);
+      await vi.waitFor(() => expect(prompts()).toHaveLength(1));
+      expect(prompts()[0]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+      expect(prompts()[0]).toContain("Check the footer too.");
+      expect(accounts()).toEqual([account]);
+      await relaunched.disposeAll();
+    },
+  );
 
   it("delivers files whose crossing ended while the click was unchecked to a backlog task with its conversation open, on the named login once the click is accepted", async () => {
     const { h, vault, first, cardId } = await clickCutOff();
