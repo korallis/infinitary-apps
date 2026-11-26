@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,6 +51,8 @@ export const REPEATS = 3;
 
 /** What a round's arguments to pnpm open with: the program `pnpm exec` starts. */
 const PNPM_VITEST = ["exec", "vitest"];
+
+const LISTED_PROGRAM = fileURLToPath(new URL("./listed-program.ts", import.meta.url));
 
 export type Selection = { repeat: string[]; onMac: string[] };
 export type LocalSelection = Selection & { once: string[] };
@@ -375,24 +384,39 @@ export function runLocalUnits(
  * starts only through a shell: without one the round never starts
  * (`spawnSync pnpm ENOENT`) and reads as a failed round, and a shell would
  * read a test file's name as its own words. So on Windows a round starts the
- * program `pnpm exec vitest` names (`packageProgram`) through Node itself,
- * with the same Vitest arguments.
+ * program `pnpm exec vitest` names (`packageProgram`) through Node itself.
+ * Windows also refuses a command line past 32,767 characters, which a wide
+ * selection's file names pass, so there the same Vitest arguments come back
+ * as `listed`, for a file whose path follows `args` (listed-program.ts): the
+ * round stays one run of the same files on every system.
  */
 export function roundStart(
   args: readonly string[],
   platform: NodeJS.Platform = process.platform,
   root = ROOT,
-): { command: string; args: string[] } {
+): { command: string; args: string[]; listed?: string[] } {
   if (platform !== "win32") return { command: "pnpm", args: [...args] };
   return {
     command: process.execPath,
-    args: [packageProgram("vitest", "vitest", root), ...args.slice(PNPM_VITEST.length)],
+    args: [LISTED_PROGRAM, packageProgram("vitest", "vitest", root)],
+    listed: args.slice(PNPM_VITEST.length),
   };
 }
 
-function startRound(args: string[]): number | null {
-  const round = roundStart(args);
-  return spawnSync(round.command, round.args, { cwd: ROOT, stdio: "inherit" }).status;
+/** Starts one round and waits for it; null when it was interrupted or could not start. */
+export function startRound(args: readonly string[]): number | null {
+  const { command, args: started, listed } = roundStart(args);
+  const start = (rest: string[]) =>
+    spawnSync(command, [...started, ...rest], { cwd: ROOT, stdio: "inherit" }).status;
+  if (!listed) return start([]);
+  const dir = mkdtempSync(join(tmpdir(), "unit-round-"));
+  try {
+    const list = join(dir, "arguments.json");
+    writeFileSync(list, JSON.stringify(listed));
+    return start([list]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 function summaryLines(

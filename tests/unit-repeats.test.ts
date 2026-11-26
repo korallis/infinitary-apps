@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { PROBE_FILES } from "../scripts/affected-probes.ts";
+import { listedCommandLine } from "../scripts/listed-program.ts";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import {
   REACH_PART_SECONDS,
@@ -145,6 +146,20 @@ describe("a change's local unit-file rounds", () => {
   });
 });
 
+// The project's own test files under src, as a change that reaches nearly all of them selects them.
+// Listed here rather than through the reach script's own lister: the reach test's real
+// example of a reader that is not direct is this file, which reaches that script only through unit-repeats.
+// A selection names its files as git does, with forward slashes on every system; the parts
+// are joined so the reach script does not read this file as a reader of that whole folder.
+const sourceTestFiles = () =>
+  readdirSync(join(resolve(import.meta.dirname, ".."), "src"), {
+    recursive: true,
+    encoding: "utf8",
+  })
+    .filter((path) => path.endsWith(".test.ts"))
+    .map((path) => ["src", ...path.split(sep)].join("/"))
+    .toSorted();
+
 // The defect this guards: on a Windows PC a round started pnpm with no shell,
 // which Node cannot do for a .cmd file, so no round ran and the first one read
 // as failed.
@@ -156,7 +171,12 @@ describe("the program a round starts", () => {
     expect(roundStart(args, platform)).toEqual({ command: "pnpm", args });
   });
 
-  it("is Node running Vitest's own script with the same Vitest arguments on Windows", () => {
+  // The choice made on this change's review: Windows starts a program with a
+  // command line of at most 32,767 characters, so a round's arguments reach
+  // Vitest in a file, and the round and its shard stay as they were built.
+  it("is Node on Windows, with the same Vitest arguments listed apart from a command line too short for them", () => {
+    const listed = ["run", "--retry", "0", "--shard", "1/2", ...sourceTestFiles()];
+    expect(listed.join(" ").length).toBeGreaterThan(32_767);
     // A project folder holding only what the round reads there: Vitest's
     // package file, naming its program as the installed one does. Its path is
     // written whole, so the reach script does not read this file as a reader
@@ -168,12 +188,30 @@ describe("the program a round starts", () => {
         join(project, "node_modules/vitest/package.json"),
         JSON.stringify({ name: "vitest", bin: { vitest: "./vitest.mjs" } }),
       );
-      expect(roundStart(args, "win32", project)).toEqual({
+      expect(roundStart(["exec", "vitest", ...listed], "win32", project)).toEqual({
         command: process.execPath,
-        args: [join(project, "node_modules", "vitest", "vitest.mjs"), ...vitestArgs],
+        args: [
+          resolve(import.meta.dirname, "../scripts/listed-program.ts"),
+          join(project, "node_modules", "vitest", "vitest.mjs"),
+        ],
+        listed,
       });
     } finally {
       rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  it("hands the program each listed argument, in order, as its own command line", () => {
+    const folder = mkdtempSync(join(tmpdir(), "round-start-"));
+    try {
+      const list = join(folder, "arguments.json");
+      const program = join(folder, "vitest.mjs");
+      writeFileSync(list, JSON.stringify(vitestArgs));
+      expect(
+        listedCommandLine([process.execPath, "scripts/listed-program.ts", program, list]),
+      ).toEqual([process.execPath, program, ...vitestArgs]);
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
     }
   });
 });
@@ -422,16 +460,7 @@ describe("the pull request's direct-reader round", () => {
   // runner stopped answering in this step, since a worker keeps what every
   // file it ran leaves behind until its run ends.
   describe("a selection wider than one run", () => {
-    // The project's own test files, as a change that reaches nearly all of them selects them.
-    // Listed here rather than through the reach script's own lister: the reach test's real
-    // example of a reader that is not direct is this file, which reaches that script only through unit-repeats.
-    // A selection names its files as git does, with forward slashes on every system; the parts
-    // are joined so the reach script does not read this file as a reader of that whole folder.
-    const files = readdirSync(join(root, "src"), { recursive: true, encoding: "utf8" })
-      .filter((path) => path.endsWith(".test.ts"))
-      .map((path) => ["src", ...path.split(sep)].join("/"))
-      .toSorted()
-      .slice(0, 2 * REACH_RUN_FILES + 1);
+    const files = sourceTestFiles().slice(0, 2 * REACH_RUN_FILES + 1);
 
     it("runs as the fewest runs of at most REACH_RUN_FILES files, each file in exactly one, one after another", () => {
       const parts: string[][] = [];
