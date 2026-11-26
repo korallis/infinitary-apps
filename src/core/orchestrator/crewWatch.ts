@@ -505,6 +505,14 @@ export class CrewWatch {
     const ids = this.core.turns.deliverRows(taskId, due);
     try {
       const resumed = await this.core.sessions.resumeTask(taskId);
+      // A hold that came up while the conversation opened starts no turn:
+      // the rows go back unspent for the delivery after it.
+      if (this.core.facts.laneHeld(taskId)) {
+        this.core.options.inbox.reparkUndelivered(ids);
+        if (due.every((row) => row.facts?.kind === "conversation-restart"))
+          this.core.turns.continueAfterHold(taskId);
+        return;
+      }
       void this.core.turns.runTurn(resumed, laneTurnText(due), ids, pictures.images);
     } catch (caught) {
       // Waiting for a model is no refused delivery: the rows go back

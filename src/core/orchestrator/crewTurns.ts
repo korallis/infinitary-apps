@@ -1274,6 +1274,16 @@ export class CrewTurns {
    * stays. A reopen that fails is a note on the task, and the first mate
    * hears it as the failed turn it is.
    */
+  /**
+   * A hold came up while a restarted conversation opened with nothing but
+   * its restart reason to serve: its first turn waits on its lane as a row
+   * of its own, since the reason alone starts no turn of an open
+   * conversation (`CrewFacts.deliverableRows`), and goes out after the hold.
+   */
+  continueAfterHold(taskId: string): void {
+    this.core.options.inbox.enqueue(taskId, CONTEXT_CONTINUE_TEXT);
+  }
+
   private async recoverContext(task: TaskRuntime): Promise<void> {
     if (this.core.tasks.get(task.id) !== task) return;
     const from = this.core.options.tasks.get(task.id)?.sessionFile;
@@ -1299,8 +1309,10 @@ export class CrewTurns {
       // new conversation still takes its turn, on the restart's words.
       if (this.core.facts.deliverableRows(task.id, this.core.now()).length > 0)
         this.deliverPendingToTask(resumed);
-      else if (!resumed.turn.busy && !resumed.turn.closing)
-        void this.runTurn(resumed, CONTEXT_CONTINUE_TEXT);
+      else if (!resumed.turn.busy && !resumed.turn.closing) {
+        if (this.core.facts.laneHeld(task.id)) this.continueAfterHold(task.id);
+        else void this.runTurn(resumed, CONTEXT_CONTINUE_TEXT);
+      }
     } catch (caught) {
       // The restart stays on its lane, said once, and opens fresh once a
       // model can take it, or on the lane's next pass when the one that

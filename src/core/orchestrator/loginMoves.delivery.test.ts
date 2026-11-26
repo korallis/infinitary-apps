@@ -843,6 +843,109 @@ describe("a task still to move whose conversation is restarted", () => {
     expect(second.promptCalls[0]).toContain("context limit");
     expect(first.promptCalls).toHaveLength(1);
   });
+
+  /** The task passes its cost limit as each conversation opens, while `opening.holds`. */
+  function costLimitWhileOpening(h: ReturnType<typeof threeLogins>, taskId: () => string) {
+    const opening = { holds: true };
+    const resume = h.supervisor.sessions.resumeTask.bind(h.supervisor.sessions);
+    vi.spyOn(h.supervisor.sessions, "resumeTask").mockImplementation(async (...args) => {
+      const resumed = await resume(...args);
+      if (opening.holds)
+        h.costs.placeHold({ taskId: taskId(), limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+      return resumed;
+    });
+    return opening;
+  }
+
+  it("starts no turn when its cost limit is reached while the restarted conversation opens on the named login, and takes it once the limit is answered", async () => {
+    const first = fakeCrewmate({ model: MODEL });
+    const second = fakeCrewmate({
+      model: MODEL,
+      sessionId: "s2",
+      resume: { backend: "pi", sessionFile: "/tmp/s2.jsonl" },
+    });
+    const h = threeLogins("openai-codex", first, second, false, undefined, undefined, MODEL);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Fix the login form",
+      intent: intentOf("fix the login form"),
+    });
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    const opening = costLimitWhileOpening(h, () => taskId);
+
+    first.emit({
+      type: "turn_failed",
+      taskId,
+      error: "This request exceeds the context window.",
+      contextOverflow: true,
+    });
+    first.emit({ type: "turn_end", taskId });
+    first.finishPrompt();
+    await vi.waitFor(() => expect(h.sessionSpecs).toHaveLength(2));
+    await tick();
+    // It moved and its conversation is open on Work, and the limit stands: it is told nothing.
+    expect(boundAccount(h, 1)).toBe("acct_work");
+    expect(second.promptCalls).toHaveLength(0);
+
+    opening.holds = false;
+    h.costs.clearHold(taskId);
+    await h.supervisor.watch.sweepInbox(Date.now());
+    await vi.waitFor(() => expect(second.promptCalls).toHaveLength(1));
+    expect(second.promptCalls[0]).toContain("context limit");
+    expect(h.sessionSpecs).toHaveLength(2);
+    expect(first.promptCalls).toHaveLength(1);
+  });
+
+  it("starts no turn when its cost limit is reached again while a restart kept for a hold reopens, and takes it once that limit is answered", async () => {
+    let release: () => void = () => {};
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const first = fakeCrewmate({ model: MODEL });
+    const second = fakeCrewmate({
+      model: MODEL,
+      sessionId: "s2",
+      resume: { backend: "pi", sessionFile: "/tmp/s2.jsonl" },
+    });
+    const h = threeLogins("openai-codex", first, second, false, undefined, () => waiting, MODEL);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Fix the login form",
+      intent: intentOf("fix the login form"),
+    });
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    first.emit({
+      type: "turn_failed",
+      taskId,
+      error: "This request exceeds the context window.",
+      contextOverflow: true,
+    });
+    first.emit({ type: "turn_end", taskId });
+    first.finishPrompt();
+    await tick();
+    // Held while its login is picked: the restart is kept on its lane.
+    h.costs.placeHold({ taskId, limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    release();
+    await tick();
+    expect(h.sessionSpecs).toHaveLength(1);
+
+    // The limit is answered, and reached again as the lane's sweep reopens the task.
+    const opening = costLimitWhileOpening(h, () => taskId);
+    h.costs.clearHold(taskId);
+    await h.supervisor.watch.sweepInbox(Date.now());
+    await vi.waitFor(() => expect(h.sessionSpecs).toHaveLength(2));
+    await tick();
+    expect(boundAccount(h, 1)).toBe("acct_work");
+    expect(second.promptCalls).toHaveLength(0);
+
+    opening.holds = false;
+    h.costs.clearHold(taskId);
+    await h.supervisor.watch.sweepInbox(Date.now());
+    await vi.waitFor(() => expect(second.promptCalls).toHaveLength(1));
+    expect(second.promptCalls[0]).toContain("context limit");
+    expect(h.sessionSpecs).toHaveLength(2);
+    expect(first.promptCalls).toHaveLength(1);
+  });
 });
 
 describe("the low-login card's Move button, as the host admits its click", () => {
