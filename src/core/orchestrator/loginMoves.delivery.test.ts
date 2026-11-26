@@ -1962,27 +1962,72 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
   });
 
   // docs/inbox.md: a message the captain or first mate sends still reaches a started task in the backlog.
-  it("wakes a backlog task for a kept sent message that waits behind a full page of the lane, and delivers it after that page", async () => {
-    const { h, relaunched, boots, prompts, read } = await relaunchedInBacklog();
-    const page = h.inbox.pending("t-move").length;
-    for (let i = 0; page + i < 50; i++) h.inbox.enqueue("t-move", `Host note ${i}.`);
-    expect(h.inbox.pending("t-move")).toHaveLength(50);
+  it.each([
+    { click: "accepted", spare: 60 },
+    { click: "refused", spare: 3 },
+  ])(
+    "reads a kept sent message in the first turn it wakes, behind a full page of override notices that alone start none, after the click is $click",
+    async ({ spare }) => {
+      const { h, relaunched, prompts, read } = await relaunchedInBacklog();
+      const override = (i: number) => ({
+        facts: {
+          kind: "task-override-changed" as const,
+          task: { id: "t-move", key: "INA-1", title: "Move" },
+          override: {
+            words: `Override note ${i}.`,
+            holds: ["asks-first" as const],
+            until: "task" as const,
+          },
+        },
+      });
+      const waiting = h.inbox.pending("t-move").length;
+      for (let i = 0; waiting + i < 50; i++) h.inbox.enqueue("t-move", override(i));
+      expect(h.inbox.pending("t-move")).toHaveLength(50);
+      // The notices alone start no turn in the backlog.
+      await relaunched.watch.sweepTaskLane("t-move", Date.now());
+      await tick();
+      expect(prompts()).toEqual([]);
+
+      await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+        "recorded-held",
+      );
+      read(spare);
+      await vi.waitFor(() => expect(prompts()).toHaveLength(1));
+      expect(prompts()[0]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+      expect(prompts()[0]).toContain("Check the footer too.");
+      expect(prompts()[0]).toContain("Override note 0.");
+      expect(h.tasks.get("t-move")?.backlogSince != null).toBe(true);
+      await relaunched.disposeAll();
+    },
+  );
+
+  // docs/inbox.md: a refused delivery spends the try of the rows it was made for.
+  it("backs off the kept sent message behind a full page, with the rows that would have gone with it, when its conversation does not open at the lane's sweep", async () => {
+    const { h, relaunched, prompts, read } = await relaunchedInBacklog();
+    const waiting = h.inbox.pending("t-move").length;
+    for (let i = 0; waiting + i < 50; i++) h.inbox.enqueue("t-move", `Host note ${i}.`);
     await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
       "recorded-held",
     );
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
     read(60);
-    await vi.waitFor(() => expect(prompts()).toHaveLength(1));
-    expect(prompts()[0]).toContain("Host note 0.");
-    expect(prompts()[0]).not.toContain("Check the footer too.");
-
-    boots[0]?.emit({ type: "turn_end", taskId: "t-move" });
-    boots[0]?.finishPrompt();
     await tick();
-    await relaunched.watch.sweepTaskLane("t-move", Date.now());
-    await vi.waitFor(() => expect(prompts()).toHaveLength(2));
-    expect(prompts()[1]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
-    expect(prompts()[1]).toContain("Check the footer too.");
-    expect(h.tasks.get("t-move")?.backlogSince != null).toBe(true);
+    h.costs.clearHold("t-move");
+    const open = vi
+      .spyOn(relaunched.sessions, "resumeTask")
+      .mockRejectedValueOnce(new Error("could not open"));
+    const now = Date.now();
+    await relaunched.watch.sweepTaskLane("t-move", now);
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    await tick();
+    expect(prompts()).toEqual([]);
+    const rows = h.inbox.allFor("t-move");
+    const sent = rows[rows.length - 1];
+    expect(sent?.attempts).toBe(1);
+    expect(sent?.nextAttemptAt ?? 0).toBeGreaterThan(now);
+    // 49 older rows were in the batch with it; the page's newest row was not.
+    expect(rows.filter((row) => row.attempts === 1)).toHaveLength(50);
+    expect(rows[rows.length - 2]?.attempts).toBe(0);
     await relaunched.disposeAll();
   });
 

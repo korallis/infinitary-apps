@@ -125,7 +125,6 @@ function crew(
       laneHeld: () => hold.held,
       disposed: () => false,
       dueRows: () => opening.due,
-      sentDue: (_taskId, rowIds) => opening.due.some((id) => rowIds.has(id)),
       openingFailed: (rowIds) => {
         steps.push(`backed off ${rowIds.join(" and ")}`);
       },

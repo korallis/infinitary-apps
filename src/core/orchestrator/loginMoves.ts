@@ -30,12 +30,6 @@ export type LoginMovesHost = {
   /** The ids of the lane's rows a delivery would take now (`CrewFacts.deliverableRows`). */
   dueRows(taskId: string): number[];
   /**
-   * Whether one of these rows of the lane is due, however many rows wait
-   * ahead of it: `dueRows` is one page of the lane, which a backlog's
-   * waiting notices can fill.
-   */
-  sentDue(taskId: string, rowIds: ReadonlySet<number>): boolean;
-  /**
    * A conversation opened for these rows of the lane did not open: they
    * spend a try and back off as after the lane's own sweep
    * (`CrewWatch.openingFailed`).
@@ -174,6 +168,15 @@ export class LoginMoves {
     return true;
   }
 
+  /**
+   * The task's kept sent rows, if any: a delivery's batch holds those that
+   * are due wherever they stand on the lane (`CrewFacts.deliverableRows`),
+   * so the turn a sent row wakes reads that row.
+   */
+  sentKept(taskId: string): ReadonlySet<number> | undefined {
+    return this.owed.get(taskId);
+  }
+
   /** Delivers each kept sent message whose click has been checked. */
   private payOwed(): void {
     for (const taskId of [...this.owed.keys()]) this.paySent(taskId);
@@ -201,8 +204,7 @@ export class LoginMoves {
       return;
     }
     if (this.paying.has(taskId) || this.awaitsCheck(taskId) || this.host.laneHeld(taskId)) return;
-    // A kept row behind a full page still wakes the task: the pages ahead of it go first.
-    if (this.host.dueRows(taskId).length === 0 || !this.host.sentDue(taskId, kept)) return;
+    if (!this.host.dueRows(taskId).some((id) => kept.has(id))) return;
     const deliver = (task: TaskRuntime) => this.host.deliverPendingToTask(task, true);
     const open = this.host.runtime(taskId);
     const paid =
