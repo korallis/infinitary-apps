@@ -49,7 +49,20 @@ export class CrewFacts {
   constructor(private readonly core: CrewCore) {}
 
   deliverableRows(taskId: string, now: number): InboxRow[] {
-    const rows = this.core.options.inbox.pending(taskId, now, { maxAttempts: INBOX_ATTEMPT_MAX });
+    const page = this.core.options.inbox.pending(taskId, now, { maxAttempts: INBOX_ATTEMPT_MAX });
+    // A sent row kept through a login move's check that is due behind a full
+    // page takes the place of the page's newest rows: the turn it wakes reads
+    // it, and a page of notices alone neither hides it nor rides its wake
+    // without it (`LoginMoves.paySent`). SQLite reads a negative limit as none.
+    const kept = this.core.loginMoves.sentKept(taskId);
+    const behind = kept
+      ? this.core.options.inbox
+          .pending(taskId, now, { maxAttempts: INBOX_ATTEMPT_MAX, limit: -1 })
+          .filter((row) => kept.has(row.id) && !page.some((paged) => paged.id === row.id))
+          .slice(0, page.length)
+      : [];
+    const rows =
+      behind.length > 0 ? [...page.slice(0, page.length - behind.length), ...behind] : page;
     const task = this.core.tasks.get(taskId);
     const running = task !== undefined && task.turn.busy;
     // A renewed conversation's reason rides the next full turn (`runTurn`),
