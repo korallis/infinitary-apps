@@ -2042,6 +2042,40 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
   );
 
   // docs/inbox.md: a refused delivery spends the try of the rows it was made for.
+  it("backs off a file hand-over's line, last on a full page, and its message, first on the next, with the rows that would have gone with them, when the conversation does not open", async () => {
+    const { h, relaunched, prompts, read } = await relaunchedInBacklog();
+    const waiting = h.inbox.pending("t-move").length;
+    for (let i = 0; waiting + i < 49; i++) h.inbox.enqueue("t-move", `Host note ${i}.`);
+    seedTask(h.tasks, { id: "t-finder", title: "Find the screenshot", status: "idle" });
+    const picture = join(scratchDir("infinitary-handed-"), "clipped card.png");
+    writeFileSync(picture, "a picture of the clipped card");
+    await keepHandoverFiles([picture], crewmateHandoverDir(h.paths, "t-finder"));
+    await relaunched.steer.steerAfterFiles("t-finder", "t-move", "look at it", {
+      response: { mode: "guidance-only" as const },
+    });
+    await vi.waitFor(() => expect(relaunched.steer.handingOver("t-move")).toBe(false));
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    read(60);
+    await tick();
+    h.costs.clearHold("t-move");
+    const open = vi
+      .spyOn(relaunched.sessions, "resumeTask")
+      .mockRejectedValueOnce(new Error("could not open"));
+    const now = Date.now();
+    await relaunched.watch.sweepTaskLane("t-move", now);
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    await tick();
+    expect(prompts()).toEqual([]);
+    const rows = h.inbox.allFor("t-move");
+    expect(rows).toHaveLength(51);
+    // The files line and its message, with the 48 oldest rows; the 49th row gave up its place.
+    expect(rows.map((row) => row.attempts)).toEqual([...Array(48).fill(1), 0, 1, 1]);
+    for (const sent of rows.slice(49)) expect(sent.nextAttemptAt ?? 0).toBeGreaterThan(now);
+    expect(rows[48]?.nextAttemptAt ?? 0).toBeLessThanOrEqual(now);
+    await relaunched.disposeAll();
+  });
+
+  // docs/inbox.md: a refused delivery spends the try of the rows it was made for.
   it("backs off the kept sent message behind a full page, with the rows that would have gone with it, when its conversation does not open at the lane's sweep", async () => {
     const { h, relaunched, prompts, read } = await relaunchedInBacklog();
     const waiting = h.inbox.pending("t-move").length;
