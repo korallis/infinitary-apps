@@ -86,6 +86,7 @@ The common launcher also distinguishes a claim's transport timeout from a channe
 The host may still finish a timed-out claim, so recovery always asks with the same identity and requires a fresh admission reply before executing the program.
 A separate `receipt` operation records the exact living payload identity after launch; only that receipt can repeat after launch through `RECEIPT_UNAVAILABLE`.
 The native supervisor keeps the payload in the same group, preserves its streams and signal behavior, and cancels receipt pursuit when it finishes.
+A receipt whose caller's connection closes before its answer stops its command process and saves no launch from then on; a claim, like every other command, runs on without its caller.
 Claim and receipt polling clear the shell cap and shell ID and use separate stable operation identities, never another operation's kept answer.
 Processor reservations end only after verified launch and a complete following aggregate CPU interval; memory growth reservations continue.
 No command table can release a living group or bypass the recorded `load-line` hold.

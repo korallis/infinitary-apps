@@ -527,7 +527,17 @@ export class LoadLine {
     // An unreadable table proves nothing about a running hold's launch. A
     // refusal would end the worker's asking and leave a healthy run charged
     // for its whole life, so this one outcome may repeat (INF-3192's rule for claims).
-    if (rows === null && held?.state === "running" && held.pid === input.pid)
+    // What the hold itself knows still refuses for good, since no reading could
+    // verify it: its own leader as the launch, or a launch other than the one saved.
+    if (
+      rows === null &&
+      held?.state === "running" &&
+      held.pid === input.pid &&
+      input.payload !== held.pid &&
+      (!held.launch ||
+        (held.launch.pid === input.payload &&
+          (input.started === undefined || held.launch.started === input.started)))
+    )
       throw new LoadReceiptUnreadError(
         "This computer's programs could not be read; the launch is not verified yet.",
       );

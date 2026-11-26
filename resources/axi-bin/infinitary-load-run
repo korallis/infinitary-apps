@@ -58,15 +58,25 @@ if [ "${1:-}" = _receipt ]; then
       mine && kill -TERM "$$"
     ) &
     watcher=$!
+    # Git Bash starts a program as a copy of this wrapper, under a Windows
+    # number the program then leaves: only a child that already shows
+    # arguments of its own carries the program's number. The copy shows the
+    # wrapper's whole list, which a program cannot: its own list is only that
+    # list's end, so its arguments may hold any words of the wrapper's.
+    mapfile -d '' -t own < "/proc/$wrapper/cmdline" || exit 0
     while :; do
       for entry in /proc/[0-9]*; do
         read -r parent < "$entry/ppid" || continue
         [ "$parent" = "$wrapper" ] || continue
-        # Git Bash starts a program as a copy of this wrapper, under a Windows
-        # number the program then leaves: only a child that already shows a
-        # command line of its own carries the program's number.
         mapfile -d '' -t line < "$entry/cmdline" || continue
-        case " ${line[*]} " in '  ' | *' _group run --processors '*) continue ;; esac
+        [ "${#line[@]}" -gt 0 ] || continue
+        if [ "${#line[@]}" -eq "${#own[@]}" ]; then
+          copy=1
+          for part in "${!own[@]}"; do
+            [ "${line[part]}" = "${own[part]}" ] || { copy=; break; }
+          done
+          [ -z "$copy" ] || continue
+        fi
         payload=${entry#/proc/}; break
       done
       [ -z "$payload" ] || break

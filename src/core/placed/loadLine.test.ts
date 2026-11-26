@@ -537,13 +537,15 @@ describe("verified processor startup coverage", () => {
       await expect(f.task.receipt(receipt)).rejects.toBeInstanceOf(LoadReceiptUnreadError);
       expect(f.saved()).toBeUndefined();
       // What no reading could say about this run stays a refusal: another task's
-      // hold, a hold that does not exist, another leader and a run still waiting.
+      // hold, a hold that does not exist, another leader, a run still waiting and
+      // the leader named as its own launch.
       const waiting = f.line.snapshot().runs[1]?.id ?? "";
       for (const [task, input] of [
         [f.line.forTask("other"), receipt],
         [f.task, { ...receipt, hold: "another hold" }],
         [f.task, { ...receipt, pid: 16412 }],
         [f.task, { hold: waiting, pid: 16412, payload: 16500 }],
+        [f.task, { ...receipt, payload: 16020 }],
       ] as const) {
         const refused = await task.receipt(input).catch((error: unknown) => error);
         expect(refused).not.toBeInstanceOf(LoadReceiptUnreadError);
@@ -570,6 +572,28 @@ describe("verified processor startup coverage", () => {
       await expect(
         f.task.receipt({ hold: f.first.id, pid: 16020, payload: 16500 }),
       ).rejects.toThrow("different launch");
+      expect(f.saved()).toEqual({ pid: 16500, started: birth(16500) });
+    });
+
+    // A worker stops asking only on a refusal, so a receipt no reading could
+    // ever verify must not turn into one it repeats while the table is unread.
+    it("refuses a launch other than the saved one for good while the table cannot be read", async () => {
+      const f = await windowsRuns();
+      f.rows.push(win(16500, 16020, 16020), win(16501, 16500, 16020));
+      const receipt = { hold: f.first.id, pid: 16020, payload: 16500 };
+      await f.task.receipt(receipt);
+      f.table.unread = true;
+      for (const input of [
+        { ...receipt, payload: 16501 },
+        { ...receipt, started: birth(16777) },
+      ]) {
+        const refused = await f.task.receipt(input).catch((error: unknown) => error);
+        expect(refused).toBeInstanceOf(Error);
+        expect(refused).not.toBeInstanceOf(LoadReceiptUnreadError);
+      }
+      // The saved launch itself can still verify once the table reads, so it alone asks again.
+      for (const input of [receipt, { ...receipt, started: birth(16500) }])
+        await expect(f.task.receipt(input)).rejects.toBeInstanceOf(LoadReceiptUnreadError);
       expect(f.saved()).toEqual({ pid: 16500, started: birth(16500) });
     });
 
@@ -717,6 +741,18 @@ describe("verified processor startup coverage", () => {
       pid: child.pid,
       started: child.started,
     });
+    // Against the saved launch, the leader's own number and another birth are
+    // refused for good, though the table is unread again.
+    unread = true;
+    for (const input of [
+      { ...receipt, payload: leader.pid, started: leader.started },
+      { ...receipt, started: `${child.started} again` },
+    ]) {
+      const refused = await task.receipt(input).catch((error: unknown) => error);
+      expect(refused).toBeInstanceOf(Error);
+      expect(refused).not.toBeInstanceOf(LoadReceiptUnreadError);
+    }
+    await expect(task.receipt(receipt)).rejects.toBeInstanceOf(LoadReceiptUnreadError);
   });
 
   it("never acknowledges a receipt whose durable write failed", async () => {

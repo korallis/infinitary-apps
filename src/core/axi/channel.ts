@@ -469,6 +469,11 @@ export class AxiChannel {
       response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
       response.end(`${outcome.exitCode}\n${outcome.stdout}`);
     };
+    // Heard from the start, since the caller can leave while its request is still read.
+    const left = new AbortController();
+    response.once("close", () => {
+      if (!response.writableEnded) left.abort();
+    });
     // A web page could reach a loopback port too: it names another host
     // (a name rebound to this Mac) or carries its origin. The launcher does neither.
     if (
@@ -542,13 +547,19 @@ export class AxiChannel {
       );
       return;
     }
+    const argv = form.getAll("arg");
     answer(
       await this.run(grant, {
         tool,
-        argv: form.getAll("arg"),
+        argv,
         bin: form.get("bin") || tool,
         cwd: form.get("cwd") ?? "",
         deadline,
+        // A receipt's worker is stopped with its run and takes its request
+        // along: nobody is left to read the answer or to ask again. Any other
+        // command runs on without its caller: its operation may have effects,
+        // and the next command may be handed its answer.
+        ...(tool === LOAD_COMMAND && argv[0] === "receipt" ? { left: left.signal } : {}),
       }),
     );
   }
@@ -571,7 +582,15 @@ export class AxiChannel {
   /** Run one command in its own process, answering its calls for this task alone. */
   private run(
     grant: Grant,
-    command: { tool: string; argv: string[]; bin: string; cwd: string; deadline?: number },
+    command: {
+      tool: string;
+      argv: string[];
+      bin: string;
+      cwd: string;
+      deadline?: number;
+      /** Aborted once the caller's connection closed with no answer sent; only a load receipt names it. */
+      left?: AbortSignal;
+    },
   ): Promise<Outcome> {
     // An operation that waits on another computer answers before this is stopped.
     const stopsAt = Date.now() + PROCESS_BOUND_MS;
@@ -591,7 +610,12 @@ export class AxiChannel {
         stdout: `${answer.stdout}retrySeconds: ${RESOURCE_REFRESH_MS / 1000}\n`,
       };
     };
+    const stopped = interrupted("The command stopped before it answered.");
     return new Promise((resolve) => {
+      if (command.left?.aborted) {
+        resolve(stopped);
+        return;
+      }
       let child: HostChildProcess;
       try {
         child = this.options.spawner.spawn();
@@ -614,7 +638,9 @@ export class AxiChannel {
         PROCESS_BOUND_MS,
       );
       bound.unref?.();
-      child.onExit(() => finish(interrupted("The command stopped before it answered.")));
+      child.onExit(() => finish(stopped));
+      // Without this its process would wait out the whole bound for a line too busy to answer.
+      command.left?.addEventListener("abort", () => finish(stopped), { once: true });
       child.onMessage((raw) => {
         const message = raw as AxiChildMessage;
         if (message?.type === "done") {
@@ -653,7 +679,7 @@ export class AxiChannel {
    */
   private async call(
     grant: Grant,
-    command: { tool: string; cwd: string; deadline?: number },
+    command: { tool: string; cwd: string; deadline?: number; left?: AbortSignal },
     message: AxiCallMessage,
     stopsAt: number,
   ): Promise<ChannelReply<OpAnswer>> {
@@ -671,7 +697,7 @@ export class AxiChannel {
     }
     const work: Promise<OpAnswer> =
       tool === LOAD_COMMAND
-        ? this.load(grant, message)
+        ? this.load(grant, message, command.left)
         : tool === INTEGRATIONS_COMMAND
           ? this.integrate(
               grant,
@@ -706,15 +732,20 @@ export class AxiChannel {
     return { kind: "answer", answer: settled };
   }
 
-  private async load(grant: Grant, message: AxiCallMessage): Promise<IntegrationChannelAnswer> {
+  private async load(
+    grant: Grant,
+    message: AxiCallMessage,
+    left?: AbortSignal,
+  ): Promise<IntegrationChannelAnswer> {
     const load = grant.tools.load;
     if (!load) return { text: "This task has no load command.", refused: "refused" };
     try {
       if (message.op === "load.read") return { data: load.read() };
       if (message.op === "load.receipt") {
+        // A launch is saved only for an asker that is still there to hear it.
         await load.receipt(
           message.input as LoadReceipt,
-          () => this.grants.get(grant.taskId) === grant,
+          () => this.grants.get(grant.taskId) === grant && !left?.aborted,
         );
         return { data: { verified: true } };
       }
