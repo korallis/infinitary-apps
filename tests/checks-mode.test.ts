@@ -246,8 +246,8 @@ describe("where the heavy checks run", () => {
       const line = [step?.command, ...(step?.args ?? [])].map((word) => `"${word}"`).join(" ");
       expect(line.length).toBeLessThan(32_767);
     }
-    // Linux and macOS start a line that long, so a lint there still takes
-    // every file in one run and reports on them together.
+    // The budget is Windows's own: on Linux and macOS a lint takes every
+    // file in one run and reports on them together.
     expect(runsOf(files, "linux")).toEqual([files]);
     expect(runsOf(files, "darwin")).toEqual([files]);
   });

@@ -141,9 +141,9 @@ export function adherenceStep(renderer: string[]): Step | undefined {
 export const RUN_NAME_CHARACTERS = 24_000;
 
 /**
- * The files in the runs that hold them: every name once, in order. Linux and
- * macOS start a line of a megabyte or more, so there a lint takes every file
- * in one run and reports on them together.
+ * The files in the runs that hold them: every name once, in order. The budget
+ * is Windows's own, so on Linux and macOS a lint takes every file in one run
+ * and reports on them together.
  */
 export function runsOf(files: readonly string[], platform = process.platform): string[][] {
   if (platform !== "win32") return files.length ? [[...files]] : [];
