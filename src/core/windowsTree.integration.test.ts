@@ -9,7 +9,12 @@ import { endWindowsTree } from "./windowsTree";
 vi.setConfig({ testTimeout: 30_000 });
 
 describe.runIf(process.platform === "win32")("ending a program's tree on Windows", () => {
-  /** A program that starts another under it; both write down their process numbers and wait. */
+  /**
+   * A program that starts another under it; both write down their process
+   * numbers and wait. The second is started detached: Node ends a program's
+   * own with it otherwise, and ending the first alone would look like
+   * ending the tree.
+   */
   function tree() {
     const dir = scratchDir("infinitary-windows-tree-");
     const log = join(dir, "started.log");
@@ -18,7 +23,7 @@ describe.runIf(process.platform === "win32")("ending a program's tree on Windows
       script,
       `require("node:fs").appendFileSync(${JSON.stringify(log)}, process.pid + "\\n");
 if (process.argv[2] === "top") {
-  require("node:child_process").spawn(process.execPath, [__filename], { stdio: "ignore", windowsHide: true });
+  require("node:child_process").spawn(process.execPath, [__filename], { stdio: "ignore", detached: true, windowsHide: true });
 }
 setTimeout(() => {}, 600000);
 `,

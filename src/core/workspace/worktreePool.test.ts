@@ -716,6 +716,9 @@ describe("cold dispatch vs warm acquire, with the real pnpm", { timeout: 25_000 
     return repo;
   }
 
+  /** pnpm ran and exited 0; `skipped` would mean no install ran at all. */
+  const INSTALLED = /^(offline|online)$/;
+
   async function dispatch(workspace: WorkspaceService, taskId: string, repo: string) {
     const started = performance.now();
     const ws = await workspace.createTaskWorktree(taskId, repo);
@@ -743,19 +746,20 @@ describe("cold dispatch vs warm acquire, with the real pnpm", { timeout: 25_000 
         });
         const fresh = await dispatch(coldService, id(), repo);
         expect(fresh.ws.acquired?.source).toBe("new");
-        expect(fresh.install.outcome).not.toBe("failed");
+        expect(fresh.install.outcome).toMatch(INSTALLED);
         cold.push(fresh.ms);
         await coldService.removeTaskWorktree(fresh.ws);
         await coldService.deletionsSettled();
       }
 
       const first = await dispatch(workspace, id(), repo);
-      expect(first.install.outcome).not.toBe("failed");
+      expect(first.ws.acquired?.source).toBe("new");
+      expect(first.install.outcome).toMatch(INSTALLED);
       await closeTask(workspace, first.ws);
       for (let round = 0; round < rounds; round++) {
         const next = await dispatch(workspace, id(), repo);
         expect(next.ws.acquired?.source).toBe("pool");
-        expect(next.install.outcome).not.toBe("failed");
+        expect(next.install.outcome).toMatch(INSTALLED);
         warm.push(next.ms);
         // The tree is the default branch's head, clean but for dependencies.
         expect(await git(next.ws.cwd, ["rev-parse", "HEAD"])).toBe(next.ws.acquired?.base.sha);
