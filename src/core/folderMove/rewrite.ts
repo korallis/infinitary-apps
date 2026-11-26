@@ -10,6 +10,7 @@ import { writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import Database from "better-sqlite3";
 import { KNOWLEDGE_DB_FILE } from "../storage/knowledgeStore";
+import { fromOtherRules, moveColumnAcross, movedAcross } from "./folderRules";
 import type { OutsideChange } from "./record";
 import { rewriteTaskFolders } from "./taskFolders";
 import type { GitLink } from "./tree";
@@ -35,6 +36,11 @@ export type Froms = readonly string[];
 
 export function movedPath(value: string, froms: Froms, to: string): string | undefined {
   for (const from of froms) {
+    if (fromOtherRules(from)) {
+      const moved = movedAcross(value, from, to);
+      if (moved !== undefined) return moved;
+      continue;
+    }
     if (value === from) return to;
     if (value.startsWith(`${from}${sep}`)) return `${to}${value.slice(from.length)}`;
   }
@@ -105,7 +111,10 @@ function rewriteMainDatabase(db: Database.Database, froms: Froms, to: string): v
       `UPDATE ${table} SET ${column} = @to || substr(${column}, length(@from) + 1)
        WHERE (${where}) AND (${column} = @from OR substr(${column}, 1, length(@prefix)) = @prefix)`,
     );
-    for (const from of froms) statement.run({ from, to, prefix: `${from}${sep}` });
+    for (const from of froms) {
+      if (fromOtherRules(from)) moveColumnAcross(db, table, column, where, from, to);
+      else statement.run({ from, to, prefix: `${from}${sep}` });
+    }
   };
   update("repos", "path");
   rewriteTaskFolders(db, froms, to);

@@ -84,6 +84,7 @@ A crewmate's approved program runs as an `.exe` in place, or as a script whose `
 A Windows PC that runs a home's work keeps a copy of the first mate's record, as a Mac or Linux computer does (`docs/devices.md`, "Keeping a copy on another computer"), and a Windows home sends its copies the same way.
 Windows refuses to rename or remove a folder that holds an open file, so the copy closes every file it read before it puts a newer full copy in place (`docs/devices.md`, "On the computer that keeps it").
 The first mate moves to a Windows PC, or away from a Windows home, as between Macs (`docs/devices.md`, "Moving the first mate"); on the PC it starts through the person's own Task Scheduler, as its work does (`docs/helper.md`, "In the background").
+The computer it arrives on reads the old home's folder locations by the rules of the system that wrote them, so a location saved on Windows names a real place on a Mac and one saved on a Mac a real place on Windows (`docs/devices.md`, "A home on another system").
 A Windows PC that keeps a copy offers Take over while the home is out of reach, confirmed with Windows Hello, or with the person's Windows password where Hello is off (`docs/devices.md`, "Taking over").
 
 ## The checks

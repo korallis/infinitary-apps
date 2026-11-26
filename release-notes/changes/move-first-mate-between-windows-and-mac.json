@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "move-first-mate-between-windows-and-mac",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Your first mate keeps its folders when it moves between a Windows PC and a Mac",
+      "body": "When you move your first mate from a Windows PC to a Mac or a Linux computer, or the other way, each project now arrives in a folder with its own name, in the same place under your home folder, and each task points at its project and its conversation on the new computer. Before, a project from a Windows PC could arrive on a Mac in a folder named after its whole Windows location, and tasks kept pointing at folders that exist only on the old computer. A project that arrives beside a folder of the same name is now saved under the name it arrived with.",
+      "noPicture": "The fix changes where folders land on the disk and which locations the record saves; no view looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

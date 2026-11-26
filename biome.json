@@ -439,6 +439,7 @@
         "!src/core/folderMove/move.test.ts",
         "!src/core/folderMove/takeOver.integration.test.ts",
         "!src/core/homeMove/homeMove.test.ts",
+        "!src/core/homeMove/otherSystem.test.ts",
         "!src/core/standby/standby.test.ts",
         "!src/core/tasks/taskTemp.integration.test.ts",
         "!src/core/tasks/keptRunning.integration.test.ts",

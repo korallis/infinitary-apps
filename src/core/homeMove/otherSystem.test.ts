@@ -1,0 +1,333 @@
+import { execFileSync } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join, type PlatformPath, posix, win32 } from "node:path";
+import { HOME_ARRIVE_ORDER, HOME_MOVE_MANIFEST, type HomeMoveManifest } from "@shared/homeMove";
+import { describe, expect, it, vi } from "vitest";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { openDatabase } from "../storage/db";
+import { SettingsStore } from "../storage/settingsStore";
+import { seedTask } from "../tasks/seedTask";
+import { TaskService } from "../tasks/taskService";
+import { HOME_ARRIVING_DIR, IncomingHomeMove, projectLanding } from "./arriving";
+
+/**
+ * The ask these guard: a first mate that moves between a Windows PC and a Mac
+ * arrives with each project in a normally named folder, and every folder
+ * location its record saved names a real place on the new home
+ * (docs/devices.md, "A home on another system"). Each case hands the arriving
+ * side the files a home of the other system sends, so the Windows home's case
+ * is the one that crosses systems on a Mac or Linux run, and the Mac home's on
+ * a Windows run.
+ */
+
+// The arriving side's git runs at the test run's own priority (docs/test-cohorts.md, "Budgets").
+vi.mock("../utilityQos", async (importOriginal) =>
+  (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
+);
+
+// Real git for three projects' bundles and clones (docs/test-cohorts.md).
+vi.setConfig({ testTimeout: 25_000 });
+
+/** An old home's own folders, written as its system writes them. */
+type OldHome = {
+  name: string;
+  rules: PlatformPath;
+  userData: string;
+  homeDir: string;
+  /** A folder outside both, where a person keeps a project. */
+  elsewhere: string;
+};
+
+const WINDOWS_PC: OldHome = {
+  name: "Windows PC",
+  rules: win32,
+  userData: "C:\\Users\\ada\\AppData\\Roaming\\infinitary",
+  homeDir: "C:\\Users\\ada",
+  elsewhere: "D:\\work",
+};
+const MAC: OldHome = {
+  name: "MacBook Pro",
+  rules: posix,
+  userData: "/Users/ada/Library/Application Support/infinitary",
+  homeDir: "/Users/ada",
+  elsewhere: "/Volumes/work",
+};
+
+function sh(cwd: string, ...args: string[]): string {
+  return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+}
+
+function sha256(file: string): string {
+  return createHash("sha256").update(readFileSync(file)).digest("hex");
+}
+
+/** The destination: a computer that runs work, whose first mate starts when asked. */
+function destination() {
+  const root = scratchDir("infinitary-other-system-new-");
+  const homeData = join(root, "data");
+  const homeDir = join(root, "home");
+  mkdirSync(join(homeData, "work"), { recursive: true });
+  const incoming = new IncomingHomeMove({
+    homeData,
+    arrivingDir: join(homeData, "work", HOME_ARRIVING_DIR),
+    homeDir,
+    claudeDir: null,
+    appVersion: "0.8.0-alpha.600",
+    addresses: () => ["192.168.1.30:47213"],
+    background: true,
+    startHome: async () => true,
+    log: () => {},
+  });
+  return { homeData, homeDir, incoming };
+}
+
+/**
+ * The files a home on `old`'s system sends, laid out where `to` keeps a
+ * move's files: a database the app made, whose saved locations are written as
+ * that system writes them, a crewmate's and the first mate's conversation, a
+ * bundle of each project, and the manifest that names them all.
+ */
+async function send(old: OldHome, to: ReturnType<typeof destination>) {
+  const at = (...parts: string[]) => old.rules.join(...parts);
+  const made = scratchDir("infinitary-other-system-old-");
+  const move = randomUUID();
+  const files = join(to.homeData, "work", HOME_ARRIVING_DIR, move, "files");
+  mkdirSync(join(files, "projects"), { recursive: true });
+
+  const projects = [
+    // Kept in the app's own projects folder, in the home folder, and on another disk.
+    { id: "r1", name: "website", path: at(old.userData, "fleet", "website") },
+    { id: "r2", name: "tools", path: at(old.homeDir, "code", "tools") },
+    { id: "r3", name: "notes", path: at(old.elsewhere, "notes") },
+  ].map((project, index) => {
+    const repo = join(made, project.name);
+    mkdirSync(repo, { recursive: true });
+    sh(repo, "init", "-q", "-b", "main");
+    sh(repo, "config", "user.email", "test@example.com");
+    sh(repo, "config", "user.name", "Test");
+    writeFileSync(join(repo, "README.md"), `${project.name}\n`);
+    sh(repo, "add", ".");
+    sh(repo, "commit", "-q", "-m", "first");
+    sh(repo, "branch", `fm/${project.name}`);
+    const remote = `https://example.com/acme/${project.name}.git`;
+    sh(repo, "remote", "add", "origin", remote);
+    sh(repo, "bundle", "create", join(files, "projects", `${index}.bundle`), "--all");
+    return {
+      id: project.id,
+      path: project.path,
+      bundle: `projects/${index}.bundle`,
+      remotes: [{ name: "origin", url: remote }],
+    };
+  });
+  const [website, tools, notes] = projects.map((project) => project.path) as [
+    string,
+    string,
+    string,
+  ];
+  // A folder beside the data folder whose name starts the same way, as a build run from source keeps.
+  const beside = at(old.rules.dirname(old.userData), "infinitary-dev", "fleet", "site");
+  const mention = `Look in ${website} for the footer.`;
+
+  const db = openDatabase(join(made, "data"));
+  const addRepo = db.prepare(
+    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor, kind) VALUES (?, ?, ?, 1, 'adopt', NULL, 'direct-pr', 0, 'standard', 'project')",
+  );
+  for (const project of projects) addRepo.run(project.id, project.path, project.id);
+  const tasks = new TaskService({ db, now: () => 5_000 });
+  const session = ["crewmates", "task-1", "sessions", "one.jsonl"];
+  seedTask(tasks, {
+    id: "task-1",
+    title: "Fix the footer",
+    prompt: mention,
+    status: "idle",
+    repoDir: website,
+    worktreeDir: at(old.userData, "worktrees", "task-1"),
+    sessionFile: at(old.userData, ...session),
+  });
+  for (const [id, repoDir] of [
+    ["task-2", tools],
+    ["task-3", notes],
+    ["task-4", beside],
+  ] as const)
+    seedTask(tasks, {
+      id,
+      title: "Tidy up",
+      status: "idle",
+      repoDir,
+      worktreeDir: at(old.userData, "worktrees", id),
+    });
+  const rolling = ["firstmate", "sessions", "rolling.jsonl"];
+  new SettingsStore(db).setFirstmateSessionFile(at(old.userData, ...rolling));
+  // A plugin the person added from a folder inside one of their projects.
+  db.prepare(
+    "INSERT INTO plugins (id, source, spec, updated_at) VALUES ('clock', 'path', ?, 1)",
+  ).run(at(tools, "plugin"));
+  await db.backup(join(files, "firstmate.db"));
+  db.close();
+
+  for (const file of [session, rolling]) {
+    mkdirSync(join(files, ...file.slice(0, -1)), { recursive: true });
+    writeFileSync(join(files, ...file), '{"a":1}\n');
+  }
+  const manifest: HomeMoveManifest = {
+    version: 1,
+    files: ["firstmate.db", session.join("/"), rolling.join("/")].map((path) => ({
+      path,
+      size: statSync(join(files, ...path.split("/"))).size,
+      sha256: sha256(join(files, ...path.split("/"))),
+    })),
+    projects,
+    from: { userData: old.userData, homeDir: old.homeDir },
+    name: old.name,
+  };
+  writeFileSync(join(files, HOME_MOVE_MANIFEST), `${JSON.stringify(manifest)}\n`);
+  return {
+    order: { move, homeNumber: 2, manifestSha256: sha256(join(files, HOME_MOVE_MANIFEST)) },
+    beside,
+    mention,
+  };
+}
+
+type SavedTask = {
+  id: string;
+  repo_dir: string;
+  worktree_dir: string;
+  session_file: string | null;
+};
+
+/** Every folder location the arrived record saved, as its database holds it now. */
+function saved(homeData: string) {
+  const db = openDatabase(homeData);
+  try {
+    return {
+      repos: db.prepare("SELECT id, path FROM repos ORDER BY id").all() as {
+        id: string;
+        path: string;
+      }[],
+      tasks: db
+        .prepare(
+          `SELECT t.id, t.repo_dir, t.worktree_dir, x.session_file
+           FROM tasks t LEFT JOIN task_execution x ON x.task_id = t.id ORDER BY t.id`,
+        )
+        .all() as SavedTask[],
+      plugin: (db.prepare("SELECT spec FROM plugins WHERE id = 'clock'").get() as { spec: string })
+        .spec,
+      firstmateSession: new SettingsStore(db).getFirstmateSessionFile(),
+      prompt: new TaskService({ db, now: () => 5_000 }).get("task-1")?.prompt,
+    };
+  } finally {
+    db.close();
+  }
+}
+
+describe.each([WINDOWS_PC, MAC])("a first mate arriving from a $name", (old) => {
+  it("lands each project in a normally named folder and names every saved folder location on the new home", async () => {
+    const to = destination();
+    const sent = await send(old, to);
+
+    expect(await to.incoming.answer(HOME_ARRIVE_ORDER, [sent.order])).toEqual({
+      addresses: ["192.168.1.30:47213"],
+      started: true,
+    });
+
+    const website = join(to.homeData, "fleet", "website");
+    const tools = join(to.homeDir, "code", "tools");
+    const notes = join(to.homeData, "fleet", "notes");
+    for (const [project, name] of [
+      [website, "website"],
+      [tools, "tools"],
+      [notes, "notes"],
+    ] as const) {
+      expect(sh(project, "branch", "--format=%(refname:short)")).toContain(`fm/${name}`);
+      expect(sh(project, "remote", "get-url", "origin")).toBe(
+        `https://example.com/acme/${name}.git`,
+      );
+    }
+    const record = saved(to.homeData);
+    expect(record.repos).toEqual([
+      { id: "r1", path: website },
+      { id: "r2", path: tools },
+      { id: "r3", path: notes },
+    ]);
+    const conversation = join(to.homeData, "crewmates", "task-1", "sessions", "one.jsonl");
+    expect(record.tasks).toEqual([
+      {
+        id: "task-1",
+        repo_dir: website,
+        worktree_dir: join(to.homeData, "worktrees", "task-1"),
+        session_file: conversation,
+      },
+      {
+        id: "task-2",
+        repo_dir: tools,
+        worktree_dir: join(to.homeData, "worktrees", "task-2"),
+        session_file: null,
+      },
+      {
+        id: "task-3",
+        repo_dir: notes,
+        worktree_dir: join(to.homeData, "worktrees", "task-3"),
+        session_file: null,
+      },
+      {
+        id: "task-4",
+        // Beside the old data folder, not in it: no folder here stands for it.
+        repo_dir: sent.beside,
+        worktree_dir: join(to.homeData, "worktrees", "task-4"),
+        session_file: null,
+      },
+    ]);
+    expect(existsSync(conversation)).toBe(true);
+    // A sentence that mentions a location is history, and stays as it was written.
+    expect(record.prompt).toBe(sent.mention);
+    expect(record.plugin).toBe(join(tools, "plugin"));
+    const rolling = join(to.homeData, "firstmate", "sessions", "rolling.jsonl");
+    expect(record.firstmateSession).toBe(rolling);
+    expect(existsSync(rolling)).toBe(true);
+  });
+
+  it("names the folder a project landed in when one of its name was already there", async () => {
+    const to = destination();
+    const own = join(to.homeData, "fleet", "website");
+    mkdirSync(own, { recursive: true });
+    writeFileSync(join(own, "kept.txt"), "this computer's own\n");
+    const sent = await send(old, to);
+
+    await to.incoming.answer(HOME_ARRIVE_ORDER, [sent.order]);
+
+    const landed = join(to.homeData, "fleet", "website-2");
+    expect(sh(landed, "branch", "--format=%(refname:short)")).toContain("fm/website");
+    expect(readFileSync(join(own, "kept.txt"), "utf8")).toBe("this computer's own\n");
+    const record = saved(to.homeData);
+    expect(record.repos[0]).toEqual({ id: "r1", path: landed });
+    expect(record.tasks[0]?.repo_dir).toBe(landed);
+  });
+});
+
+// Each case names the system it lands on, so both directions run on every system the checks run on.
+describe("where a project lands on the new home", () => {
+  it("keeps its place under the data folder or the home folder, or joins the others, from a Windows PC onto a Mac", () => {
+    const to = { homeData: MAC.userData, homeDir: MAC.homeDir };
+    const landing = (location: string) => projectLanding(location, WINDOWS_PC, to, posix);
+    expect(landing("C:\\Users\\ada\\AppData\\Roaming\\infinitary\\fleet\\website")).toBe(
+      "/Users/ada/Library/Application Support/infinitary/fleet/website",
+    );
+    expect(landing("C:\\Users\\ada\\code\\tools")).toBe("/Users/ada/code/tools");
+    expect(landing("D:\\work\\notes")).toBe(
+      "/Users/ada/Library/Application Support/infinitary/fleet/notes",
+    );
+  });
+
+  it("does the same from a Mac onto a Windows PC", () => {
+    const to = { homeData: WINDOWS_PC.userData, homeDir: WINDOWS_PC.homeDir };
+    const landing = (location: string) => projectLanding(location, MAC, to, win32);
+    expect(landing("/Users/ada/Library/Application Support/infinitary/fleet/website")).toBe(
+      "C:\\Users\\ada\\AppData\\Roaming\\infinitary\\fleet\\website",
+    );
+    expect(landing("/Users/ada/code/tools")).toBe("C:\\Users\\ada\\code\\tools");
+    expect(landing("/Volumes/work/notes")).toBe(
+      "C:\\Users\\ada\\AppData\\Roaming\\infinitary\\fleet\\notes",
+    );
+  });
+});

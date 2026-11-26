@@ -1,6 +1,7 @@
 import { sep } from "node:path";
 import type Database from "better-sqlite3";
 import { pathsOf } from "./due";
+import { fromOtherRules, moveColumnAcross } from "./folderRules";
 import { readMoveRecord } from "./record";
 
 function columns(db: Database.Database, table: string): Set<string> {
@@ -27,7 +28,10 @@ export function rewriteTaskFolders(
       `UPDATE ${table} SET ${column} = @to || substr(${column}, length(@from) + 1)
        WHERE (${where}) AND (${column} = @from OR substr(${column}, 1, length(@prefix)) = @prefix)`,
     );
-    for (const from of froms) statement.run({ from, to, prefix: `${from}${sep}` });
+    for (const from of froms) {
+      if (fromOtherRules(from)) moveColumnAcross(db, table, column, where, from, to);
+      else statement.run({ from, to, prefix: `${from}${sep}` });
+    }
   };
   update("tasks", "repo_dir");
   update("tasks", "worktree_dir");

@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { open } from "node:fs/promises";
 import { connect } from "node:net";
-import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import path, { dirname, join, type PlatformPath } from "node:path";
 import { LOCAL_DOOR_FOLDER } from "@shared/connection";
 import {
   HOME_ABANDON_ORDER,
@@ -27,7 +27,8 @@ import {
 import { readLocalDoor } from "../connection/localDoor";
 import { HOME_NUMBER_FILE, readHomeNumber, writeHomeNumber } from "../devices/homeNumber";
 import { writePrivate } from "../devices/identity";
-import { rewriteDatabases } from "../folderMove/rewrite";
+import { rulesOf, stepsInside } from "../folderMove/folderRules";
+import { movedPath, rewriteDatabases } from "../folderMove/rewrite";
 import { git } from "../workspace/git";
 import { hashFile, landingOf, removePlaced, restoreAside, setAsideRecord } from "./record";
 import { keepSignInsToAsk } from "./signInAgain";
@@ -380,7 +381,9 @@ export class IncomingHomeMove {
           },
           this.fromCopy.has(order.move),
         );
-        if (to !== project.path) rewriteDatabases(homeData, [project.path], to);
+        // The rewrite above already named a project the old home kept in its data folder by this one's.
+        const saved = movedPath(project.path, [manifest.from.userData], homeData) ?? project.path;
+        if (to !== saved) rewriteDatabases(homeData, [saved], to);
       }
       writeHomeNumber(join(homeData, "devices"), order.homeNumber);
       state.starting = true;
@@ -399,20 +402,6 @@ export class IncomingHomeMove {
     return this.arrived(order.move, { addresses, started: true });
   }
 
-  /** Where a project lands here: the same place under this home folder or data folder, else beside the others. */
-  private landingOfProject(path: string, manifest: HomeMoveManifest): string {
-    const { homeData, homeDir } = this.options;
-    const inside = (root: string) => {
-      const rel = relative(root, path);
-      return rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel : null;
-    };
-    const underData = inside(manifest.from.userData);
-    if (underData) return join(homeData, ...underData.split(sep));
-    const underHome = inside(manifest.from.homeDir);
-    if (underHome) return join(homeDir, ...underHome.split(sep));
-    return join(homeData, "fleet", basename(path));
-  }
-
   private async cloneProject(
     project: HomeMoveManifest["projects"][number],
     manifest: HomeMoveManifest,
@@ -420,10 +409,10 @@ export class IncomingHomeMove {
     made: (clone: string) => void,
     fromRemotes = false,
   ): Promise<string> {
-    let to = this.landingOfProject(project.path, manifest);
+    const landing = projectLanding(project.path, manifest.from, this.options);
+    let to = landing;
     // A folder already there is never written over: the project lands beside it.
-    for (let n = 2; existsSync(to); n++)
-      to = `${this.landingOfProject(project.path, manifest)}-${n}`;
+    for (let n = 2; existsSync(to); n++) to = `${landing}-${n}`;
     made(to);
     mkdirSync(dirname(to), { recursive: true });
     if (project.bundle) {
@@ -459,6 +448,24 @@ export class IncomingHomeMove {
       ]).catch(() => "");
     return to;
   }
+}
+
+/**
+ * Where a project lands on the new home: the same place under its home folder
+ * or data folder, else beside the others. The old home's locations are read
+ * by its own system's folder rules, and the landing is written by `here`'s.
+ */
+export function projectLanding(
+  location: string,
+  from: HomeMoveManifest["from"],
+  to: { homeData: string; homeDir: string },
+  here: PlatformPath = path,
+): string {
+  const underData = stepsInside(from.userData, location);
+  if (underData?.length) return here.join(to.homeData, ...underData);
+  const underHome = stepsInside(from.homeDir, location);
+  if (underHome?.length) return here.join(to.homeDir, ...underHome);
+  return here.join(to.homeData, "fleet", rulesOf(location).basename(location));
 }
 
 /** Clones a project again from one of its remotes; false when it could not, leaving nothing. */
