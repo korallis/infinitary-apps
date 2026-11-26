@@ -2,20 +2,24 @@ import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, type PlatformPath, posix, win32 } from "node:path";
+import { HOME } from "@shared/deviceNames";
 import { HOME_ARRIVE_ORDER, HOME_MOVE_MANIFEST, type HomeMoveManifest } from "@shared/homeMove";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { LOCAL_MACHINE_ID } from "../session/session";
 import { openDatabase } from "../storage/db";
 import { SettingsStore } from "../storage/settingsStore";
+import { TaskExecutionStore } from "../storage/taskExecutionStore";
+import { TaskSessionStore } from "../storage/taskSessionStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { HOME_ARRIVING_DIR, IncomingHomeMove, projectLanding } from "./arriving";
 
 /**
  * The ask these guard: a first mate that moves between a Windows PC and a Mac
- * arrives with each project in a normally named folder, and every folder
- * location its record saved names a real place on the new home
- * (docs/devices.md, "A home on another system"). Each case hands the arriving
+ * arrives with each project in a normally named folder, and each folder
+ * location its record saved inside the old data folder or a project names its
+ * place on the new home (docs/devices.md, "A home on another system"). Each case hands the arriving
  * side the files a home of the other system sends, so the Windows home's case
  * is the one that crosses systems on a Mac or Linux run, and the Mac home's on
  * a Windows run.
@@ -26,7 +30,7 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-// Real git for three projects' bundles and clones (docs/test-cohorts.md).
+// Real git for each project's bundle and clone (docs/test-cohorts.md).
 vi.setConfig({ testTimeout: 25_000 });
 
 /** An old home's own folders, written as its system writes them. */
@@ -86,27 +90,37 @@ function destination() {
  * The files a home on `old`'s system sends, laid out where `to` keeps a
  * move's files: a database the app made, whose saved locations are written as
  * that system writes them, a crewmate's and the first mate's conversation, a
- * bundle of each project, and the manifest that names them all.
+ * bundle of each project, and the manifest that names them all. `shop` adds a
+ * second project whose folder is also named `website`, kept on another disk
+ * and listed before or after the others.
  */
-async function send(old: OldHome, to: ReturnType<typeof destination>) {
+async function send(old: OldHome, to: ReturnType<typeof destination>, shop?: "first" | "last") {
   const at = (...parts: string[]) => old.rules.join(...parts);
   const made = scratchDir("infinitary-other-system-old-");
   const move = randomUUID();
   const files = join(to.homeData, "work", HOME_ARRIVING_DIR, move, "files");
   mkdirSync(join(files, "projects"), { recursive: true });
 
-  const projects = [
+  const kept = [
     // Kept in the app's own projects folder, in the home folder, and on another disk.
     { id: "r1", name: "website", path: at(old.userData, "fleet", "website") },
     { id: "r2", name: "tools", path: at(old.homeDir, "code", "tools") },
     { id: "r3", name: "notes", path: at(old.elsewhere, "notes") },
-  ].map((project, index) => {
+  ];
+  const other = { id: "r4", name: "shop", path: at(old.elsewhere, "website") };
+  if (shop === "first") kept.unshift(other);
+  if (shop === "last") kept.push(other);
+  const projects = kept.map((project, index) => {
     const repo = join(made, project.name);
     mkdirSync(repo, { recursive: true });
     sh(repo, "init", "-q", "-b", "main");
     sh(repo, "config", "user.email", "test@example.com");
     sh(repo, "config", "user.name", "Test");
     writeFileSync(join(repo, "README.md"), `${project.name}\n`);
+    if (project.name === "tools") {
+      mkdirSync(join(repo, "plugin"));
+      writeFileSync(join(repo, "plugin", "plugin.json"), '{"name":"clock"}\n');
+    }
     sh(repo, "add", ".");
     sh(repo, "commit", "-q", "-m", "first");
     sh(repo, "branch", `fm/${project.name}`);
@@ -120,11 +134,9 @@ async function send(old: OldHome, to: ReturnType<typeof destination>) {
       remotes: [{ name: "origin", url: remote }],
     };
   });
-  const [website, tools, notes] = projects.map((project) => project.path) as [
-    string,
-    string,
-    string,
-  ];
+  const [website, tools, notes] = ["r1", "r2", "r3"].map(
+    (id) => projects.find((project) => project.id === id)?.path,
+  ) as [string, string, string];
   // A folder beside the data folder whose name starts the same way, as a build run from source keeps.
   const beside = at(old.rules.dirname(old.userData), "infinitary-dev", "fleet", "site");
   const mention = `Look in ${website} for the footer.`;
@@ -145,11 +157,30 @@ async function send(old: OldHome, to: ReturnType<typeof destination>) {
     worktreeDir: at(old.userData, "worktrees", "task-1"),
     sessionFile: at(old.userData, ...session),
   });
-  for (const [id, repoDir] of [
+  // The conversation as the old home recorded it for a crewmate it ran itself.
+  // Its id is the file's name read by that home's folder rules, which the
+  // computer running this test may not share, so the stores write it.
+  new TaskSessionStore(db).record("task-1", {
+    conversation: "one",
+    resume_token: at(old.userData, ...session),
+    file: at(old.userData, ...session),
+    computer: HOME.the,
+    device_id: LOCAL_MACHINE_ID,
+    provider: "openai-codex",
+    model: "gpt-5",
+    account_id: null,
+    opened_at: 5_000,
+    last_at: 5_000,
+    began: "start",
+  });
+  new TaskExecutionStore(db).pinConversation("task-1", "one");
+  const tidied: [string, string][] = [
     ["task-2", tools],
     ["task-3", notes],
     ["task-4", beside],
-  ] as const)
+  ];
+  if (shop) tidied.push(["task-5", other.path]);
+  for (const [id, repoDir] of tidied)
     seedTask(tasks, {
       id,
       title: "Tidy up",
@@ -199,6 +230,7 @@ type SavedTask = {
 /** Every folder location the arrived record saved, as its database holds it now. */
 function saved(homeData: string) {
   const db = openDatabase(homeData);
+  const tasks = new TaskService({ db, now: () => 5_000 });
   try {
     return {
       repos: db.prepare("SELECT id, path FROM repos ORDER BY id").all() as {
@@ -214,7 +246,13 @@ function saved(homeData: string) {
       plugin: (db.prepare("SELECT spec FROM plugins WHERE id = 'clock'").get() as { spec: string })
         .spec,
       firstmateSession: new SettingsStore(db).getFirstmateSessionFile(),
-      prompt: new TaskService({ db, now: () => 5_000 }).get("task-1")?.prompt,
+      prompt: tasks.get("task-1")?.prompt,
+      // As the by-key task read asks for them, with this home's own folder of the task's files.
+      conversations: tasks.archive.sessions("task-1", {
+        dir: join(homeData, "crewmates", "task-1", "sessions"),
+        computer: HOME.the,
+        device: LOCAL_MACHINE_ID,
+      }),
     };
   } finally {
     db.close();
@@ -222,7 +260,7 @@ function saved(homeData: string) {
 }
 
 describe.each([WINDOWS_PC, MAC])("a first mate arriving from a $name", (old) => {
-  it("lands each project in a normally named folder and names every saved folder location on the new home", async () => {
+  it("lands each project in a normally named folder and names each saved location inside the old data folder or a project on the new home", async () => {
     const to = destination();
     const sent = await send(old, to);
 
@@ -279,9 +317,26 @@ describe.each([WINDOWS_PC, MAC])("a first mate arriving from a $name", (old) => 
       },
     ]);
     expect(existsSync(conversation)).toBe(true);
+    // One conversation, by the file that came over, with what the old home recorded of it.
+    expect(record.conversations).toEqual([
+      {
+        conversation: "one",
+        file: conversation,
+        computer: HOME.the,
+        device_id: LOCAL_MACHINE_ID,
+        provider: "openai-codex",
+        model: "gpt-5",
+        account_id: null,
+        opened_at: 5_000,
+        last_at: 5_000,
+        began: "start",
+        current: true,
+      },
+    ]);
     // A sentence that mentions a location is history, and stays as it was written.
     expect(record.prompt).toBe(sent.mention);
     expect(record.plugin).toBe(join(tools, "plugin"));
+    expect(readFileSync(join(record.plugin, "plugin.json"), "utf8")).toBe('{"name":"clock"}\n');
     const rolling = join(to.homeData, "firstmate", "sessions", "rolling.jsonl");
     expect(record.firstmateSession).toBe(rolling);
     expect(existsSync(rolling)).toBe(true);
@@ -303,6 +358,39 @@ describe.each([WINDOWS_PC, MAC])("a first mate arriving from a $name", (old) => 
     expect(record.repos[0]).toEqual({ id: "r1", path: landed });
     expect(record.tasks[0]?.repo_dir).toBe(landed);
   });
+
+  // Whichever is listed first takes the name, and the other lands beside it.
+  it.each([
+    { shop: "first", website: "website-2", other: "website" },
+    { shop: "last", website: "website", other: "website-2" },
+  ] as const)(
+    "keeps two projects whose folders share a name apart when the one kept on another disk is listed $shop",
+    async ({ shop, website, other }) => {
+      const to = destination();
+      const sent = await send(old, to, shop);
+
+      await to.incoming.answer(HOME_ARRIVE_ORDER, [sent.order]);
+
+      const fleet = join(to.homeData, "fleet");
+      expect(sh(join(fleet, website), "branch", "--format=%(refname:short)")).toContain(
+        "fm/website",
+      );
+      expect(sh(join(fleet, other), "branch", "--format=%(refname:short)")).toContain("fm/shop");
+      const record = saved(to.homeData);
+      expect(record.repos.filter((repo) => ["r1", "r4"].includes(repo.id))).toEqual([
+        { id: "r1", path: join(fleet, website) },
+        { id: "r4", path: join(fleet, other) },
+      ]);
+      expect(
+        record.tasks
+          .filter((task) => ["task-1", "task-5"].includes(task.id))
+          .map((task) => [task.id, task.repo_dir]),
+      ).toEqual([
+        ["task-1", join(fleet, website)],
+        ["task-5", join(fleet, other)],
+      ]);
+    },
+  );
 });
 
 // Each case names the system it lands on, so both directions run on every system the checks run on.
