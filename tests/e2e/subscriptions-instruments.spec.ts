@@ -464,7 +464,7 @@ test("a provider with two or more logins in use shows their pooled allowance abo
   // Only Claude and ChatGPT logins pool: Grok's three keep their own rows alone.
   await expect(page.locator("[data-pool-row]")).toHaveCount(2);
   // The pooled row heads its provider's accounts.
-  const rows = page.locator("[data-subscriptions-list] .fm-subs-row");
+  const rows = page.locator("[data-subscriptions-list] :is([data-pool-row], [data-account-row])");
   const order = await rows.evaluateAll((all) =>
     all.map(
       (each) => each.getAttribute("data-pool-row") ?? each.getAttribute("data-account-row") ?? "",
