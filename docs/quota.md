@@ -266,34 +266,43 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
 - **The login in use.**
   It is the provider's account pin (`AccountVault.setPin`).
   Under `wait` and `ask`, new work of a provider runs only on that login (`onlyPin` and `chooseLoginInUse` in `src/core/routing/accountPolicy.ts`): an enabled pin that is spent, signed out or withheld serves no other login, so the decision waits as it does for a provider with one login.
+  The same holds for a model the pin's sign-in does not list and for a pin that already failed to open the model (`AccountSelector.decide`): no sibling takes that work, and its decision row says why.
+  Routing reads the same answer (`AccountSelector.crewAccount`): a model whose login in use is spent is ranked by that login's own reading, and a model that login cannot serve is left out of the pick, never ranked on a sibling's reading.
   A provider with no pin, or whose pin names a login that is off or gone, gets one: the login the pick would have chosen without the choice becomes the pin, and one feed line says which login is in use (`AccountSelector`'s `loginInUse`).
   Under `spread` and `move` the pick is unchanged: the login with the most room, with a pin winning while it is healthy.
   A computer that runs work keeps its own pick over its own sign-ins.
 - **The moment.**
-  At every allowance reading and every change of a typed cut-off, `LowLogins` (`src/core/quota/lowLogins.ts`) reads each provider with two or more enabled logins.
-  A login runs low at `CREW_NEAR_FLOOR_PERCENT` or less of its measured allowance, a typed `no_headroom` included, and the place to move is the enabled, signed-in login with the most measured room that is not itself low, withheld or on credits (`roomiestOther`); a login with no reading comes after every measured one.
+  At every allowance reading and every change of a typed cut-off, `LowLogins` (`src/core/quota/lowLogins.ts`) reads each provider with a login, so a provider left with one login has its card taken down.
+  A login runs low at `CREW_NEAR_FLOOR_PERCENT` or less of its measured allowance, or while the vault holds a typed `no_headroom` cut-off for it, whatever its meter last read (`runsLow`; `runOut` on the reading, from `AccountVault.cutOff`).
+  The place to move is the enabled, signed-in login with the most measured room that is not itself low, withheld or on credits (`roomiestOther`); a login with no reading comes after every measured one.
   With no such login nothing is asked and nothing moves.
 - **`ask`.**
-  One crew card per provider per run-out (`card-login-low-<provider>`, `loginLowCard` in `src/core/orchestrator/loginCards.ts`) names the low login, what it has left, when its allowance refills, and the login with the most room, with Move to that login and Wait for the refill.
+  One crew card per provider per run-out (`card-login-low-<provider>`, `loginLowCard` in `src/core/orchestrator/loginCards.ts`) names the low login, what it has left, when its allowance refills (a typed cut-off's own reset before the meter's), and the login with the most room, with Move to that login and Wait for the refill.
   Nothing moves until the click.
-  Move (`move-login` host op, `crew:<accountId>`) makes that login the one in use, writes one feed line, and moves the started tasks on the low login.
+  Move (`move-login` host op, `crew:<accountId>`) makes that login the one in use, writes one feed line, and binds the started tasks on the low login to that login and no other.
+  The click is checked against the logins as they are now (`LowLogins.move`): it moves work only while the choice still asks, the login the card asked about is still low and the named login still has room; otherwise nothing moves and the logins are read again.
   Wait for the refill leaves everything where it is, and the card comes back only at that login's next run-out.
-  The card goes when the login has room again, when no other login has room, or when the choice becomes `wait`; the home keeps what it asked in memory, so a restart may ask once more.
+  The card up is kept apart from that answer: it is revised in place when the low login, the login it offers or what it says of them changes, taken down when the login has room again, when no other login has room or when the choice becomes `wait`, and put up again when there is something to offer once more.
+  The home keeps the card it has up and a Wait answer in memory, so a restart may ask once more.
 - **`move`.**
-  The same without the card: the pin moves to the login with the most room with one feed line naming both logins, and each task that moves writes its own line.
+  The same without the card: the pin moves to the login with the most room with one feed line naming both logins, and each task on the low login is bound to that login and writes its own line as it moves.
 - **`spread`.**
   New work already runs across the logins, so only started work is asked about: the card names a low login that tasks run on, and its click moves those tasks and leaves a pin on another login alone.
 - **`wait`.**
   Nothing is asked and nothing moves; work on the low login waits for its refill.
 - **A moved task.**
-  `LoginMoves` (`src/core/orchestrator/loginMoves.ts`) moves a started task between turns, never inside one: it lets go of the task's conversation, records the new login's pick in `account_decisions`, names the login on the task's placement, writes one feed line naming the task and both logins, and reopens the conversation the way a resume does, which renews it on the new login (`docs/inbox.md`, "A lane on a withheld account").
-  A Claude conversation is never copied across accounts, and nothing is retried inside a refused turn.
-  A task that was inside a turn at the click moves at a later reading while its old login is still low.
+  `LoginMoves` (`src/core/orchestrator/loginMoves.ts`) moves a started task between turns, never inside one, to the login the move named: it lets go of the task's conversation, records that login's pick in `account_decisions`, names the login on the task's placement, writes one feed line naming the task and both logins, and reopens the conversation the way a resume does (`docs/inbox.md`, "A lane on a withheld account").
+  The pick reads the named login alone (`only` on `AccountSelector.pickForSpawn`): a login with more room, or a pin set since, takes none of the work, and a named login that no longer serves the task's model leaves the task where it is.
+  A backend that keeps its own transcript, as Pi does, opens it under the new login.
+  A Claude conversation is never copied across accounts: each login's client keeps its transcripts in its own folder, so the new login opens a new conversation, which is told its brief and where the earlier transcript is saved, as any conversation that could not be reopened is.
+  Nothing is retried inside a refused turn.
+  A task inside a turn at the click stays bound to the named login and moves at its lane's next delivery (`LoginMoves.takes`, from `CrewTurns.deliverPendingToTask`), before any of it goes to the old login; the binding ends when its old login has room again or the choice becomes `wait`.
   Only tasks whose crewmate runs on this computer move.
 - **The first mate.**
   The first mate's account is its own setting, and its ladder's step to another login of the same provider follows the choice (`FirstmateSeat.admitTurn`, `docs/architecture.md` §16).
   Under `move` it rebinds with a feed line.
   Under `ask` and `spread` its spent-allowance card leads with Move to that login (`move-login`, `firstmate:<accountId>`) and says the captain's messages are kept; a first mate that serves on a login's credits keeps answering and asks once on `card-fm-on-credits`, with Stay on that login beside the move.
+  Both offers are read again at every check of the seat - an allowance reading, a cut-off change, a change of the choice - and the click is checked against them (`FirstmateSeat.checkSeat`, `moveLogin`).
   Under `wait` it waits on its own login and its card names no other.
   The move to another provider still asks on its own card under every choice.
 - **Older views.**

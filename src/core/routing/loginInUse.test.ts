@@ -28,7 +28,13 @@ function reading(logins: readonly Login[]): QuotaSnapshotView {
   };
 }
 
-function selectorOver(logins: readonly Login[], choice: WhenLoginLow, pinned?: string) {
+function selectorOver(
+  logins: readonly Login[],
+  choice: WhenLoginLow,
+  pinned?: string,
+  /** The models a login's sign-in lists, when it lists any. */
+  lists: Record<string, string[]> = {},
+) {
   const pins: { providerId: string; accountId: string }[] = [];
   let pin = pinned;
   const pool: AccountPool = {
@@ -50,6 +56,11 @@ function selectorOver(logins: readonly Login[], choice: WhenLoginLow, pinned?: s
     quota: { latest: () => reading(logins) },
     flagshipAccountId: () => null,
     decisions: new DecisionStore(db),
+    accountModels: () =>
+      Object.entries(lists).map(([accountId, models]) => ({
+        accountId,
+        models: models.map((id) => ({ provider: "openai-codex", id })),
+      })),
     loginInUse: {
       whenLow: () => choice,
       pin: (providerId, accountId) => {
@@ -154,6 +165,89 @@ describe("a pick under each choice for a login that runs low", () => {
     );
     expect(await t.selector.selectForSpawn("task-1", "openai-codex")).toBe("spare");
     expect(t.pins).toEqual([{ providerId: "openai-codex", accountId: "spare" }]);
+  });
+
+  const bothRoomy = [
+    { id: "personal", percent: 60 },
+    { id: "work", percent: 80 },
+  ];
+  const TERRA = { model: "gpt-6.1-terra" };
+  const noPlacedWork = { work: [], samples: [], charges: {}, readings: [] };
+
+  it.each(["wait", "ask"] as const)(
+    "serves nothing under %s for a model the login in use does not list, though another login lists it",
+    async (choice) => {
+      const t = selectorOver(bothRoomy, choice, "personal", {
+        personal: ["gpt-6.1-luna"],
+        work: ["gpt-6.1-terra"],
+      });
+      expect(await t.selector.selectForSpawn("task-1", "openai-codex", TERRA)).toBeUndefined();
+      expect(t.reasonsOf("task-1")).toEqual([
+        "skipped personal: does not list this model",
+        "personal is the openai-codex login in use; no other login serves until it is moved",
+      ]);
+      // Routing reads that as a model no account may serve, not as no information.
+      expect(t.selector.crewAccount("openai-codex", "gpt-6.1-terra", noPlacedWork)).toBeNull();
+    },
+  );
+
+  it("serves the login that lists the model under spread", async () => {
+    const t = selectorOver(bothRoomy, "spread", "personal", {
+      personal: ["gpt-6.1-luna"],
+      work: ["gpt-6.1-terra"],
+    });
+    expect(await t.selector.selectForSpawn("task-1", "openai-codex", TERRA)).toBe("work");
+  });
+
+  it("serves nothing under ask once the login in use failed to open the model", async () => {
+    const t = selectorOver(bothRoomy, "ask", "personal");
+    const pick = await t.selector.pickForSpawn("task-1", "openai-codex", {
+      ...TERRA,
+      passing: ["personal"],
+    });
+    expect(pick.accountId).toBeUndefined();
+    pick.record();
+    expect(t.reasonsOf("task-1")[0]).toBe("skipped personal: failed to open this model");
+  });
+
+  it("keeps the login in use serving under ask while its sign-in lists nothing yet", async () => {
+    const t = selectorOver(bothRoomy, "ask", "personal", { work: ["gpt-6.1-terra"] });
+    expect(await t.selector.selectForSpawn("task-1", "openai-codex", TERRA)).toBe("personal");
+  });
+
+  it("ranks a model by a spent login in use, and by nothing when no login is known", () => {
+    const spent = selectorOver(spentPin, "ask", "personal");
+    expect(spent.selector.crewAccount("openai-codex", "gpt-6.1-terra", noPlacedWork)).toBe(
+      "personal",
+    );
+    const none = selectorOver([], "ask");
+    expect(
+      none.selector.crewAccount("openai-codex", "gpt-6.1-terra", noPlacedWork),
+    ).toBeUndefined();
+  });
+
+  it("picks only the named login for a low login's move, whatever the pin and the room elsewhere", async () => {
+    const logins = [
+      { id: "personal", percent: 0 },
+      { id: "work", percent: 40 },
+      { id: "spare", percent: 95 },
+    ];
+    const named = selectorOver(logins, "ask", "personal");
+    const pick = await named.selector.pickForSpawn("task-1", "openai-codex", {
+      ...TERRA,
+      only: "work",
+    });
+    expect(pick.accountId).toBe("work");
+    // A named login that does not list the model is not replaced by one that does.
+    const unlisted = selectorOver(logins, "spread", undefined, {
+      work: ["gpt-6.1-luna"],
+      spare: ["gpt-6.1-terra"],
+    });
+    const none = await unlisted.selector.pickForSpawn("task-1", "openai-codex", {
+      ...TERRA,
+      only: "work",
+    });
+    expect(none.accountId).toBeUndefined();
   });
 
   it("pins nothing for a provider with one login", async () => {

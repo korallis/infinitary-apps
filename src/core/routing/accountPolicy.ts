@@ -105,6 +105,12 @@ export type AccountSelectionDecision = {
   candidates: AccountCandidateFact[];
   /** The provider's account pin chose it. */
   pinned?: true;
+  /**
+   * Nothing was picked because the login in use cannot serve and no other
+   * login may (`onlyPin`): `spent` when all that stops it is its allowance,
+   * so the model is still ranked by that login's own reading.
+   */
+  held?: { accountId: string; spent: boolean };
 };
 
 /** Headroom within this many points counts as a tie for tiebreak purposes. */
@@ -281,6 +287,7 @@ function chooseLoginInUse(
   const status = statusOf(inUse, undefined, { providerId, candidates: [] });
   if (status !== "eligible")
     return {
+      held: { accountId: inUse.accountId, spent: status === "skipped: exhausted" },
       reasons: [
         // i18n-exempt: a decision ledger reason the first mate reads, never shown
         status.replace("skipped:", `skipped ${inUse.label}:`),

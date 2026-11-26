@@ -189,10 +189,8 @@ export function homeAutoSavedResets(options: {
   };
   vault: { usesSavedResets(accountId: string): boolean };
   quota: { latest(): QuotaSnapshotView | undefined };
-  /** `SavedResets.use`, once the home's saved resets exist. */
-  use:
-    | ((accountId: string, options: { deviceId?: string; auto: true }) => Promise<SavedResetResult>)
-    | undefined;
+  /** `SavedResets.use`. */
+  use: (accountId: string, options: { deviceId?: string; auto: true }) => Promise<SavedResetResult>;
   note: (text: string) => void;
 }): AutoSavedResets {
   const { deviceSignIns } = options;
@@ -210,9 +208,7 @@ export function homeAutoSavedResets(options: {
     canUse: (deviceId) =>
       deviceSignIns.canUseSavedReset(deviceId) && deviceSignIns.takesAutoSavedResets(deviceId),
     use: (accountId, deviceId) =>
-      options.use
-        ? options.use(accountId, { ...(deviceId ? { deviceId } : {}), auto: true })
-        : Promise.reject(new Error("Infinitary is still starting.")),
+      options.use(accountId, { ...(deviceId ? { deviceId } : {}), auto: true }),
     note: options.note,
     now: Date.now,
   });

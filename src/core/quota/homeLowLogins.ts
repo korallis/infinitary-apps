@@ -3,6 +3,7 @@ import { type Said, said, saidLine } from "@shared/i18n/said";
 import { PROVIDER_CATALOG } from "@shared/providers";
 import { type QuotaSnapshotView, resetWhen } from "@shared/quota";
 import type { WhenLoginLow } from "@shared/whenLoginLow";
+import { LOGIN_LOW_WAIT, loginLowCardId } from "../orchestrator/loginCards";
 import type { LoginMoves } from "../orchestrator/loginMoves";
 import { quotaRowProviderOf } from "./auth";
 import { limitingResetOf } from "./catalog";
@@ -21,6 +22,7 @@ export function startLowLogins(options: {
     pinnedAccount(providerId: string): string | undefined;
     setPin(providerId: string, accountId: string | null): void;
     onCutOffChange(listener: () => void): unknown;
+    cutOff(accountId: string): { class: string; resetsAt?: number } | undefined;
   };
   routing: {
     accounts: { logins(providerId: string): LoginReading[] };
@@ -28,7 +30,10 @@ export function startLowLogins(options: {
     attachLoginInUse(said: (providerId: string, accountId: string) => void): void;
   };
   quota: { latest(): QuotaSnapshotView | undefined };
-  supervisor: { cards: { hostCards: LowLoginsOptions["cards"] }; loginMoves: LoginMoves };
+  supervisor: {
+    cards: { hostCards: LowLoginsOptions["cards"]; chosenAction(id: string): string | undefined };
+    loginMoves: LoginMoves;
+  };
   broadcastEvent: (event: FmEvent) => void;
 }): LowLogins {
   const { vault, quota, supervisor } = options;
@@ -36,13 +41,23 @@ export function startLowLogins(options: {
     options.broadcastEvent({ type: "firstmate_note", ...saidLine(fact) });
   const nameOf = (providerId: string) =>
     PROVIDER_CATALOG.find((entry) => entry.id === providerId)?.name ?? providerId;
+  // The provider's typed refusal for a spent allowance, which no meter has to agree with.
+  const runOutOf = (accountId: string) => {
+    const cut = vault.cutOff(accountId);
+    return cut?.class === "no_headroom" ? { resetsAt: cut.resetsAt } : undefined;
+  };
   const lowLogins = new LowLogins({
     whenLow: () => options.settings.getWhenLoginLow(),
     providers: () =>
-      PROVIDER_CATALOG.filter(
-        (entry) => vault.list(entry.id).filter((account) => account.enabled).length > 1,
-      ).map((entry) => ({ id: entry.id, name: entry.name })),
-    logins: (providerId) => options.routing.accounts.logins(providerId),
+      PROVIDER_CATALOG.filter((entry) => vault.list(entry.id).length > 0).map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+      })),
+    logins: (providerId) =>
+      options.routing.accounts.logins(providerId).map((login) => {
+        const runOut = runOutOf(login.accountId);
+        return runOut ? { ...login, runOut } : login;
+      }),
     pinOf: (providerId) => vault.pinnedAccount(providerId),
     setPin: (providerId, accountId) => vault.setPin(providerId, accountId),
     refillsOf: (providerId, accountId) => {
@@ -52,11 +67,15 @@ export function startLowLogins(options: {
           (entry) =>
             entry.accountId === accountId && entry.provider === quotaRowProviderOf(providerId),
         );
-      const reset = row ? limitingResetOf(row, Date.now()) : undefined;
+      const reset =
+        runOutOf(accountId)?.resetsAt ?? (row ? limitingResetOf(row, Date.now()) : undefined);
       return reset !== undefined ? resetWhen(reset, Date.now()) : undefined;
     },
     tasksOn: (accountId) => supervisor.loginMoves.tasksOn(accountId),
-    moveOff: (accountId) => supervisor.loginMoves.moveOff(accountId),
+    moveOff: (from, to) => supervisor.loginMoves.moveOff(from, to),
+    forget: (from) => supervisor.loginMoves.forget(from),
+    waitChosen: (providerId) =>
+      supervisor.cards.chosenAction(loginLowCardId(providerId)) === LOGIN_LOW_WAIT,
     cards: supervisor.cards.hostCards,
     note,
   });

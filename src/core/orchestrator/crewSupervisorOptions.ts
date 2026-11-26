@@ -179,7 +179,7 @@ export type AccountAttachment = {
   pickForSpawn?(
     taskId: string,
     piProviderId: string,
-    crew?: { model: string; passing?: readonly string[] },
+    crew?: { model: string; passing?: readonly string[]; only?: string },
   ): Promise<{ accountId?: string; record(): void; selected(): void }>;
   /**
    * The account a resume binds: the recorded one while healthy, else a

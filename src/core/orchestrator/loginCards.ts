@@ -14,6 +14,9 @@ export function loginLowCardId(providerId: string): string {
   return `card-login-low-${providerId}`;
 }
 
+/** The card's Wait for the refill action, which the low-login watch reads as its answer. */
+export const LOGIN_LOW_WAIT = "wait-for-refill";
+
 export type LoginLowCard = {
   providerId: string;
   providerName: string;
@@ -64,7 +67,7 @@ export function loginLowCard(
     body: `${sentences.map((fact) => saidMark(fact)).join(" ")}${cardWordsMark([title, move, wait])}`,
     actions: [
       moveLoginAction({ who: "crew", accountId: input.other.accountId }, input.other.label, true),
-      { id: "wait-for-refill", label: englishOf(wait), variant: "secondary", declines: true },
+      { id: LOGIN_LOW_WAIT, label: englishOf(wait), variant: "secondary", declines: true },
     ],
   };
 }

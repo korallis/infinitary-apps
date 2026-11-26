@@ -810,4 +810,69 @@ describe("INF-443 learned placed-work ranking", () => {
     });
     w.db.close();
   });
+  // The approved plan for several logins of one provider, piece 3, "Login
+  // in use": under wait and ask only the pin serves, so a model the pin
+  // cannot serve is not available on a sibling's reading.
+  it("leaves a model no account may serve unranked, never on a sibling's reading", () => {
+    const w = world();
+    const rows = [row("grok", "home-grok", 84)];
+    w.scores.observe("home", snapshot(AT, rows));
+    const [model] = buildModelsCatalog([GROK], rows, new Date(AT).toISOString(), AT).models;
+    if (!model) throw new Error("The catalog lists Grok.");
+    const [blocked] = w.scores.catalog([model], rows, AT, () => null, w.scores.data(AT));
+    expect(blocked).toEqual({ provider: "grok", id: GROK.id, label: GROK.name });
+    w.db.close();
+  });
+
+  it.each([
+    ["ask", undefined],
+    ["spread", "xai"],
+  ] as const)(
+    "under %s, routes a model whose login in use does not list it to %s",
+    (choice, provider) => {
+      const w = world();
+      const rows = [row("grok", "home-grok", 84), row("grok", "mini-grok", 60)];
+      const catalog = buildModelsCatalog([GROK], rows, new Date(AT).toISOString(), AT);
+      const accounts = new AccountSelector({
+        decisions: w.decisions,
+        placedWork: w.scores,
+        quota: { latest: () => snapshot(AT, rows) },
+        flagshipAccountId: () => null,
+        pool: {
+          list: () =>
+            ["home-grok", "mini-grok"].map((id) => ({
+              id,
+              providerId: "xai",
+              label: id,
+              enabled: true,
+            })),
+          connectedSync: () => true,
+          withheldReason: () => undefined,
+          // The login in use is the one whose sign-in lists another model.
+          pinnedAccount: () => "mini-grok",
+          markSelected: () => {},
+        },
+        accountModels: () => [
+          { accountId: "home-grok", models: [{ provider: "xai", id: GROK.id }] },
+          { accountId: "mini-grok", models: [{ provider: "xai", id: "grok-4.1" }] },
+        ],
+        loginInUse: { whenLow: () => choice, pin: () => {} },
+      });
+      const router = new Router({
+        settings: w.settings,
+        decisions: w.decisions,
+        placedWork: w.scores,
+        quota: { latestModels: () => catalog, latest: () => snapshot(AT, rows) } as QuotaService,
+        availableModels: () => [GROK],
+        crewAccount: (piProvider, model, placed) => accounts.crewAccount(piProvider, model, placed),
+      });
+      const preview = router.preview(
+        "Build",
+        { kind: "implement", basis_verified: true },
+        { placed: w.scores.data(AT) },
+      );
+      expect(preview?.result.choice?.provider).toBe(provider);
+      w.db.close();
+    },
+  );
 });

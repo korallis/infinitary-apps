@@ -9,7 +9,9 @@ import { type LoginReading, LowLogins } from "./lowLogins";
 // room), "Ask" (one card per provider per run-out; the click moves the pin
 // and the tasks on the spent login follow) and "Move" (the same with no
 // card and one feed line), with `wait` doing nothing and `spread` asking
-// only about running work.
+// only about running work. The moment is also a typed `no_headroom`
+// cut-off, whatever the meter last read, and the click moves work only to
+// the login the card named.
 
 type HostCard = Omit<Card, "author" | "priority" | "status" | "createdAt">;
 
@@ -19,7 +21,13 @@ function watchOver(start: {
   logins: LoginReading[];
   tasksOn?: Record<string, string[]>;
 }) {
-  const state = { ...start, tasksOn: start.tasksOn ?? {} };
+  const state = {
+    ...start,
+    tasksOn: start.tasksOn ?? {},
+    providers: [{ id: "openai-codex", name: "ChatGPT" }],
+    waitChosen: false,
+  };
+  const forgotten = new Set<string>();
   const raised: HostCard[] = [];
   const withdrawn: string[] = [];
   const lines: string[] = [];
@@ -27,7 +35,7 @@ function watchOver(start: {
   const pins: string[] = [];
   const watch = new LowLogins({
     whenLow: () => state.choice,
-    providers: () => [{ id: "openai-codex", name: "ChatGPT" }],
+    providers: () => state.providers,
     logins: () => state.logins,
     pinOf: () => state.pin,
     setPin: (_providerId, accountId) => {
@@ -36,11 +44,17 @@ function watchOver(start: {
     },
     refillsOf: (_providerId, accountId) => (accountId === "personal" ? "6pm" : undefined),
     tasksOn: (accountId) => state.tasksOn[accountId] ?? [],
-    moveOff: (accountId) => {
-      left.push(accountId);
+    moveOff: (from, to) => {
+      forgotten.delete(from);
+      left.push(`${from} to ${to}`);
     },
+    forget: (from) => {
+      forgotten.add(from);
+    },
+    waitChosen: () => state.waitChosen,
     cards: {
       raiseHostCard: (card) => {
+        state.waitChosen = false;
         raised.push(card);
       },
       withdrawHostCard: (id) => {
@@ -51,7 +65,7 @@ function watchOver(start: {
       lines.push(englishOf(fact));
     },
   });
-  return { watch, state, raised, withdrawn, lines, left, pins };
+  return { watch, state, raised, withdrawn, lines, left, pins, forgotten };
 }
 
 const login = (accountId: string, label: string, percent?: number): LoginReading => ({
@@ -106,11 +120,11 @@ describe("the login in use running low, under ask", () => {
     t.watch.move("spare");
     expect(t.state.pin).toBe("spare");
     expect(t.lines).toEqual(["ChatGPT work moved from Personal to Spare."]);
-    expect(t.left).toEqual(["personal"]);
-    expect(t.withdrawn).toEqual(["card-login-low-openai-codex"]);
-    // A task that was mid-turn at the click is asked again at each reading while the login stays low.
+    // Work, which also has room, is not where the card said work would go.
+    expect(t.left).toEqual(["personal to spare"]);
+    // While the login stays low its tasks stay bound to the move.
     t.watch.read();
-    expect(t.left).toEqual(["personal", "personal"]);
+    expect(t.forgotten.has("personal")).toBe(false);
     expect(t.raised).toHaveLength(1);
     // Once it refills nothing leaves it any more.
     t.state.logins = [
@@ -119,7 +133,121 @@ describe("the login in use running low, under ask", () => {
       login("spare", "Spare", 60),
     ];
     t.watch.read();
-    expect(t.left).toEqual(["personal", "personal"]);
+    expect(t.forgotten.has("personal")).toBe(true);
+    expect(t.left).toEqual(["personal to spare"]);
+  });
+
+  it("asks at a typed run-out whatever the meter last read, and never offers a login that ran out", () => {
+    const t = watchOver({
+      choice: "ask",
+      pin: "personal",
+      logins: [
+        // The provider refused Personal for a spent allowance; its meter still reads 80%.
+        { ...login("personal", "Personal", 80), runOut: { resetsAt: 1_800_000_000_000 } },
+        // Spare was refused the same way and has no reading at all.
+        { ...login("spare", "Spare"), runOut: {} },
+        login("work", "Work", 45),
+      ],
+    });
+    t.watch.read();
+    expect(t.raised).toHaveLength(1);
+    expect(t.raised[0]?.title).toBe("Personal has used up its allowance");
+    expect(wordsOf(t.raised[0])).toBe(
+      "Its allowance refills 6pm. Work has the most room. New ChatGPT work would run on Work, and crew work waiting on Personal would continue there at its next turn.",
+    );
+  });
+
+  it("keeps the card true to the logins: revised, taken down and put up again as they change", () => {
+    const t = watchOver({ choice: "ask", pin: "personal", logins: personalLow() });
+    t.watch.read();
+    // Spare runs low too: the card now offers Work.
+    t.state.logins = [
+      login("personal", "Personal", 6),
+      login("work", "Work", 45),
+      login("spare", "Spare", 9),
+    ];
+    t.watch.read();
+    expect(t.raised).toHaveLength(2);
+    expect(t.raised[1]?.actions?.[0]?.label).toBe("Move to Work");
+    expect(wordsOf(t.raised[1])).toContain("It has 6% of its allowance left.");
+    expect(t.withdrawn).toEqual([]);
+    // No login has room: the card comes down.
+    t.state.logins = [login("personal", "Personal", 6), login("work", "Work", 3)];
+    t.watch.read();
+    expect(t.withdrawn).toEqual(["card-login-low-openai-codex"]);
+    // Work refills while Personal is still low: the question is asked again.
+    t.state.logins = [login("personal", "Personal", 6), login("work", "Work", 100)];
+    t.watch.read();
+    expect(t.raised).toHaveLength(3);
+    // The provider is left with one login: nothing to ask.
+    t.state.logins = [login("personal", "Personal", 6)];
+    t.watch.read();
+    expect(t.withdrawn).toHaveLength(2);
+  });
+
+  it("takes the card down for a provider left with no login", () => {
+    const t = watchOver({ choice: "ask", pin: "personal", logins: personalLow() });
+    t.watch.read();
+    t.state.providers = [];
+    t.watch.read();
+    expect(t.withdrawn).toEqual(["card-login-low-openai-codex"]);
+  });
+
+  it("holds the captain's Wait answer until that login has room again", () => {
+    const t = watchOver({
+      choice: "ask",
+      pin: "personal",
+      logins: personalLow(),
+      tasksOn: { personal: ["task-1"] },
+    });
+    t.watch.read();
+    t.state.waitChosen = true;
+    // Another login becoming the roomiest does not ask again.
+    t.state.logins = [
+      login("personal", "Personal", 4),
+      login("work", "Work", 95),
+      login("spare", "Spare", 70),
+    ];
+    t.watch.read();
+    expect(t.raised).toHaveLength(1);
+    expect([t.pins, t.left]).toEqual([[], []]);
+    // It refills, and at its next run-out the card is back.
+    t.state.logins = [login("personal", "Personal", 100), login("work", "Work", 95)];
+    t.watch.read();
+    t.state.logins = [login("personal", "Personal", 9), login("work", "Work", 95)];
+    t.watch.read();
+    expect(t.raised).toHaveLength(2);
+  });
+
+  it("moves nothing on a click the logins no longer bear out, and asks about what is true now", () => {
+    const gone = watchOver({
+      choice: "ask",
+      pin: "personal",
+      logins: personalLow(),
+      tasksOn: { personal: ["task-1"] },
+    });
+    gone.watch.read();
+    // Spare ran out between the card and the click.
+    gone.state.logins = [
+      login("personal", "Personal", 8),
+      login("work", "Work", 45),
+      { ...login("spare", "Spare", 70), runOut: {} },
+    ];
+    gone.watch.move("spare");
+    expect([gone.pins, gone.left, gone.lines]).toEqual([[], [], []]);
+    expect(gone.raised).toHaveLength(2);
+    expect(gone.raised[1]?.actions?.[0]?.label).toBe("Move to Work");
+
+    const refilled = watchOver({
+      choice: "ask",
+      pin: "personal",
+      logins: personalLow(),
+      tasksOn: { personal: ["task-1"] },
+    });
+    refilled.watch.read();
+    refilled.state.logins = [login("personal", "Personal", 100), login("spare", "Spare", 70)];
+    refilled.watch.move("spare");
+    expect([refilled.pins, refilled.left]).toEqual([[], []]);
   });
 
   it("says the allowance is used up for a spent login", () => {
@@ -204,7 +332,7 @@ describe("the login in use running low, under the other choices", () => {
     expect(t.raised).toEqual([]);
     expect(t.state.pin).toBe("spare");
     expect(t.lines).toEqual(["Personal is running low, so ChatGPT work moved to Spare."]);
-    expect(t.left).toEqual(["personal"]);
+    expect(t.left).toEqual(["personal to spare"]);
     // The next reading says nothing again: the pin is no longer the low login.
     t.watch.read();
     expect(t.lines).toHaveLength(1);
@@ -223,8 +351,24 @@ describe("the login in use running low, under the other choices", () => {
     );
     t.watch.move("spare");
     expect(t.state.pin).toBe("work");
-    expect(t.left).toEqual(["personal"]);
+    expect(t.left).toEqual(["personal to spare"]);
     expect(t.lines).toEqual([]);
+  });
+
+  it("leaves running work where it is under spread when the captain chooses Wait", () => {
+    const t = watchOver({
+      choice: "spread",
+      pin: "work",
+      logins: personalLow(),
+      tasksOn: { personal: ["task-1"] },
+    });
+    t.watch.read();
+    expect(t.raised).toHaveLength(1);
+    t.state.waitChosen = true;
+    t.watch.read();
+    t.watch.read();
+    expect(t.raised).toHaveLength(1);
+    expect([t.pins, t.left, t.lines]).toEqual([[], [], []]);
   });
 
   it("asks nothing under spread about a low login no task runs on", () => {
@@ -244,6 +388,7 @@ describe("the login in use running low, under the other choices", () => {
     t.state.choice = "wait";
     t.watch.read();
     expect(t.withdrawn).toEqual(["card-login-low-openai-codex"]);
+    expect(t.forgotten.has("personal")).toBe(true);
     t.watch.move("spare");
     expect([t.pins, t.left]).toEqual([[], []]);
   });
