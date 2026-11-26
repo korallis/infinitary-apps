@@ -92,6 +92,8 @@ function crew(
   });
   const turn = { busy: start.busy ?? false };
   const hold = { held: start.held ?? false };
+  /** The task's conversation does not open. */
+  const opening = { fails: false };
   const runtime = { id: "task-1", turn } as unknown as TaskRuntime;
   const live = new Map<string, TaskRuntime>([["task-1", runtime]]);
   const moves = new LoginMoves(
@@ -105,6 +107,7 @@ function crew(
         live.delete(taskId);
       },
       resumeTask: async (taskId) => {
+        if (opening.fails) throw new Error("could not open");
         steps.push(`resumed ${taskId} on ${tasks.get(taskId)?.accountId}`);
         return runtime;
       },
@@ -118,9 +121,13 @@ function crew(
       machineOf: () => start.machine ?? "local",
       laneHeld: () => hold.held,
       disposed: () => false,
+      dueRows: () => [],
+      openingFailed: (taskId) => {
+        steps.push(`backed off ${taskId}`);
+      },
     },
   );
-  return { moves, tasks, events, steps, live, db, turn, hold, runtime };
+  return { moves, tasks, events, steps, live, db, turn, hold, opening, runtime };
 }
 
 describe("a started task's move to another login", () => {
@@ -206,6 +213,57 @@ describe("a started task's move to another login", () => {
     await t.moves.takes("task-2", () => true);
     expect(t.tasks.get("task-1")?.accountId).toBe("work");
     expect(t.tasks.get("task-2")?.accountId).toBe("spare");
+  });
+
+  // INA-9: a task's next delivery is on the login its own click named.
+  it("gives up only the moves a refused click itself named, and keeps an earlier click's to the same login", async () => {
+    const t = crew({ held: true });
+    await t.moves.moveOff("personal", "spare", true, "first raising");
+    seedTask(t.tasks, {
+      id: "task-2",
+      title: "Fix the footer",
+      status: "idle",
+      accountId: "personal",
+      model: MODEL,
+    });
+    // A later click that is refused before it names any task's move.
+    t.moves.forget("personal", "spare", "second raising");
+    expect(t.moves.bindsTask("task-1")).toBe(true);
+    // And one refused after its moves were saved, as after a quit part way.
+    await t.moves.moveOff("personal", "spare", true, "second raising");
+    expect(t.moves.bindsTask("task-2")).toBe(true);
+    t.moves.forget("personal", "spare", "second raising");
+    expect(t.moves.bindsTask("task-2")).toBe(false);
+    expect(t.moves.bindsTask("task-1")).toBe(true);
+    t.hold.held = false;
+    await t.moves.takes("task-1", () => true);
+    expect(t.tasks.get("task-1")?.accountId).toBe("spare");
+    expect(t.tasks.get("task-2")?.accountId).toBe("personal");
+  });
+
+  // docs/inbox.md: a refused delivery spends its try and backs off.
+  it("backs the lane off when a sent message's conversation does not open, on the named login and where the task stays", async () => {
+    const moved = crew({ held: true });
+    moved.live.delete("task-1");
+    await moved.moves.moveOff("personal", "work");
+    moved.hold.held = false;
+    moved.opening.fails = true;
+    await expect(moved.moves.takes("task-1", () => true, true)).resolves.toBe(false);
+    expect(moved.tasks.get("task-1")?.accountId).toBe("work");
+    expect(moved.steps).toEqual(["selected work", "backed off task-1"]);
+
+    // Work's sign-in does not list the task's model: the task stays on Personal.
+    const stays = crew({
+      held: true,
+      lists: { work: ["gpt-6.1-luna"], spare: [MODEL.id], personal: [MODEL.id] },
+    });
+    stays.live.delete("task-1");
+    await stays.moves.moveOff("personal", "work");
+    stays.hold.held = false;
+    stays.opening.fails = true;
+    await expect(stays.moves.takes("task-1", () => true, true)).resolves.toBe(false);
+    expect(stays.tasks.get("task-1")?.accountId).toBe("personal");
+    expect(stays.steps).toEqual(["backed off task-1"]);
   });
 
   it("opens a task with no open conversation on the named login for a sent message, and not through its lane's sweep", async () => {

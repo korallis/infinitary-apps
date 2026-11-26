@@ -350,8 +350,8 @@ export type CrewSupervisorOptions = {
    * kept only while the app runs.
    */
   loginMoveRecord?: {
-    read(): Record<string, { from: string; to: string }>;
-    write(moves: Record<string, { from: string; to: string }>): void;
+    read(): Record<string, { from: string; to: string; click?: string }>;
+    write(moves: Record<string, { from: string; to: string; click?: string }>): void;
     /**
      * Whether a Move click that left this login is still to be checked
      * against the logins as they are now (`LowLogins.accept`), read from

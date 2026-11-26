@@ -59,6 +59,8 @@ export class CrewSteer {
    * recorded on it meanwhile is read after the files, in the order sent.
    */
   private readonly handing = new Map<string, Promise<void>>();
+  /** Each hand-over's files line on its task's lane, which the messages sent with it are read after. */
+  private readonly handedRows = new Map<string, number[]>();
 
   constructor(private readonly core: CrewCore) {}
 
@@ -262,12 +264,14 @@ export class CrewSteer {
   private handOverEnded(taskId: string, crossing: Promise<void>): void {
     if (this.handing.get(taskId) !== crossing) return;
     this.handing.delete(taskId);
+    const sent = this.handedRows.get(taskId) ?? [];
+    this.handedRows.delete(taskId);
     if (this.core.disposed()) return;
     const task = this.core.tasks.get(taskId);
     if (task?.session && !task.turn.closing && !task.turn.busy) {
       // Held for its click's check, it keeps its wake until that check (`LoginMoves`).
       if (!this.core.turns.deliverPendingToTask(task, { sent: true }))
-        this.core.loginMoves.keepsSent(taskId);
+        this.core.loginMoves.keepsSent(taskId, sent);
       return;
     }
     const record = this.core.options.tasks.get(taskId);
@@ -297,7 +301,7 @@ export class CrewSteer {
       return;
     }
     // Held for its click's check, it is delivered as sent once the check is made.
-    if (record && this.core.facts.inBacklog(taskId)) this.core.loginMoves.keepsSent(taskId);
+    if (record && this.core.facts.inBacklog(taskId)) this.core.loginMoves.keepsSent(taskId, sent);
     void this.core.watch.sweepTaskLane(taskId, this.core.now());
   }
 
@@ -393,7 +397,7 @@ export class CrewSteer {
         });
         // The line was held with the lane, so no turn has it yet.
         if (!this.core.options.inbox.revise(lineId, handed))
-          this.core.options.inbox.enqueue(taskId, handed);
+          this.handedRow(taskId, this.core.options.inbox.enqueue(taskId, handed));
       } catch (caught) {
         const record = this.core.options.tasks.resolve(taskId);
         this.core.hooks().notifyOp(
@@ -417,6 +421,7 @@ export class CrewSteer {
     void crossing.then(() => this.handOverEnded(taskId, crossing));
     // Until the files arrive, the line says what is true if they never do.
     const lineId = this.core.options.inbox.enqueue(taskId, handoverMissingLine(fromHandle));
+    this.handedRow(taskId, lineId);
     try {
       await this.sendSteer(taskId, message, "firstmate", checked, true);
     } catch (caught) {
@@ -425,6 +430,10 @@ export class CrewSteer {
       throw caught;
     }
     resolveLine(lineId);
+  }
+
+  private handedRow(taskId: string, id: number): void {
+    this.handedRows.set(taskId, [...(this.handedRows.get(taskId) ?? []), id]);
   }
 
   /**
@@ -588,7 +597,7 @@ export class CrewSteer {
       const pending = enqueue();
       if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
         // Kept on the lane until the account serves again, or the task leaves the backlog.
-        if (!sentByHost) this.core.loginMoves.keepsSent(taskId);
+        if (!sentByHost) this.core.loginMoves.keepsSent(taskId, [pending]);
         this.recordSteer(taskId, message, source, "recorded-held", pending);
         if (sentByHost) this.tellBacklogNews(taskId, message);
         return "recorded-held";
@@ -609,7 +618,7 @@ export class CrewSteer {
     }
     const resumeId = enqueue();
     if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
-      if (!sentByHost) this.core.loginMoves.keepsSent(taskId);
+      if (!sentByHost) this.core.loginMoves.keepsSent(taskId, [resumeId]);
       this.recordSteer(taskId, message, source, "recorded-held", resumeId);
       if (sentByHost) this.tellBacklogNews(taskId, message);
       return "recorded-held";

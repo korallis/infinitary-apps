@@ -28,7 +28,7 @@ type SavedAnswers = {
 export function loginLowAnswer(
   saved: SavedAnswers,
   providerId: string,
-): { from: string; to?: string; refillsAt?: number } | undefined {
+): { from: string; to?: string; refillsAt?: number; askId?: string } | undefined {
   const id = loginLowCardId(providerId);
   const chosen = saved.cards.chosenAction(id);
   const asked = loginLowAsked(saved.cards.stored(id)?.body ?? "");
@@ -37,6 +37,7 @@ export function loginLowAnswer(
   const answer = {
     from: asked.accountId,
     ...(asked.refillsAt !== undefined ? { refillsAt: asked.refillsAt } : {}),
+    ...(asked.askId !== undefined ? { askId: asked.askId } : {}),
   };
   if (chosen === LOGIN_LOW_WAIT) return answer;
   // A Move button's id names both logins (`moveLoginActionId`).
@@ -136,8 +137,9 @@ export function startLowLogins(options: {
       loginLowAnswer({ cards: supervisor.cards, settings, vault }, providerId),
     tasksOn: (accountId) => supervisor.loginMoves.tasksOn(accountId),
     unnamedOn: (accountId) => supervisor.loginMoves.unnamedOn(accountId),
-    moveOff: (from, to, unnamedOnly) => supervisor.loginMoves.moveOff(from, to, unnamedOnly),
-    forget: (from, to) => supervisor.loginMoves.forget(from, to),
+    moveOff: (from, to, unnamedOnly, click) =>
+      supervisor.loginMoves.moveOff(from, to, unnamedOnly, click),
+    forget: (from, to, click) => supervisor.loginMoves.forget(from, to, click),
     openOffers: () =>
       PROVIDER_CATALOG.flatMap((entry) => {
         const card = supervisor.cards.get(loginLowCardId(entry.id));

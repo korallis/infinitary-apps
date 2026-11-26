@@ -27,7 +27,17 @@ export type LoginMovesHost = {
   laneHeld(taskId: string): boolean;
   /** The app is quitting: no move starts now. */
   disposed(): boolean;
+  /** The ids of the lane's rows a delivery would take now (`CrewFacts.deliverableRows`). */
+  dueRows(taskId: string): number[];
+  /**
+   * A conversation opened for the lane's due rows did not open: they spend
+   * a try and back off as after the lane's own sweep (`CrewWatch.openingFailed`).
+   */
+  openingFailed(taskId: string, caught: unknown): void;
 };
+
+/** A task's move: the login it leaves, the one named for it, and the card click that named it. */
+type Move = { from: string; to: string; click?: string };
 
 /** A move under way: the delivery asked of it, and whether it handed the lane on. */
 type Going = {
@@ -60,9 +70,11 @@ export class LoginMoves {
   /** Each move under way, with the delivery it owes when it is over. */
   private readonly moving = new Map<string, Going>();
   /** Each task still to move, with the login it leaves and the one named for it. */
-  private readonly bound = new Map<string, { from: string; to: string }>();
-  /** Each task whose lane keeps a message someone sent, until a delivery takes it (`keepsSent`). */
-  private readonly owed = new Set<string>();
+  private readonly bound = new Map<string, Move>();
+  /** Each task's rows someone sent that keep their wake until a delivery takes them (`keepsSent`). */
+  private readonly owed = new Map<string, Set<number>>();
+  /** Each task a kept message's delivery is opening or moving now. */
+  private readonly paying = new Set<string>();
 
   constructor(
     private readonly options: Pick<
@@ -87,7 +99,7 @@ export class LoginMoves {
   }
 
   /** The task's move is named, or `undefined` once it is made or given up; saved either way. */
-  private bind(taskId: string, move: { from: string; to: string } | undefined): void {
+  private bind(taskId: string, move: Move | undefined): void {
     if (move) this.bound.set(taskId, move);
     else if (!this.bound.delete(taskId)) return;
     this.save();
@@ -111,8 +123,10 @@ export class LoginMoves {
    * here, before the promise, with no task bound and nothing saved. With
    * `unnamedOnly`, a task another login is already named for keeps that
    * login: the click that asked about the rest did not ask about it.
+   * `click` is the card click that names these moves, kept with each so a
+   * refusal of that click gives up its own and no earlier click's (`forget`).
    */
-  moveOff(from: string, to: string, unnamedOnly = false): Promise<void> {
+  moveOff(from: string, to: string, unnamedOnly = false, click?: string): Promise<void> {
     const taskIds = this.tasksOn(from).filter((taskId) => {
       const bound = this.bound.get(taskId);
       return !unnamedOnly || !bound || (bound.from === from && bound.to === to);
@@ -123,10 +137,11 @@ export class LoginMoves {
       return bound?.from !== from || bound.to !== to;
     });
     if (named.length > 0) {
+      const move = (): Move => ({ from, to, ...(click !== undefined ? { click } : {}) });
       const next = new Map(this.bound);
-      for (const taskId of named) next.set(taskId, { from, to });
+      for (const taskId of named) next.set(taskId, move());
       this.options.loginMoveRecord?.write(Object.fromEntries(next));
-      for (const taskId of named) this.bound.set(taskId, { from, to });
+      for (const taskId of named) this.bound.set(taskId, next.get(taskId) ?? move());
     }
     // The moves begin once the caller has finished what follows the save in
     // the same step (the pin, the answer's end), which they are held for.
@@ -137,67 +152,78 @@ export class LoginMoves {
   }
 
   /**
-   * A message someone sent is kept on the task's lane because its click's
-   * check is awaited: true when so. It is delivered as a sent message, on
-   * the named login or where the task is, once the click is checked and
+   * Rows someone sent are kept on the task's lane because its click's
+   * check is awaited: true when so. They are delivered as a sent message,
+   * on the named login or where the task is, once the click is checked and
    * nothing else holds the lane, so a task in the backlog, which no sweep
-   * opens, still reads it. Never for a notice of the host's own, which
-   * waits in the backlog for a Start.
+   * opens, still reads them. Never for a notice of the host's own, which
+   * waits in the backlog for a Start: only these rows wake the task.
    */
-  keepsSent(taskId: string): boolean {
+  keepsSent(taskId: string, rowIds: readonly number[]): boolean {
     if (!this.awaitsCheck(taskId)) return false;
-    this.owed.add(taskId);
+    const kept = this.owed.get(taskId) ?? new Set<number>();
+    for (const id of rowIds) kept.add(id);
+    this.owed.set(taskId, kept);
     return true;
   }
 
   /** Delivers each kept sent message whose click has been checked. */
   private payOwed(): void {
-    for (const taskId of [...this.owed]) this.paySent(taskId);
+    for (const taskId of [...this.owed.keys()]) this.paySent(taskId);
   }
 
   /**
-   * Delivers the task's kept sent message when its click has been checked
-   * and no hold stands. It stays kept until a delivery takes the lane, so
-   * another hold, a conversation that did not open or a delivery that was
-   * not admitted leaves it for the lane's next sweep. `failed` is told of
-   * a conversation that did not open.
+   * Delivers the task's lane as a sent message when one of its kept rows
+   * is due, its click has been checked and no hold stands. A row stays
+   * kept while it waits undelivered, so another hold, a delivery that was
+   * not admitted or a conversation that did not open, whose rows back off
+   * (`reopen`), leaves it for the lane's sweep once it is due again; a row
+   * of the host's own that is due beside it wakes nothing.
    */
-  paySent(taskId: string, failed: () => void = () => {}): void {
-    if (!this.owed.has(taskId) || this.awaitsCheck(taskId) || this.host.laneHeld(taskId)) return;
-    this.owed.delete(taskId);
+  paySent(taskId: string): void {
+    const kept = this.owed.get(taskId);
+    if (!kept) return;
+    for (const id of [...kept])
+      if (this.options.inbox.get(id)?.deliveredAt !== null) kept.delete(id);
+    if (kept.size === 0) {
+      this.owed.delete(taskId);
+      return;
+    }
+    if (this.paying.has(taskId) || this.awaitsCheck(taskId) || this.host.laneHeld(taskId)) return;
+    if (!this.host.dueRows(taskId).some((id) => kept.has(id))) return;
     const deliver = (task: TaskRuntime) => this.host.deliverPendingToTask(task, true);
-    // Still kept while rows wait that no delivery took.
-    const settle = (taken: boolean) => {
-      const parked = this.options.tasks.get(taskId)?.backlogSince != null;
-      if (!taken && parked && this.options.inbox.pending(taskId).length > 0) this.owed.add(taskId);
-    };
-    const moved = this.takes(taskId, deliver, true);
-    if (moved) {
-      void moved.then(settle);
-      return;
-    }
     const open = this.host.runtime(taskId);
-    if (open) {
-      settle(deliver(open));
+    const paid =
+      this.takes(taskId, deliver, true) ??
+      (open ? undefined : this.reopen(taskId).then(deliver, () => false));
+    if (!paid) {
+      if (open) deliver(open);
       return;
     }
-    void this.host
-      .resumeTask(taskId)
-      .then(deliver)
-      .then(settle, () => {
-        this.owed.add(taskId);
-        failed();
-      });
+    this.paying.add(taskId);
+    void paid.finally(() => this.paying.delete(taskId));
+  }
+
+  /** Opens the task's conversation; one that does not open backs its lane's due rows off. */
+  private async reopen(taskId: string): Promise<TaskRuntime> {
+    try {
+      return await this.host.resumeTask(taskId);
+    } catch (caught) {
+      this.host.openingFailed(taskId, caught);
+      throw caught;
+    }
   }
 
   /**
    * The login has room again, or work now waits: its tasks still to move
-   * stay. With `to`, only the moves to that login: a click's moves that
-   * the click's own check then refused.
+   * stay. With `to`, only the moves that `click` named for that login: a
+   * click's moves that the click's own check then refused, never an
+   * earlier click's to the same login.
    */
-  forget(from: string, to?: string): void {
+  forget(from: string, to?: string, click?: string): void {
     for (const [taskId, move] of [...this.bound])
-      if (move.from === from && (to === undefined || move.to === to)) this.bind(taskId, undefined);
+      if (move.from === from && (to === undefined || (move.to === to && move.click === click)))
+        this.bind(taskId, undefined);
     // After the caller has ended the answer that held them.
     if (this.owed.size > 0) void Promise.resolve().then(() => this.payOwed());
   }
@@ -306,9 +332,9 @@ export class LoginMoves {
       if (open) return hand(open);
       if (!going.sent) return;
       try {
-        hand(await this.host.resumeTask(taskId));
+        hand(await this.reopen(taskId));
       } catch {
-        // The rows are durable: the next message or Start delivers them.
+        // The rows are durable and back off: a kept one is tried again when due (`paySent`).
       }
     };
     try {
@@ -372,7 +398,7 @@ export class LoginMoves {
         this.host.deliverLane(taskId);
         return;
       }
-      hand(await this.host.resumeTask(taskId));
+      hand(await this.reopen(taskId));
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       // i18n-exempt: a task timeline row the first mate reads
