@@ -175,6 +175,9 @@ export class CrewFacts {
     // Its model left every level and no other can take it yet (docs/routing.md).
     const cause = this.core.moves.modelWaitCause(taskId);
     if (cause) return { kind: "model", cause };
+    // Its move to another login waits for its click to be checked: which
+    // login takes its next delivery is not settled yet.
+    if (this.core.loginMoves.awaitsCheck(taskId)) return { kind: "account" };
     const accountId = this.core.tasks.get(taskId)?.accountId ?? record?.accountId;
     // A task with a confirmed move to another login is not held by the
     // login it leaves: its next delivery makes the move (`LoginMoves.takes`).

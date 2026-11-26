@@ -16,10 +16,11 @@ import {
 import type { FakeSessionOptions } from "../../../tests/helpers/fakeSession";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { crewmateHandoverDir } from "../paths";
-import { startLowLogins } from "../quota/homeLowLogins";
+import { loginMoveUnchecked, startLowLogins } from "../quota/homeLowLogins";
 import type { LoginReading } from "../quota/lowLogins";
 import { type AccountPool, AccountSelector } from "../routing/accountRouter";
 import type { Router } from "../routing/router";
+import { CardStore } from "../storage/cardStore";
 import { CostLimitStore } from "../storage/costLimitStore";
 import { DecisionStore } from "../storage/decisionStore";
 import { STUCK_REFUSAL_LIMIT } from "../storage/inboxStore";
@@ -105,6 +106,23 @@ function threeLogins(
       moveRecord = {
         read: () => settings.getLoginMoves(),
         write: (moves) => settings.setLoginMoves(moves),
+        // As the home wires it: read from the saved card and the record of ended answers.
+        unchecked: (move) => {
+          const cards = new CardStore(db);
+          return loginMoveUnchecked(
+            {
+              cards: {
+                chosenAction: (id) => cards.chosenAction(id),
+                stored: (id) => cards.get(id),
+              },
+              settings,
+              vault: {
+                list: (providerId) => pool.list().filter((a) => a.providerId === providerId),
+              },
+            },
+            move,
+          );
+        },
       };
       return moveRecord;
     },
@@ -1209,11 +1227,13 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     effectivePercentRemaining: percent,
   });
 
+  type Vault = { pin: string; quitsAtPin: boolean; quitsAfterPin?: boolean; savedAtPin?: unknown };
+
   /** The home's watch over a supervisor, with the vault's pin and each login's reading. */
   function watching(
     h: ReturnType<typeof threeLogins>,
     supervisor: ReturnType<typeof reboot>,
-    vault: { pin: string; quitsAtPin: boolean; savedAtPin?: unknown },
+    vault: Vault,
     readings: () => LoginReading[],
     choice: "ask" | "wait" = "ask",
   ) {
@@ -1239,6 +1259,7 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
           vault.savedAtPin = settings.getLoginMoves();
           if (vault.quitsAtPin) throw new Error("the app quit");
           vault.pin = accountId ?? vault.pin;
+          if (vault.quitsAfterPin) throw new Error("the app quit");
         },
         onCutOffChange: () => {},
         cutOff: () => undefined,
@@ -1257,7 +1278,7 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
       // Its cost limit keeps each task's move from being made before the quit.
       h.costs.placeHold({ taskId: id, limitUsd: 50, spentUsd: 51.5, at: Date.now() });
     }
-    const vault: { pin: string; quitsAtPin: boolean; savedAtPin?: unknown } = {
+    const vault: Vault = {
       pin: "acct_personal",
       quitsAtPin: true,
     };
@@ -1294,6 +1315,15 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
       { router: h.router as unknown as Router, ...h.relaunchWith },
     );
     vault.quitsAtPin = false;
+    // A wake at startup, before the watch has checked the click: each task
+    // waits, on neither the login it leaves nor the named one.
+    for (const id of TASKS) h.costs.clearHold(id);
+    for (const id of TASKS) await relaunched.steer.steerCrewmate(id, "Check the footer too.");
+    await relaunched.watch.sweepInbox(Date.now());
+    await tick();
+    expect(specs).toEqual([]);
+    expect(TASKS.map((id) => relaunched.loginMoves.awaitsCheck(id))).toEqual([true, true]);
+
     const second = watching(h, relaunched, vault, () => [
       reading("acct_personal", "Personal", 4),
       reading("acct_work", "Work", 95),
@@ -1307,8 +1337,6 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     // The captain is not asked to choose again.
     expect(relaunched.cards.get(cardId)).toBeUndefined();
 
-    for (const id of TASKS) h.costs.clearHold(id);
-    for (const id of TASKS) await relaunched.steer.steerCrewmate(id, "Check the footer too.");
     await vi.waitFor(() =>
       expect(boots.filter((boot) => boot.promptCalls.length > 0)).toHaveLength(2),
     );
@@ -1327,7 +1355,7 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
       seedRunning(h, MODEL, `/tmp/${id}.jsonl`, id);
       h.costs.placeHold({ taskId: id, limitUsd: 50, spentUsd: 51.5, at: Date.now() });
     }
-    const vault: { pin: string; quitsAtPin: boolean; savedAtPin?: unknown } = {
+    const vault: Vault = {
       pin: "acct_personal",
       quitsAtPin: true,
     };
@@ -1368,24 +1396,71 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
       reading("acct_work", "Work", 40),
       reading("acct_spare", "Spare", 3),
     ]);
-    // From the watch's start no task is still to move to Spare.
-    expect(TASKS.map((id) => relaunched.loginMoves.bindsTask(id))).toEqual([false, false]);
-    expect(new SettingsStore(h.db).getLoginMoves()).toEqual({});
+    // Until the watch has read the logins, a wake opens no task anywhere.
+    for (const id of TASKS) h.costs.clearHold(id);
+    for (const id of TASKS) await relaunched.steer.steerCrewmate(id, "Check the footer too.");
+    await relaunched.watch.sweepInbox(Date.now());
+    await tick();
+    expect(specs).toEqual([]);
+
     second.read();
     await tick();
+    expect(TASKS.map((id) => relaunched.loginMoves.bindsTask(id))).toEqual([false, false]);
     expect(vault.pin).toBe("acct_personal");
     expect(new SettingsStore(h.db).getLoginMoves()).toEqual({});
     // The captain is asked about what is true now.
     expect(relaunched.cards.get(cardId)?.actions?.[0]?.label).toBe("Move to Work");
 
-    for (const id of TASKS) h.costs.clearHold(id);
-    for (const id of TASKS) await relaunched.steer.steerCrewmate(id, "Check the footer too.");
+    // Refused, the click holds the tasks no longer: they carry on where they are.
+    await relaunched.watch.sweepInbox(Date.now());
     await vi.waitFor(() =>
       expect(boots.filter((boot) => boot.promptCalls.length > 0)).toHaveLength(2),
     );
     expect(
       specs.map((spec) => (spec.binding as { accountId?: string } | undefined)?.accountId),
     ).toEqual(["acct_personal", "acct_personal"]);
+    await relaunched.disposeAll();
+  });
+
+  it("keeps both tasks' moves to the named login when the app quit after the login in use was saved", async () => {
+    const { h, vault, cardId } = await clickCutOff();
+    vault.quitsAtPin = false;
+    vault.quitsAfterPin = true;
+    expect(() =>
+      h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_spare"),
+    ).toThrow("the app quit");
+    expect(vault.pin).toBe("acct_spare");
+    await h.supervisor.disposeAll();
+
+    const specs: { binding?: unknown }[] = [];
+    const boots: FakeCrewmate[] = [];
+    const relaunched = reboot(
+      h,
+      async (spec: { binding?: unknown }) => {
+        specs.push(spec);
+        const boot = fakeCrewmate({});
+        boots.push(boot);
+        return boot;
+      },
+      { router: h.router as unknown as Router, ...h.relaunchWith },
+    );
+    vault.quitsAfterPin = false;
+    for (const id of TASKS) h.costs.clearHold(id);
+    for (const id of TASKS) await relaunched.steer.steerCrewmate(id, "Check the footer too.");
+    const second = watching(h, relaunched, vault, () => [
+      reading("acct_personal", "Personal", 4),
+      reading("acct_work", "Work", 95),
+      reading("acct_spare", "Spare", 60),
+    ]);
+    second.read();
+    await vi.waitFor(() =>
+      expect(boots.filter((boot) => boot.promptCalls.length > 0)).toHaveLength(2),
+    );
+    expect(
+      specs.map((spec) => (spec.binding as { accountId?: string } | undefined)?.accountId),
+    ).toEqual(["acct_spare", "acct_spare"]);
+    expect(vault.pin).toBe("acct_spare");
+    expect(Object.keys(new SettingsStore(h.db).getLoginAnswersOver())).toEqual(["openai-codex"]);
     await relaunched.disposeAll();
   });
 

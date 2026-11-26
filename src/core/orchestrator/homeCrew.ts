@@ -25,6 +25,7 @@ import type { PiAuthService } from "../pi/piAuth";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { PlacedSessions } from "../placed/placedSessions";
 import type { ProgramQuestions } from "../program/programQuestions";
+import { loginMoveUnchecked } from "../quota/homeLowLogins";
 import type { HomeQuota } from "../quota/homeQuota";
 import type { QuotaService } from "../quota/quotaService";
 import type { RecordReader } from "../recordReads/recordReader";
@@ -234,6 +235,18 @@ export function startHomeCrew({
     loginMoveRecord: {
       read: () => settings.getLoginMoves(),
       write: (moves) => settings.setLoginMoves(moves),
+      unchecked: (move) =>
+        loginMoveUnchecked(
+          {
+            cards: {
+              chosenAction: (id) => cardStore.chosenAction(id),
+              stored: (id) => cardStore.get(id),
+            },
+            settings,
+            vault,
+          },
+          move,
+        ),
     },
     personalVersion: async () => (await homePersonalSet.current()).version,
     runbooks,

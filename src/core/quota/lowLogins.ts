@@ -92,9 +92,11 @@ export type LowLoginsOptions = {
  * it offers or their readings change, taken down when nothing can be
  * offered and put up again when something can. A Wait answer holds until
  * that login is read with room again or the refill its card named has
- * passed; a Move answer holds until its move is recorded. The card up is
- * remembered only while the app runs; the answer is saved, so a launch
- * keeps a Wait and finishes a Move the last one was cut off in.
+ * passed; a Move answer holds until its move is recorded. Both are saved
+ * by the card store: a launch starts from the card it kept open
+ * (`openOffers`), keeps a Wait and finishes a Move the last one was cut
+ * off in. Until a Move answer is checked its tasks neither move nor take a
+ * delivery on the login they leave (`LoginMoves.awaitsCheck`).
  */
 export class LowLogins {
   /** Each provider's card that is up: the login it asks about, the one it offers, and its words. */
@@ -105,12 +107,6 @@ export class LowLogins {
     // readings revise it or take it down as they would one raised here.
     for (const open of options.openOffers?.() ?? [])
       this.offers.set(open.providerId, { from: open.from ?? "", to: open.to ?? "", words: "" });
-    // A Move click the last launch was cut off in is made again whole by
-    // `accept`, or not at all: until then none of its tasks is still to move.
-    for (const provider of options.providers()) {
-      const answer = options.answered(provider.id);
-      if (answer?.to !== undefined) options.forget(answer.from, answer.to);
-    }
   }
 
   read(): void {
@@ -144,7 +140,7 @@ export class LowLogins {
    * Makes the move a click named, true when work moved. The tasks' moves
    * are recorded before the pin, and the answer ends last: a quit part way
    * leaves an answer the next launch finishes (`readProvider`), which
-   * records the same moves again and never picks another login. A record
+   * names the same moves again and never picks another login. A record
    * that cannot be saved throws from `moveOff` before the pin or the
    * answer change, so the next reading tries the whole move again.
    */
@@ -156,13 +152,16 @@ export class LowLogins {
     // Not read yet, as at launch: the answer waits for the reading.
     if (low && unread(low)) return false;
     const asks = choice === "ask" || choice === "spread";
-    // Under `ask` the card asked about the login in use: one the captain has since replaced is not it.
-    const inUse = choice !== "ask" || this.options.pinOf(provider.id) === from;
+    const pin = this.options.pinOf(provider.id);
+    // Under `ask` the card asked about the login in use: one the captain has
+    // since replaced is not it. The named login already in use is the same
+    // click, cut off after its pin was saved: its tasks' moves still stand.
+    const inUse = choice !== "ask" || pin === from || pin === accountId;
     const moves = asks && inUse && low && runsLow(low) && to && hasRoom(to);
     if (moves) {
       void this.options.moveOff(from, accountId);
-      // Under `spread` new work is not bound to the pin, so the pin moves only when it is the low login.
-      if (choice !== "spread" || this.options.pinOf(provider.id) === from) {
+      // The pin moves only when it is the low login: under `spread` new work is not bound to it.
+      if (pin === from) {
         this.options.setPin(provider.id, accountId);
         this.options.note(
           said("feedLoginMoved", { provider: provider.name, from: low.label, to: to.label }),

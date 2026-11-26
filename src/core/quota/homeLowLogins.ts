@@ -10,6 +10,53 @@ import { quotaRowProviderOf } from "./auth";
 import { limitingResetOf } from "./catalog";
 import { type LoginReading, LowLogins, type LowLoginsOptions } from "./lowLogins";
 
+type SavedAnswers = {
+  cards: {
+    chosenAction(id: string): string | undefined;
+    stored(id: string): { body?: string } | undefined;
+  };
+  settings: { getLoginAnswersOver(): Record<string, string> };
+  vault: { list(providerId?: string): { id: string }[] };
+};
+
+/**
+ * The captain's answer on a provider's saved low-login card that still
+ * stands (`LowLoginsOptions.answered`): read from the card store and the
+ * record of ended answers alone, so it reads the same at any point of a
+ * launch.
+ */
+export function loginLowAnswer(
+  saved: SavedAnswers,
+  providerId: string,
+): { from: string; to?: string; refillsAt?: number } | undefined {
+  const id = loginLowCardId(providerId);
+  const chosen = saved.cards.chosenAction(id);
+  const asked = loginLowAsked(saved.cards.stored(id)?.body ?? "");
+  if (chosen === undefined || !asked) return undefined;
+  if (saved.settings.getLoginAnswersOver()[providerId] === (asked.askId ?? "")) return undefined;
+  const answer = {
+    from: asked.accountId,
+    ...(asked.refillsAt !== undefined ? { refillsAt: asked.refillsAt } : {}),
+  };
+  if (chosen === LOGIN_LOW_WAIT) return answer;
+  // A Move button's id names both logins (`moveLoginActionId`).
+  const to = saved.vault
+    .list(providerId)
+    .find((account) => chosen === moveLoginActionId(asked.accountId, account.id));
+  return to ? { ...answer, to: to.id } : undefined;
+}
+
+/** Whether a task's saved move was named by a Move click whose answer still stands unchecked. */
+export function loginMoveUnchecked(
+  saved: SavedAnswers,
+  move: { from: string; to: string },
+): boolean {
+  return PROVIDER_CATALOG.some((entry) => {
+    const answer = loginLowAnswer(saved, entry.id);
+    return answer?.from === move.from && answer.to === move.to;
+  });
+}
+
 /**
  * The home's watch over its own logins that run low (docs/quota.md, "When
  * the login in use runs low"): `LowLogins` over this computer's vault,
@@ -87,23 +134,8 @@ export function startLowLogins(options: {
       return reset !== undefined ? resetWhen(reset, Date.now()) : undefined;
     },
     refillsAt,
-    answered: (providerId) => {
-      const id = loginLowCardId(providerId);
-      const chosen = supervisor.cards.chosenAction(id);
-      const asked = askedOn(providerId);
-      if (chosen === undefined || !asked) return undefined;
-      if (settings.getLoginAnswersOver()[providerId] === (asked.askId ?? "")) return undefined;
-      const answer = {
-        from: asked.accountId,
-        ...(asked.refillsAt !== undefined ? { refillsAt: asked.refillsAt } : {}),
-      };
-      if (chosen === LOGIN_LOW_WAIT) return answer;
-      // A Move button's id names both logins (`moveLoginActionId`).
-      const to = vault
-        .list(providerId)
-        .find((account) => chosen === moveLoginActionId(asked.accountId, account.id));
-      return to ? { ...answer, to: to.id } : undefined;
-    },
+    answered: (providerId) =>
+      loginLowAnswer({ cards: supervisor.cards, settings, vault }, providerId),
     tasksOn: (accountId) => supervisor.loginMoves.tasksOn(accountId),
     moveOff: (from, to) => supervisor.loginMoves.moveOff(from, to),
     forget: (from, to) => supervisor.loginMoves.forget(from, to),

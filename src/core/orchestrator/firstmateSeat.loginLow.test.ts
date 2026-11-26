@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { notes, runtimeKind, setupWithFlagship } from "../../../tests/helpers/firstmateFlagship";
 import { type FakeSession, fakeClockEachTest, tick } from "../../../tests/helpers/firstmateHarness";
+import { firstmateOnCreditsCard } from "./loginCards";
 
 fakeClockEachTest();
 
@@ -275,6 +276,23 @@ describe("the first mate on a login's credits while another login has allowance 
     t.settings.setWhenLoginLow("wait");
     await spendPersonal(t);
     expect(t.specs).toHaveLength(1);
+    expect(t.cards().some((each) => each.id === "card-fm-on-credits")).toBe(false);
+  });
+
+  it("takes down a card left open by the last launch when its offer no longer holds", async () => {
+    const t = onCredits();
+    // The card as the card store kept it, raised before this seat asked anything.
+    t.supervisor.cards.hostCards.raiseHostCard(
+      firstmateOnCreditsCard({
+        accountId: "acct_a",
+        login: "Personal",
+        other: { accountId: "acct_b", label: "Work #2" },
+      }),
+    );
+    await tick();
+    expect(t.cards().some((each) => each.id === "card-fm-on-credits")).toBe(true);
+    t.settings.setWhenLoginLow("wait");
+    await spendPersonal(t);
     expect(t.cards().some((each) => each.id === "card-fm-on-credits")).toBe(false);
   });
 });

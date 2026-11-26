@@ -117,7 +117,11 @@ export class LoginMoves {
       this.options.loginMoveRecord?.write(Object.fromEntries(next));
       for (const taskId of named) this.bound.set(taskId, { from, to });
     }
-    return Promise.all(taskIds.map((taskId) => this.begin(taskId).done)).then(() => undefined);
+    // The moves begin once the caller has finished what follows the save in
+    // the same step (the pin, the answer's end), which they are held for.
+    return Promise.resolve().then(async () => {
+      await Promise.all(taskIds.map((taskId) => this.begin(taskId).done));
+    });
   }
 
   /**
@@ -128,6 +132,18 @@ export class LoginMoves {
   forget(from: string, to?: string): void {
     for (const [taskId, move] of [...this.bound])
       if (move.from === from && (to === undefined || move.to === to)) this.bind(taskId, undefined);
+  }
+
+  /**
+   * Whether the task's move was named by a click that is still to be
+   * checked (`loginMoveRecord.unchecked`): as after a quit part way through
+   * the click. Until the check accepts or refuses it the task's lane is
+   * held (`CrewFacts.laneHold`), so it neither moves nor takes a delivery on
+   * the login it would leave.
+   */
+  awaitsCheck(taskId: string): boolean {
+    const move = this.bound.get(taskId);
+    return move !== undefined && this.options.loginMoveRecord?.unchecked?.(move) === true;
   }
 
   /**
