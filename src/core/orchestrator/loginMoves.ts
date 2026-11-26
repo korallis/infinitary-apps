@@ -135,15 +135,20 @@ export class LoginMoves {
   }
 
   /**
-   * Whether the task's move was named by a click that is still to be
-   * checked (`loginMoveRecord.unchecked`): as after a quit part way through
-   * the click. Until the check accepts or refuses it the task's lane is
-   * held (`CrewFacts.laneHold`), so it neither moves nor takes a delivery on
-   * the login it would leave.
+   * Whether the task is on a login a Move click left and that click is
+   * still to be checked (`loginMoveRecord.unchecked`): as after a quit part
+   * way through the click, with the task's own move saved or not yet. Until
+   * the check accepts or refuses the click the task's lane is held
+   * (`CrewFacts.laneHold`), so it neither moves nor takes a delivery on the
+   * login it would leave.
    */
   awaitsCheck(taskId: string): boolean {
-    const move = this.bound.get(taskId);
-    return move !== undefined && this.options.loginMoveRecord?.unchecked?.(move) === true;
+    const accountId = this.options.tasks.get(taskId)?.accountId;
+    return (
+      accountId != null &&
+      this.host.machineOf(taskId) === LOCAL_MACHINE_ID &&
+      this.options.loginMoveRecord?.unchecked?.(accountId) === true
+    );
   }
 
   /**

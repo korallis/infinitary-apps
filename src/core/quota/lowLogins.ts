@@ -131,7 +131,7 @@ export class LowLogins {
     const provider = this.options.providers().find((entry) => entry.id === offered?.[0]);
     if (offered && provider) {
       this.offers.delete(provider.id);
-      if (this.accept(provider, offered[1].from, accountId)) return;
+      if (this.accept(provider, offered[1].from, accountId) === "moved") return;
     }
     this.read();
   }
@@ -143,15 +143,21 @@ export class LowLogins {
    * names the same moves again and never picks another login. A record
    * that cannot be saved throws from `moveOff` before the pin or the
    * answer change, so the next reading tries the whole move again.
+   * `pending` is neither: the login the click left is not read yet, so the
+   * answer stands and nothing is decided against it.
    */
-  private accept(provider: { id: string; name: string }, from: string, accountId: string): boolean {
+  private accept(
+    provider: { id: string; name: string },
+    from: string,
+    accountId: string,
+  ): "moved" | "refused" | "pending" {
     const choice = this.options.whenLow();
     const logins = this.options.logins(provider.id).filter((login) => login.enabled);
     const low = logins.find((login) => login.accountId === from);
     const to = logins.find((login) => login.accountId === accountId);
-    // Not read yet, as at launch: the answer waits for the reading.
-    if (low && unread(low)) return false;
     const asks = choice === "ask" || choice === "spread";
+    // Not read yet, as at launch: the answer waits for the reading, while the choice still asks.
+    if (asks && low && unread(low)) return "pending";
     const pin = this.options.pinOf(provider.id);
     // Under `ask` the card asked about the login in use: one the captain has
     // since replaced is not it. The named login already in use is the same
@@ -171,7 +177,7 @@ export class LowLogins {
     // Refused, the click leaves no task named for the login it named.
     else this.options.forget(from, accountId);
     this.options.endAnswer(provider.id);
-    return Boolean(moves);
+    return moves ? "moved" : "refused";
   }
 
   private readProvider(provider: { id: string; name: string }, choice: WhenLoginLow): void {
@@ -182,7 +188,10 @@ export class LowLogins {
     const answer = this.options.answered(provider.id);
     if (answer) this.offers.delete(provider.id);
     // A Move click the last launch was cut off in is finished as it was named.
-    if (answer?.to !== undefined) this.accept(provider, answer.from, answer.to);
+    // While that click is still to be checked, its card is not replaced by
+    // another question: the saved answer is what holds its tasks.
+    if (answer?.to !== undefined && this.accept(provider, answer.from, answer.to) === "pending")
+      return;
     const waited =
       answer && answer.to === undefined ? this.stillWaited(provider.id, answer, every) : undefined;
     // Tasks leave a login only while it is low and work may move. A login

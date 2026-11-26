@@ -1489,6 +1489,58 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     await h.supervisor.disposeAll();
   });
 
+  it("opens neither task where it is while only the click is saved, then moves both to the named login once the logins are read", async () => {
+    const { h, vault, cardId } = await clickCutOff();
+    vault.quitsAtPin = false;
+    // The app stops before any task's move is saved: the card's answer is all there is.
+    const write = vi.spyOn(SettingsStore.prototype, "setLoginMoves").mockImplementationOnce(() => {
+      throw new Error("the app quit");
+    });
+    expect(() =>
+      h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_spare"),
+    ).toThrow("the app quit");
+    write.mockRestore();
+    expect(new SettingsStore(h.db).getLoginMoves()).toEqual({});
+    await h.supervisor.disposeAll();
+
+    const specs: { binding?: unknown }[] = [];
+    const boots: FakeCrewmate[] = [];
+    const relaunched = reboot(
+      h,
+      async (spec: { binding?: unknown }) => {
+        specs.push(spec);
+        const boot = fakeCrewmate({});
+        boots.push(boot);
+        return boot;
+      },
+      { router: h.router as unknown as Router, ...h.relaunchWith },
+    );
+    expect(TASKS.map((id) => relaunched.loginMoves.bindsTask(id))).toEqual([false, false]);
+    // A wake at startup, before the logins are read.
+    for (const id of TASKS) h.costs.clearHold(id);
+    for (const id of TASKS) await relaunched.steer.steerCrewmate(id, "Check the footer too.");
+    await relaunched.watch.sweepInbox(Date.now());
+    await tick();
+    expect(specs).toEqual([]);
+    expect(TASKS.map((id) => relaunched.loginMoves.awaitsCheck(id))).toEqual([true, true]);
+
+    const second = watching(h, relaunched, vault, () => [
+      reading("acct_personal", "Personal", 4),
+      reading("acct_work", "Work", 95),
+      reading("acct_spare", "Spare", 60),
+    ]);
+    second.read();
+    await vi.waitFor(() =>
+      expect(boots.filter((boot) => boot.promptCalls.length > 0)).toHaveLength(2),
+    );
+    expect(
+      specs.map((spec) => (spec.binding as { accountId?: string } | undefined)?.accountId),
+    ).toEqual(["acct_spare", "acct_spare"]);
+    expect(vault.pin).toBe("acct_spare");
+    expect(TASKS.map((id) => relaunched.loginMoves.awaitsCheck(id))).toEqual([false, false]);
+    await relaunched.disposeAll();
+  });
+
   it("takes down at the first reading a card left open by the last launch, once the choice is wait", async () => {
     const { h, vault, cardId } = await clickCutOff();
     expect(h.supervisor.cards.get(cardId)).toBeDefined();

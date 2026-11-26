@@ -363,6 +363,24 @@ describe("AccountVault", () => {
     expect(vault.pinnedAccount("openai-codex")).toBeUndefined();
   });
 
+  // The low-login move reads the pin to tell a move already made from one
+  // still to make, so a pin that was not saved must not read as the pin.
+  it("keeps the pin it had when the new one cannot be saved", async () => {
+    const paths = freshPaths();
+    const vault = AccountVault.create(paths);
+    const first = await vault.add("openai-codex", "oauth", bridge());
+    const second = await vault.add("openai-codex", "oauth", bridge());
+    vault.setPin("openai-codex", first.id);
+    // The registry file cannot be written: a folder stands where it was.
+    const registry = join(paths.accountsDir, "registry.json");
+    rmSync(registry);
+    mkdirSync(registry);
+    expect(() => vault.setPin("openai-codex", second.id)).toThrow();
+    expect(vault.pinnedAccount("openai-codex")).toBe(first.id);
+    expect(() => vault.setPin("openai-codex", null)).toThrow();
+    expect(vault.pinnedAccount("openai-codex")).toBe(first.id);
+  });
+
   it("refuses to pin an account under a different provider", async () => {
     const vault = AccountVault.create(freshPaths());
     const account = await vault.add("openai-codex", "oauth", bridge());
