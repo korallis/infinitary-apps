@@ -351,6 +351,47 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(machines.map(({ id }) => id)).not.toContain(PARTS);
   });
 
+  /**
+   * Intent: an install of the version a workflow runs from asks nothing of
+   * the machine's Node headers. It compiles nothing, since pnpm-workspace.yaml
+   * keeps better-sqlite3's build off, so none of ci.yml's jobs runs the
+   * headers step or hands the install the headers' folder; the step failed a
+   * job on an image without them, and a step with no condition is one the
+   * gate's own checks above let through. Neither does any other check of that
+   * same source. Only a workflow given its source by a ref of its own, which
+   * can be handed a release that still builds the module, keeps both
+   * (docs/testing.md; tests/node-headers-action.test.ts owns what the step
+   * does there).
+   */
+  it("asks for Node's headers only in the workflows given their source by a ref of their own", () => {
+    const headersFolder = "NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR";
+    /** Whether a step anywhere in the parsed file uses the headers action, or any env in it sets the install's variable. */
+    const asks = (node: unknown): boolean => {
+      if (Array.isArray(node)) return node.some(asks);
+      if (node === null || typeof node !== "object") return false;
+      const { uses, env } = node as { uses?: unknown; env?: unknown };
+      return (
+        (typeof uses === "string" && uses.endsWith("/actions/node-headers")) ||
+        (env !== null && typeof env === "object" && headersFolder in env) ||
+        Object.values(node).some(asks)
+      );
+    };
+    const files = [
+      ...readdirSync(join(root, ".github/workflows"))
+        .filter((name) => name.endsWith(".yml"))
+        .map((name) => `.github/workflows/${name}`),
+      ...readdirSync(join(root, ".github/actions")).map(
+        (name) => `.github/actions/${name}/action.yml`,
+      ),
+    ];
+    expect(files.filter((file) => asks(loadYamlFile(file))).toSorted()).toEqual([
+      ".github/workflows/batch-checks.yml",
+      ".github/workflows/linux-packages.yml",
+      ".github/workflows/source-journeys.yml",
+      ".github/workflows/verify.yml",
+    ]);
+  });
+
   // The captain's ask on a held batch's repair: "cut whatever is redundant
   // in the repair's path back to the batch ... and we simply rely on them
   // being covered by the batch's checks run". A pushed branch built on a
