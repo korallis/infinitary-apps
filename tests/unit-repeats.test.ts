@@ -1,4 +1,5 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { PROBE_FILES } from "../scripts/affected-probes.ts";
@@ -148,7 +149,6 @@ describe("a change's local unit-file rounds", () => {
 // which Node cannot do for a .cmd file, so no round ran and the first one read
 // as failed.
 describe("the program a round starts", () => {
-  const root = resolve(import.meta.dirname, "..");
   const vitestArgs = ["run", "--retry", "0", "--maxWorkers", "2", "tests/unit-repeats.test.ts"];
   const args = ["exec", "vitest", ...vitestArgs];
 
@@ -157,15 +157,24 @@ describe("the program a round starts", () => {
   });
 
   it("is Node running Vitest's own script with the same Vitest arguments on Windows", () => {
-    // Vitest's package file is named whole, so the reach script does not read
-    // this file as a reader of the project's own package.json.
-    const { bin } = JSON.parse(
-      readFileSync(join(root, "node_modules/vitest/package.json"), "utf8"),
-    ) as { bin: { vitest: string } };
-    const { command, args: started } = roundStart(args, "win32");
-    expect(command).toBe(process.execPath);
-    expect(started).toEqual([join(root, "node_modules", "vitest", bin.vitest), ...vitestArgs]);
-    expect(existsSync(started[0] ?? "")).toBe(true);
+    // A project folder holding only what the round reads there: Vitest's
+    // package file, naming its program as the installed one does. Its path is
+    // written whole, so the reach script does not read this file as a reader
+    // of the project's own package.json.
+    const project = mkdtempSync(join(tmpdir(), "round-start-"));
+    try {
+      mkdirSync(join(project, "node_modules/vitest"), { recursive: true });
+      writeFileSync(
+        join(project, "node_modules/vitest/package.json"),
+        JSON.stringify({ name: "vitest", bin: { vitest: "./vitest.mjs" } }),
+      );
+      expect(roundStart(args, "win32", project)).toEqual({
+        command: process.execPath,
+        args: [join(project, "node_modules", "vitest", "vitest.mjs"), ...vitestArgs],
+      });
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
   });
 });
 
