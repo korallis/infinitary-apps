@@ -1,6 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkCommands } from "./check.ts";
 import { writeCompiledMessages } from "./generate-messages.ts";
@@ -74,6 +74,23 @@ export interface Step {
 }
 
 /**
+ * A lint's own program: the Node script its package names under `bin`, the
+ * file `pnpm exec` starts. The lint steps start it through Node themselves.
+ * On Windows pnpm and the programs it links are .cmd files, which Node starts
+ * only through a shell (`spawn pnpm ENOENT` without one), and a shell would
+ * read a changed file's name as its own words.
+ */
+export function packageProgram(name: string, program = name): string {
+  const folder = join("node_modules", name);
+  const { bin } = JSON.parse(readFileSync(join(folder, "package.json"), "utf8")) as {
+    bin?: string | Record<string, string>;
+  };
+  const script = typeof bin === "string" ? bin : bin?.[program];
+  if (!script) throw new Error(`${name} has no program named ${program}`);
+  return join(folder, script);
+}
+
+/**
  * Biome on every changed file, so Biome's own configuration picks which of
  * them it checks, as it does for the whole-project Biome in `pnpm check`: its
  * `files.includes` and the languages it knows. A list of extensions here
@@ -84,14 +101,28 @@ export function biomeStep(files: string[]): Step | undefined {
   if (!files.length) return undefined;
   return {
     label: "biome",
-    command: "pnpm",
+    command: "node",
     args: [
-      "exec",
-      "biome",
+      packageProgram("@biomejs/biome", "biome"),
       "check",
       "--no-errors-on-unmatched",
       "--files-ignore-unknown=true",
       ...files,
+    ],
+  };
+}
+
+export function adherenceStep(renderer: string[]): Step | undefined {
+  if (!renderer.length) return undefined;
+  return {
+    label: "adherence",
+    command: "node",
+    args: [
+      packageProgram("eslint"),
+      "--config",
+      "eslint.adherence.config.mjs",
+      "--no-config-lookup",
+      ...renderer,
     ],
   };
 }
@@ -164,19 +195,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const steps: Step[] = [];
   const biome = biomeStep(files);
   if (biome) steps.push(biome);
-  if (renderer.length)
-    steps.push({
-      label: "adherence",
-      command: "pnpm",
-      args: [
-        "exec",
-        "eslint",
-        "--config",
-        "eslint.adherence.config.mjs",
-        "--no-config-lookup",
-        ...renderer,
-      ],
-    });
+  const adherence = adherenceStep(renderer);
+  if (adherence) steps.push(adherence);
   for (const args of checkScripts(scripts.check ?? ""))
     steps.push({ label: args.join(" "), command: "node", args });
   // The pull request's first step. It reads commits, so it waits for the

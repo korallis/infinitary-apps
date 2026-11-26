@@ -1,12 +1,14 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { extname, join } from "node:path";
+import { extname, join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  adherenceStep,
   baseRef,
   biomeStep,
   checkScripts,
   LANE_MEMORY_BYTES,
+  packageProgram,
   quickCheckLanes,
   sideBySide,
 } from "../scripts/check-changed.ts";
@@ -165,12 +167,37 @@ describe("where the heavy checks run", () => {
       return [...names].map(([, file]) => file ?? "").sort();
     };
     // The paths as the full lint's Biome takes them, with no word on which to check.
-    const full = checked("pnpm", ["exec", "biome", "check", "--no-errors-on-unmatched", ...files]);
+    const full = checked("node", [
+      packageProgram("@biomejs/biome", "biome"),
+      "check",
+      "--no-errors-on-unmatched",
+      ...files,
+    ]);
     const mjs = full.filter((file) => file.endsWith(".mjs"));
     expect(mjs, full.join(" ")).not.toEqual([]);
     const step = biomeStep(files);
     expect(step).toBeDefined();
     expect(checked(step?.command ?? "", step?.args ?? [])).toEqual(full);
+  });
+
+  // The bug a Windows PC found: the quick check started Biome and the
+  // adherence lint as `pnpm exec`, and pnpm there is a .cmd file, which Node
+  // starts only through a shell, so both steps answered `spawn pnpm ENOENT`
+  // and linted nothing. One of the project's own renderer files stands in for
+  // a branch's change, and ESLint's JSON report names each file it judged.
+  it("starts the adherence lint on the changed renderer files as a program of its own", () => {
+    const [file = ""] = execFileSync("git", ["ls-files", "src/renderer/*.tsx"], {
+      encoding: "utf8",
+    }).split("\n");
+    const step = adherenceStep([file]);
+    const result = spawnSync(step?.command ?? "", [...(step?.args ?? []), "--format", "json"], {
+      encoding: "utf8",
+    });
+    expect(result.error?.message).toBeUndefined();
+    const judged = (JSON.parse(result.stdout) as { filePath: string }[]).map(({ filePath }) =>
+      relative(process.cwd(), filePath).split(sep).join("/"),
+    );
+    expect(judged).toEqual([file]);
   });
 
   // The bug a main check found: its push checkout holds one commit and no main

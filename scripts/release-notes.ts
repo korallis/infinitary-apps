@@ -84,7 +84,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPicture } from "../src/core/pictureFormat.ts";
 import { printErrors } from "./github-errors.ts";
@@ -357,7 +357,7 @@ function load(repo: { root: string }): Loaded {
     ["history", false],
   ] as const) {
     for (const absolute of jsonFiles(join(repo.root, NOTES_DIR, folder))) {
-      const path = `${NOTES_DIR}/${folder}/${absolute.split("/").pop()}`;
+      const path = `${NOTES_DIR}/${folder}/${basename(absolute)}`;
       const value = read(absolute);
       if (value === undefined) continue;
       const parsed = parseNoteFile(value, path);
@@ -368,7 +368,7 @@ function load(repo: { root: string }): Loaded {
   const manifests: Loaded["manifests"] = [];
   const hashes = new Map<string, string>();
   for (const absolute of jsonFiles(join(repo.root, NOTES_DIR, "releases"))) {
-    const path = `${NOTES_DIR}/releases/${absolute.split("/").pop()}`;
+    const path = `${NOTES_DIR}/releases/${basename(absolute)}`;
     const value = read(absolute);
     if (value === undefined) continue;
     const parsed = parseManifest(value, path);
