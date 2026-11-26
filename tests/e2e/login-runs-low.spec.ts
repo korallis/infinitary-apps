@@ -78,6 +78,12 @@ async function cardUp(page: Page): Promise<boolean> {
   return cards.some((card) => card.id === id);
 }
 
+const movedLine = m.feedLoginMoved({
+  provider: "Codex",
+  from: LOW_LABEL,
+  to: CODEX_SECOND_LABEL,
+});
+
 test("a low login in use asks once on a card, and Enter on Move makes the other login the one in use", async () => {
   test.setTimeout(3 * 60_000);
   let mock: MockProviderServer | undefined;
@@ -127,9 +133,7 @@ test("a low login in use asks once on a card, and Enter on Move makes the other 
     );
     await expect.poll(() => loginInUse(page)).toBe(CODEX_SECOND_ACCOUNT);
     await expect.poll(() => cardUp(page)).toBe(false);
-    await expect(
-      feedLine(page, `Codex work moved from ${LOW_LABEL} to ${CODEX_SECOND_LABEL}.`),
-    ).toBeVisible();
+    await expect(feedLine(page, movedLine)).toBeVisible();
     if (evidence) {
       await expectRailsDrawn(page);
       await regionShot(dockRegion(page, "activity"), join(evidence, "login-low-moved.png"));
@@ -185,9 +189,7 @@ test("Wait for the refill moves nothing, and the card stays away at the next rea
     await readAgain(page);
     expect(await cardUp(page)).toBe(false);
     expect(await loginInUse(page)).toBe(CODEX_SEAT_ACCOUNT);
-    await expect(
-      feedLine(page, `Codex work moved from ${LOW_LABEL} to ${CODEX_SECOND_LABEL}.`),
-    ).toHaveCount(0);
+    await expect(feedLine(page, movedLine)).toHaveCount(0);
   });
 });
 
