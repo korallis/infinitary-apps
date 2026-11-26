@@ -370,6 +370,7 @@ export class IncomingHomeMove {
       rewriteDatabases(homeData, [manifest.from.userData], homeData);
       // The new home asks for each sign-in the old one had: none crossed.
       if (manifest.signIns) keepSignInsToAsk(homeData, manifest.name, manifest.signIns);
+      const landed: { saved: string; to: string }[] = [];
       for (const project of manifest.projects) {
         const to = await this.cloneProject(
           project,
@@ -383,7 +384,16 @@ export class IncomingHomeMove {
         );
         // The rewrite above already named a project the old home kept in its data folder by this one's.
         const saved = movedPath(project.path, [manifest.from.userData], homeData) ?? project.path;
-        if (to !== saved) rewriteDatabases(homeData, [saved], to);
+        if (to !== saved) landed.push({ saved, to });
+      }
+      // A project that landed in the place the record still names another by
+      // waits until that other is named by its own landing: the record refuses
+      // two projects at one location, and a later rewrite of that place would
+      // take both.
+      while (landed.length) {
+        const free = landed.findIndex(({ to }) => !landed.some((other) => other.saved === to));
+        for (const { saved, to } of landed.splice(Math.max(free, 0), 1))
+          rewriteDatabases(homeData, [saved], to);
       }
       writeHomeNumber(join(homeData, "devices"), order.homeNumber);
       state.starting = true;
