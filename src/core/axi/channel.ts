@@ -30,7 +30,13 @@ import {
   isIntegrationAnswer,
   type TaskIntegrations,
 } from "../integrations";
-import { type LoadClaim, type LoadReceipt, loadWaitWords, type TaskLoad } from "../placed/loadLine";
+import {
+  type LoadClaim,
+  type LoadReceipt,
+  LoadReceiptUnreadError,
+  loadWaitWords,
+  type TaskLoad,
+} from "../placed/loadLine";
 import { claimShellGroup, type ShellGroups } from "../placed/shellGroups";
 import type { SecretAskInput } from "../secrets/asks";
 import type { SecretBringRequest } from "../secrets/bring";
@@ -620,7 +626,12 @@ export class AxiChannel {
         }
         if (message?.type === "call") {
           void this.call(grant, command, message, stopsAt).then((reply) => {
-            if (!finished) child.postMessage({ type: "result", id: message.id, reply });
+            if (finished) return;
+            // The command process can print a refusal but not the reading
+            // cadence, so an unread receipt leaves here as the interruption it is.
+            if (reply.kind === "answer" && "unread" in reply.answer && reply.answer.unread)
+              finish(interrupted(reply.answer.unread));
+            else child.postMessage({ type: "result", id: message.id, reply });
           });
         }
       });
@@ -727,7 +738,11 @@ export class AxiChannel {
         },
       };
     } catch (error) {
-      return { text: error instanceof Error ? error.message : String(error), refused: "refused" };
+      return {
+        text: error instanceof Error ? error.message : String(error),
+        refused: "refused",
+        ...(error instanceof LoadReceiptUnreadError ? { unread: error.message } : {}),
+      };
     }
   }
 

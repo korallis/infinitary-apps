@@ -88,6 +88,8 @@ export type IntegrationChannelAnswer = {
   data?: Record<string, unknown>;
   text?: string;
   refused?: "refused" | "invalid";
+  /** What a load receipt the line could not check is told: its command leaves as interrupted, free to ask again. */
+  unread?: string;
 };
 
 /**

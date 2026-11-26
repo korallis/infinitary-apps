@@ -3,18 +3,20 @@
 # the task channel: the admitted group execs the caller's original argv here.
 # Bash's job-control group works without a terminal on macOS and Linux.
 
-# The receipt worker never creates the payload. Its supervisor, on Windows the
-# wrapper, cancels it when that payload finishes, including a pending request
-# or cadence wait.
+# The receipt worker never creates the payload. Its supervisor cancels it when
+# that payload finishes, including a pending request or cadence wait; on
+# Windows, which has no supervisor, it ends itself with its wrapper.
 if [ "${1:-}" = _receipt ]; then
   hold=$2; leader=$3; payload=$4
   launcher=${0%/*}/infinitary-load-axi
   request=
+  watcher=
   answerFile=
   canceled=
   finish_receipt() {
     trap '' TERM INT HUP
     if [ -n "$request" ]; then kill "$request" 2>/dev/null; wait "$request" 2>/dev/null; fi
+    if [ -n "$watcher" ]; then kill "$watcher" 2>/dev/null; wait "$watcher" 2>/dev/null; fi
     [ -z "$answerFile" ] || rm -f "$answerFile"
     exit 0
   }
@@ -37,15 +39,35 @@ if [ "${1:-}" = _receipt ]; then
   if [ -r "/proc/$$/winpid" ]; then
     # Windows: the wrapper runs the payload as its foreground child and cannot
     # name it, so the last argument is the wrapper's own Git Bash number and
-    # the payload is its only other child. A shell builtin has no process and
-    # gets no receipt; the scans end so that one never polls for a whole run.
+    # the payload is its child. A shell builtin has no process and gets no
+    # receipt; the scans end so that one never polls for a whole run.
     wrapper=$payload; payload=; scans=0
+    # A wrapper stopped by force cancels nothing, and the program may outlive
+    # it, so this worker ends within a second of its wrapper whatever it waits
+    # for. Git Bash gives an ended program's number to a later one: the
+    # wrapper is alive only while its number still reads its Windows number,
+    # and only this worker's own child signals it.
+    (
+      nap=
+      trap 'kill "$nap" 2>/dev/null; exit 0' TERM
+      mine() { read -r up < "/proc/$BASHPID/ppid" && [ "$up" = "$$" ]; }
+      while mine && read -r now < "/proc/$wrapper/winpid" && [ "$now" = "$leader" ]; do
+        sleep 1 & nap=$!
+        wait "$nap"
+      done
+      mine && kill -TERM "$$"
+    ) &
+    watcher=$!
     while :; do
-      kill -0 "$wrapper" 2>/dev/null || exit 0
       for entry in /proc/[0-9]*; do
-        [ "${entry#/proc/}" != "$$" ] || continue
         read -r parent < "$entry/ppid" || continue
-        if [ "$parent" = "$wrapper" ]; then payload=${entry#/proc/}; break; fi
+        [ "$parent" = "$wrapper" ] || continue
+        # Git Bash starts a program as a copy of this wrapper, under a Windows
+        # number the program then leaves: only a child that already shows a
+        # command line of its own carries the program's number.
+        mapfile -d '' -t line < "$entry/cmdline" || continue
+        case " ${line[*]} " in '  ' | *' _group run --processors '*) continue ;; esac
+        payload=${entry#/proc/}; break
       done
       [ -z "$payload" ] || break
       scans=$((scans + 1))
@@ -222,18 +244,15 @@ while :; do
       # leader's foreground child, keeping its input, signals and status. Git
       # Bash's exec of one of its own programs would end this Windows process,
       # which the app reads as the run's end, so the leader waits and answers
-      # with the program's status. The receipt worker beside it holds none of
-      # the caller's streams and is never waited for, so it cannot delay or
-      # change that answer. It is this shell's only background job, and it is
-      # cancelled as that job, never by its number: the worker may have ended
-      # long before the program, and Git Bash gives an ended program's number
-      # to a later one, which a signal by number would reach.
+      # with the program's status. The receipt worker holds none of the
+      # caller's streams and starts from a subshell that ends at once, so it
+      # is no job of this shell: a builtin runs in this shell, and its wait,
+      # kill and $! must meet only jobs it started itself. Nothing here
+      # signals the worker either, which ends itself with this leader.
       if [ -n "$windows" ]; then
-        /bin/bash "$0" _receipt "$hold" "$self" "$$" </dev/null >/dev/null 2>&1 &
+        ( /bin/bash "$0" _receipt "$hold" "$self" "$$" </dev/null >/dev/null 2>&1 & )
         "$@"
-        code=$?
-        kill %% 2>/dev/null
-        exit "$code"
+        exit $?
       fi
       supervisor=${0%/*}/../load-bin/infinitary-load-supervisor
       [ -x "$supervisor" ] || supervisor=${0%/*}/../../vendor/load-bin/infinitary-load-supervisor

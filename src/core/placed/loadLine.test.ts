@@ -15,6 +15,7 @@ import {
   type LoadJobs,
   type LoadJournalEntry,
   LoadLine,
+  LoadReceiptUnreadError,
 } from "./loadLine";
 import { type ProcessReading, processesFromPs } from "./processResources";
 
@@ -458,10 +459,11 @@ describe("verified processor startup coverage", () => {
       const clock = { now: 0 };
       const stateFile = join(scratchDir("windows-receipt-"), "holds.json");
       const jobs: LoadJobs = { lead: (_pid, started) => started, adopt: () => true };
+      const table = { unread: false };
       const line = new LoadLine({
         stateFile,
         now: () => clock.now,
-        processes: async () => rows,
+        processes: async () => (table.unread ? null : rows),
         groupExists: () => true,
         jobs,
       });
@@ -496,7 +498,7 @@ describe("verified processor startup coverage", () => {
         (
           JSON.parse(readFileSync(stateFile, "utf8")) as Array<{ id: string; launch?: unknown }>
         ).find((row) => row.id === first.id)?.launch;
-      return { line, rows, clock, sample, task, first, later, saved };
+      return { line, rows, table, clock, sample, task, first, later, saved };
     }
 
     it("stamps the payload's birth from its own reading, and a covering interval then frees the run's processors", async () => {
@@ -525,6 +527,36 @@ describe("verified processor startup coverage", () => {
       expect(f.saved()).toBeUndefined();
       f.sample(2002, 4002);
       expect((await f.later()).state).toBe("waiting");
+    });
+
+    it("asks again while the table cannot be read, saving nothing, then verifies the same receipt", async () => {
+      const f = await windowsRuns();
+      f.rows.push(win(16500, 16020, 16020));
+      const receipt = { hold: f.first.id, pid: 16020, payload: 16500 };
+      f.table.unread = true;
+      await expect(f.task.receipt(receipt)).rejects.toBeInstanceOf(LoadReceiptUnreadError);
+      expect(f.saved()).toBeUndefined();
+      // What no reading could say about this run stays a refusal: another task's
+      // hold, a hold that does not exist, another leader and a run still waiting.
+      const waiting = f.line.snapshot().runs[1]?.id ?? "";
+      for (const [task, input] of [
+        [f.line.forTask("other"), receipt],
+        [f.task, { ...receipt, hold: "another hold" }],
+        [f.task, { ...receipt, pid: 16412 }],
+        [f.task, { hold: waiting, pid: 16412, payload: 16500 }],
+      ] as const) {
+        const refused = await task.receipt(input).catch((error: unknown) => error);
+        expect(refused).not.toBeInstanceOf(LoadReceiptUnreadError);
+        expect((refused as Error).message).toContain("living admitted group");
+      }
+      f.table.unread = false;
+      // The unverified launch freed nothing: a complete interval after it leaves the charge.
+      f.sample(2002, 4002);
+      expect((await f.later()).state).toBe("waiting");
+      await expect(f.task.receipt(receipt)).resolves.toBeUndefined();
+      expect(f.saved()).toEqual({ pid: 16500, started: birth(16500) });
+      f.sample(4003, 6003);
+      expect((await f.later()).state).toBe("running");
     });
 
     it("keeps the first verified launch against another member or a reused number", async () => {
@@ -655,6 +687,36 @@ describe("verified processor startup coverage", () => {
     released.resolve();
     await expect(receipt).rejects.toThrow("no longer");
     expect(JSON.parse(readFileSync(stateFile, "utf8"))[0].launch).toBeUndefined();
+  });
+
+  it("asks a birth-stamped receipt again while the table cannot be read, then verifies it", async () => {
+    const stateFile = join(scratchDir("receipt-unread-"), "holds.json");
+    const rows = identities.map((row) => ({ ...row }));
+    let unread = false;
+    const line = new LoadLine({
+      stateFile,
+      groupExists: () => true,
+      processes: async () => (unread ? null : rows),
+    });
+    lines.push(line);
+    line.observe(reading, rows);
+    const leader = rowAt(rows, 0);
+    const child = rowAt(rows, 1);
+    const task = line.forTask("unread");
+    const first = await held(
+      task.claim({ pid: leader.pid, demand: { cpu: 8, memoryBytes: 1024 ** 3 } }),
+    );
+    rows[1] = { ...child, group: leader.pid };
+    const receipt = { hold: first.id, pid: leader.pid, payload: child.pid, started: child.started };
+    unread = true;
+    await expect(task.receipt(receipt)).rejects.toBeInstanceOf(LoadReceiptUnreadError);
+    expect(JSON.parse(readFileSync(stateFile, "utf8"))[0].launch).toBeUndefined();
+    unread = false;
+    await expect(task.receipt(receipt)).resolves.toBeUndefined();
+    expect(JSON.parse(readFileSync(stateFile, "utf8"))[0].launch).toEqual({
+      pid: child.pid,
+      started: child.started,
+    });
   });
 
   it("never acknowledges a receipt whose durable write failed", async () => {

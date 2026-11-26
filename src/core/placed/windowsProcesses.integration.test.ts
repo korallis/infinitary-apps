@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import { createServer, type Server, type Socket } from "node:net";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { ResourceObservation } from "@shared/resources";
+import { RESOURCE_REFRESH_MS, type ResourceObservation } from "@shared/resources";
 import { build } from "vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
@@ -17,7 +17,7 @@ import { JobManager } from "../jobs/jobManager";
 import { windowsBash } from "../pi/windowsBash";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { endHolder, findFolderHolders } from "./folderHolders";
-import { JOURNAL_FILE, LoadLine } from "./loadLine";
+import { JOURNAL_FILE, LoadLine, LoadReceiptUnreadError } from "./loadLine";
 import { loopbackCaller } from "./loopbackCaller";
 import { descendsFrom, readProcesses } from "./processResources";
 import { ShellGroups } from "./shellGroups";
@@ -38,6 +38,8 @@ vi.setConfig({ testTimeout: 60_000 });
  */
 const windows = process.platform === "win32";
 const AXI_BIN = resolve(__dirname, "../../../resources/axi-bin");
+// Git Bash names a program by its last `/` part, as a crewmate's PATH gives it.
+const LAUNCHER = join(AXI_BIN, "infinitary-load-axi").replace(/\\/g, "/");
 
 const children: ChildProcess[] = [];
 const servers: Server[] = [];
@@ -584,7 +586,6 @@ describe.skipIf(!windows)("a heavy run on Windows through its command", () => {
       const dir = scratchDir("infinitary-windows-receipt-");
       const stateFile = join(dir, "load.json");
       const line = new LoadLine({ stateFile });
-      const before = performance.now();
       let sequence = 0;
       // A complete reading over the interval from `start` to now, with the system's own table.
       const sample = async (start: number) => {
@@ -598,9 +599,9 @@ describe.skipIf(!windows)("a heavy run on Windows through its command", () => {
           { epoch: reading.epoch, start, end },
         );
       };
-      // Readings that began before either run started keep capacity fresh and cover no launch.
-      await sample(before);
-      const fresh = setInterval(() => void sample(before), 1_000);
+      // Readings with no processor interval keep capacity fresh and can cover no launch.
+      line.observe(reading, null);
+      const fresh = setInterval(() => line.observe(reading, null), 1_000);
       const channel = await AxiChannel.open({
         spawner: forkChildProcess(await bundleAxiProcess()),
         binDir: AXI_BIN,
@@ -635,6 +636,8 @@ describe.skipIf(!windows)("a heavy run on Windows through its command", () => {
           state: string;
           launch?: { pid: number; started: string };
         }>;
+      // Before the first run exists: an interval from here began before any launch.
+      const before = performance.now();
       const first = run();
       let later: ReturnType<typeof run> | undefined;
       try {
@@ -648,7 +651,10 @@ describe.skipIf(!windows)("a heavy run on Windows through its command", () => {
             );
           });
         const [held] = saved();
-        expect(held?.launch?.pid).not.toBe(held?.pid);
+        // The program prints its own Windows number: the launch is that program,
+        // not the leader, the worker or the copy of the wrapper it started as.
+        await expect.poll(() => first.said.output, { timeout: 30_000 }).toMatch(/^\d+\s*$/);
+        expect(held?.launch?.pid).toBe(Number(first.said.output.trim()));
         expect(held?.launch?.started).toMatch(/^win:\d+$/);
         // The test's own program is outside the run's job, and the leader is not its payload.
         const task = line.forTask("heavy");
@@ -663,7 +669,8 @@ describe.skipIf(!windows)("a heavy run on Windows through its command", () => {
         await expect
           .poll(() => line.snapshot().runs[1], { timeout: 30_000 })
           .toMatchObject({ state: "waiting", reason: "capacity", free: { cpu: 1.16 } });
-        clearInterval(fresh);
+        // A complete reading that ends now and began before the launch overlaps
+        // the program's start: it proves nothing about the run's own use.
         await sample(before);
         expect(line.snapshot().runs.map((run) => run.state)).toEqual(["running", "waiting"]);
 
@@ -700,6 +707,373 @@ describe.skipIf(!windows)("a heavy run on Windows through its command", () => {
       }
     },
   );
+
+  /** One run through the real launcher under Git Bash: what it said and how it ended. */
+  function heavyRun(env: NodeJS.ProcessEnv, dir: string, command: string[]) {
+    const child = spawn(
+      windowsBash() ?? "bash",
+      [LAUNCHER, "run", "--processors", "2", "--memory-mib", "512", "--", ...command],
+      { cwd: dir, env: hostEnv(env), stdio: ["pipe", "pipe", "pipe"], windowsHide: true },
+    );
+    children.push(child);
+    const said = { output: "", errors: "" };
+    child.stdout?.on("data", (chunk) => {
+      said.output += chunk.toString();
+    });
+    child.stderr?.on("data", (chunk) => {
+      said.errors += chunk.toString();
+    });
+    const ended = once(child, "exit").then(([code]) => code as number | null);
+    return { child, said, ended };
+  }
+  /** The living programs of the job a hold's leader leads, by Windows number. */
+  async function jobMembers(leader: number): Promise<number[]> {
+    return ((await readProcesses()) ?? [])
+      .filter((row) => row.group === leader && !row.exited)
+      .map((row) => row.pid)
+      .sort((a, b) => a - b);
+  }
+
+  // A table the app cannot read while it checks a receipt proves nothing about
+  // the launch. The command answers the typed interruption with the reading
+  // cadence, the worker asks again at that cadence, and the same program is
+  // verified once the table reads; a refusal the table could not change stays one.
+  it("asks again after a receipt met an unreadable table, then verifies the same launch", async () => {
+    const bash = windowsBash();
+    expect(bash).toBeDefined();
+    const dir = scratchDir("infinitary-windows-unread-");
+    const stateFile = join(dir, "load.json");
+    let unread = false;
+    const line = new LoadLine({
+      stateFile,
+      processes: async () => (unread ? null : readProcesses()),
+    });
+    line.observe(reading, null);
+    const fresh = setInterval(() => line.observe(reading, null), 1_000);
+    const channel = await AxiChannel.open({
+      spawner: forkChildProcess(await bundleAxiProcess()),
+      binDir: AXI_BIN,
+      version: "9.9.9-test",
+      keysDir: join(dir, "keys"),
+    });
+    const task = line.forTask("heavy");
+    // Each receipt in `misses` is checked against a table that cannot be read.
+    let misses = 2;
+    const receipts: Array<{ at: number; payload: number; answer: string }> = [];
+    const shell = channel.grant("heavy", {
+      load: {
+        ...task,
+        receipt: async (input, permitted) => {
+          const entry = { at: performance.now(), payload: input.payload, answer: "verified" };
+          receipts.push(entry);
+          unread = misses-- > 0;
+          try {
+            await task.receipt(input, permitted);
+          } catch (error) {
+            entry.answer = error instanceof LoadReceiptUnreadError ? "unread" : "refused";
+            throw error;
+          } finally {
+            unread = false;
+          }
+        },
+      },
+    });
+    const [native] = payloads;
+    const program = join(dir, native?.file ?? "").replace(/\\/g, "/");
+    writeFileSync(program, native?.text ?? "");
+    const saved = () =>
+      JSON.parse(readFileSync(stateFile, "utf8")) as Array<{
+        id: string;
+        pid: number;
+        launch?: { pid: number; started: string };
+      }>;
+    /** One receipt sent as the worker sends it, with the command's own answer. */
+    const ask = (hold: string, leader: number, payload: number) =>
+      new Promise<{ code: number | null; said: string }>((done) => {
+        const child = spawn(
+          bash ?? "bash",
+          [LAUNCHER, "receipt", "--hold", hold, "--pid", `${leader}`, "--payload", `${payload}`],
+          {
+            cwd: dir,
+            env: hostEnv(shell.env),
+            stdio: ["ignore", "pipe", "pipe"],
+            windowsHide: true,
+          },
+        );
+        children.push(child);
+        let said = "";
+        child.stdout?.on("data", (chunk) => {
+          said += chunk.toString();
+        });
+        child.once("close", (code) => done({ code, said }));
+      });
+    const first = heavyRun(shell.env, dir, native?.command(program) ?? []);
+    try {
+      await expect
+        .poll(() => existsSync(stateFile) && saved()[0]?.launch, { timeout: 30_000 })
+        .toBeTruthy()
+        .catch((error: unknown) => {
+          throw new Error(
+            `no launch was verified; the run said: ${first.said.errors}; receipts ${JSON.stringify(receipts)}`,
+            { cause: error },
+          );
+        });
+      const payload = Number(first.said.output.trim());
+      expect(receipts.map(({ payload, answer }) => ({ payload, answer }))).toEqual([
+        { payload, answer: "unread" },
+        { payload, answer: "unread" },
+        { payload, answer: "verified" },
+      ]);
+      // The worker waited out the reading cadence before each repeat.
+      for (const index of [1, 2])
+        expect((receipts[index]?.at ?? 0) - (receipts[index - 1]?.at ?? 0)).toBeGreaterThanOrEqual(
+          RESOURCE_REFRESH_MS - 250,
+        );
+      const [held] = saved();
+      expect(held?.launch?.pid).toBe(payload);
+
+      misses = 1;
+      const again = await ask(held?.id ?? "", held?.pid ?? 0, payload);
+      expect(again.code).toBe(1);
+      expect(again.said).toMatch(/^code: RECEIPT_UNAVAILABLE$/m);
+      expect(again.said).toMatch(new RegExp(`^retrySeconds: ${RESOURCE_REFRESH_MS / 1000}$`, "m"));
+      // A hold that is not this run's is refused whatever the table says, with no cadence to repeat at.
+      misses = 1;
+      const refused = await ask("another-hold", held?.pid ?? 0, payload);
+      expect(refused.code).toBe(1);
+      expect(refused.said).toMatch(/^code: REFUSED$/m);
+      expect(refused.said).not.toContain("retrySeconds");
+      expect(saved()[0]?.launch).toEqual(held?.launch);
+
+      first.child.stdin?.end("finish\n");
+      expect(await first.ended).toBe(7);
+    } finally {
+      clearInterval(fresh);
+      first.child.stdin?.end("finish\n");
+      channel.close();
+      line.dispose();
+      await first.ended;
+    }
+  });
+
+  // Git Bash starts every program as a copy of the wrapper, which then becomes
+  // the program. A copy that takes seconds over it is still the wrapper's own
+  // shell, a living member of the run's job that proves no launch: no receipt
+  // names it, and the launch verified is the program it becomes.
+  it("verifies the program a copy of the wrapper becomes, never the copy", async () => {
+    const bash = windowsBash();
+    expect(bash).toBeDefined();
+    const dir = scratchDir("infinitary-windows-copy-");
+    const stateFile = join(dir, "load.json");
+    const line = new LoadLine({ stateFile });
+    line.observe(reading, null);
+    const fresh = setInterval(() => line.observe(reading, null), 1_000);
+    const channel = await AxiChannel.open({
+      spawner: forkChildProcess(await bundleAxiProcess()),
+      binDir: AXI_BIN,
+      version: "9.9.9-test",
+      keysDir: join(dir, "keys"),
+    });
+    const task = line.forTask("heavy");
+    const asked: number[] = [];
+    const shell = channel.grant("heavy", {
+      load: {
+        ...task,
+        receipt: (input, permitted) => {
+          asked.push(input.payload);
+          return task.receipt(input, permitted);
+        },
+      },
+    });
+    const [native] = payloads;
+    const program = join(dir, native?.file ?? "").replace(/\\/g, "/");
+    writeFileSync(program, native?.text ?? "");
+    const node = process.execPath.replace(/\\/g, "/");
+    const first = heavyRun(shell.env, dir, ["eval", `( sleep 3; exec "${node}" "${program}" )`]);
+    try {
+      await expect.poll(() => first.said.output, { timeout: 30_000 }).toMatch(/^\d+\s*$/);
+      const payload = Number(first.said.output.trim());
+      const saved = () =>
+        JSON.parse(readFileSync(stateFile, "utf8")) as Array<{ launch?: { pid: number } }>;
+      await expect
+        .poll(() => saved()[0]?.launch, { timeout: 30_000 })
+        .toBeTruthy()
+        .catch((error: unknown) => {
+          throw new Error(
+            `no launch was verified; the run said: ${first.said.errors}; receipts named ${JSON.stringify(asked)}`,
+            { cause: error },
+          );
+        });
+      expect(saved()[0]?.launch?.pid).toBe(payload);
+      expect(asked.filter((named) => named !== payload)).toEqual([]);
+      first.child.stdin?.end("finish\n");
+      expect(await first.ended).toBe(7);
+      // The worker may still be reading its answer: the run is over once its job is empty.
+      await expect
+        .poll(
+          async () => {
+            line.observe(reading, await readProcesses());
+            return line.snapshot().runs;
+          },
+          { timeout: 30_000 },
+        )
+        .toEqual([]);
+    } finally {
+      clearInterval(fresh);
+      first.child.stdin?.end("finish\n");
+      channel.close();
+      line.dispose();
+      await first.ended;
+    }
+  });
+
+  // A builtin runs in the leader's own shell, so the jobs it starts are that
+  // shell's. The receipt worker is none of them: a builtin's `wait` ends with
+  // its own job while a receipt still hangs, and a job it leaves running is
+  // not signalled when the builtin returns.
+  it("leaves a builtin's own jobs to it while a receipt is unanswered", async () => {
+    const bash = windowsBash();
+    expect(bash).toBeDefined();
+    const dir = scratchDir("infinitary-windows-builtin-");
+    const line = new LoadLine({ stateFile: join(dir, "load.json") });
+    line.observe(reading, null);
+    const fresh = setInterval(() => line.observe(reading, null), 1_000);
+    const channel = await AxiChannel.open({
+      spawner: forkChildProcess(await bundleAxiProcess()),
+      binDir: AXI_BIN,
+      version: "9.9.9-test",
+      keysDir: join(dir, "keys"),
+    });
+    // No receipt is answered while this test runs.
+    const asked: number[] = [];
+    const shell = channel.grant("heavy", {
+      load: {
+        ...line.forTask("heavy"),
+        receipt: (input) => {
+          asked.push(input.payload);
+          return new Promise<void>(() => {});
+        },
+      },
+    });
+    const node = process.execPath.replace(/\\/g, "/");
+    const waited = join(dir, "waited.js").replace(/\\/g, "/");
+    writeFileSync(waited, "console.log(process.pid);setTimeout(()=>process.exit(4),3000)");
+    const left = join(dir, "left.js").replace(/\\/g, "/");
+    const survived = join(dir, "survived");
+    writeFileSync(
+      left,
+      `setTimeout(()=>require('node:fs').writeFileSync(${JSON.stringify(survived)},''),4000)`,
+    );
+    const released = () =>
+      expect
+        .poll(
+          async () => {
+            line.observe(reading, await readProcesses());
+            return line.snapshot().runs;
+          },
+          { timeout: 30_000 },
+        )
+        .toEqual([]);
+    try {
+      // The builtin waits for the job it started and for nothing else.
+      const waiting = heavyRun(shell.env, dir, ["eval", `"${node}" "${waited}" & wait`]);
+      await expect.poll(() => waiting.said.output, { timeout: 30_000 }).toMatch(/^\d+\s*$/);
+      const program = Number(waiting.said.output.trim());
+      await expect.poll(() => asked, { timeout: 30_000 }).toContain(program);
+      await expect.poll(() => alive(program), { timeout: 30_000 }).toBe(false);
+      const ended = performance.now();
+      expect(await waiting.ended).toBe(0);
+      // The unanswered receipt would hold a waited-for worker for a minute.
+      expect(performance.now() - ended).toBeLessThan(15_000);
+      await released();
+
+      // The builtin returns at once, and the job it left runs on to its own end.
+      const leaving = heavyRun(shell.env, dir, [
+        "eval",
+        `"${node}" "${left}" </dev/null >/dev/null 2>&1 &`,
+      ]);
+      expect(await leaving.ended).toBe(0);
+      expect(existsSync(survived)).toBe(false);
+      await expect.poll(() => existsSync(survived), { timeout: 30_000 }).toBe(true);
+      await released();
+    } finally {
+      clearInterval(fresh);
+      channel.close();
+      line.dispose();
+    }
+  });
+
+  // A wrapper stopped by force cancels nothing, and its program runs on. The
+  // worker still ends with the wrapper, though its receipt is unanswered, and
+  // signals nothing: only the program is left in the run's job.
+  it("ends the receipt worker with a wrapper stopped by force, and leaves its program running", async () => {
+    const bash = windowsBash();
+    expect(bash).toBeDefined();
+    const dir = scratchDir("infinitary-windows-forced-");
+    const stateFile = join(dir, "load.json");
+    const line = new LoadLine({ stateFile });
+    line.observe(reading, null);
+    const fresh = setInterval(() => line.observe(reading, null), 1_000);
+    const channel = await AxiChannel.open({
+      spawner: forkChildProcess(await bundleAxiProcess()),
+      binDir: AXI_BIN,
+      version: "9.9.9-test",
+      keysDir: join(dir, "keys"),
+    });
+    const asked: number[] = [];
+    const shell = channel.grant("heavy", {
+      load: {
+        ...line.forTask("heavy"),
+        receipt: (input) => {
+          asked.push(input.payload);
+          return new Promise<void>(() => {});
+        },
+      },
+    });
+    // The program runs until this file exists: the test closes the run's input
+    // when the stopped wrapper ends, so the program must not end with its input.
+    const stop = join(dir, "stop");
+    const program = join(dir, "stays.js").replace(/\\/g, "/");
+    writeFileSync(
+      program,
+      `console.log(process.pid);setInterval(()=>{if(require('node:fs').existsSync(${JSON.stringify(stop)}))process.exit(7)},100)`,
+    );
+    const first = heavyRun(shell.env, dir, [process.execPath, program]);
+    let payload = 0;
+    try {
+      await expect.poll(() => first.said.output, { timeout: 30_000 }).toMatch(/^\d+\s*$/);
+      payload = Number(first.said.output.trim());
+      await expect.poll(() => asked, { timeout: 30_000 }).toContain(payload);
+      const [held] = JSON.parse(readFileSync(stateFile, "utf8")) as Array<{ pid: number }>;
+      const leader = held?.pid ?? 0;
+      // Git Bash keeps a process of its own for a Windows program it started, as that program's parent.
+      const beside = ((await readProcesses()) ?? []).find((row) => row.pid === payload)?.parent;
+      const kept = [beside ?? 0, payload].sort((a, b) => a - b);
+      // More than those two and the leader: the worker with its pending request.
+      const before = await jobMembers(leader);
+      expect(before).toEqual(expect.arrayContaining([leader, ...kept]));
+      expect(before.length).toBeGreaterThan(3);
+      process.kill(leader);
+      await expect.poll(() => jobMembers(leader), { timeout: 15_000, interval: 250 }).toEqual(kept);
+      expect(alive(payload)).toBe(true);
+      writeFileSync(stop, "");
+      await expect.poll(() => alive(payload), { timeout: 30_000 }).toBe(false);
+      await expect
+        .poll(
+          async () => {
+            line.observe(reading, await readProcesses());
+            return line.snapshot().runs;
+          },
+          { timeout: 30_000 },
+        )
+        .toEqual([]);
+    } finally {
+      clearInterval(fresh);
+      writeFileSync(stop, "");
+      channel.close();
+      line.dispose();
+    }
+  });
 
   // A run that ends before its receipt is sent, and a shell builtin, which has
   // no program for the worker to find: the worker holds none of the run's

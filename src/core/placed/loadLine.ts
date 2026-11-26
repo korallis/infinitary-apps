@@ -86,6 +86,11 @@ export type LoadClaim = { pid: number; demand: LoadDemand; parent?: string; call
  */
 export type LoadReceipt = { hold: string; pid: number; payload: number; started?: string };
 /**
+ * A receipt the line could neither verify nor refuse, because this computer's
+ * programs could not be read. Nothing was saved and the same receipt may ask again.
+ */
+export class LoadReceiptUnreadError extends Error {}
+/**
  * A claim's answer: its run, or, when the process table could not be read
  * and the caller holds no verified place, a wait with no hold that the
  * wrapper answers by asking again (INF-3192). It grants nothing.
@@ -519,6 +524,13 @@ export class LoadLine {
     this.check();
     if (permitted && !permitted()) throw new Error("This task no longer has a load command.");
     const held = this.held.find((held) => held.id === input.hold && held.taskId === taskId);
+    // An unreadable table proves nothing about a running hold's launch. A
+    // refusal would end the worker's asking and leave a healthy run charged
+    // for its whole life, so this one outcome may repeat (INF-3192's rule for claims).
+    if (rows === null && held?.state === "running" && held.pid === input.pid)
+      throw new LoadReceiptUnreadError(
+        "This computer's programs could not be read; the launch is not verified yet.",
+      );
     const leader = rows?.find((row) => row.pid === input.pid);
     const started = input.started ?? payload?.started;
     if (
