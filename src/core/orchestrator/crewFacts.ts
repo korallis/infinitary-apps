@@ -51,18 +51,24 @@ export class CrewFacts {
   deliverableRows(taskId: string, now: number): InboxRow[] {
     const page = this.core.options.inbox.pending(taskId, now, { maxAttempts: INBOX_ATTEMPT_MAX });
     // A sent row kept through a login move's check that is due behind a full
-    // page takes the place of the page's newest rows: the turn it wakes reads
-    // it, and a page of notices alone neither hides it nor rides its wake
-    // without it (`LoginMoves.paySent`). SQLite reads a negative limit as none.
+    // page takes the place of the page's newest rows that are not kept ones
+    // themselves: the turn it wakes reads it beside every kept row already on
+    // the page, and a page of notices alone neither hides it nor rides its
+    // wake without it (`LoginMoves.paySent`). SQLite reads a negative limit
+    // as none.
     const kept = this.core.loginMoves.sentKept(taskId);
+    const others = kept ? page.filter((row) => !kept.has(row.id)) : page;
     const behind = kept
       ? this.core.options.inbox
           .pending(taskId, now, { maxAttempts: INBOX_ATTEMPT_MAX, limit: -1 })
           .filter((row) => kept.has(row.id) && !page.some((paged) => paged.id === row.id))
-          .slice(0, page.length)
+          .slice(0, others.length)
       : [];
+    const stays = new Set(others.slice(0, others.length - behind.length));
     const rows =
-      behind.length > 0 ? [...page.slice(0, page.length - behind.length), ...behind] : page;
+      behind.length > 0
+        ? [...page.filter((row) => stays.has(row) || !others.includes(row)), ...behind]
+        : page;
     const task = this.core.tasks.get(taskId);
     const running = task !== undefined && task.turn.busy;
     // A renewed conversation's reason rides the next full turn (`runTurn`),
