@@ -133,6 +133,8 @@ export function accountHandlers(services: CoreServices, emit: CoreEventSink): Ac
       if (deviceId)
         return services.deviceSignIns.setAccount(deviceId, { kind: "pin", providerId, accountId });
       services.vault.setPin(providerId, accountId);
+      // The low-login card and the first mate's offers speak for the login in use.
+      services.whenLoginLowChanged?.();
       return { ok: true as const };
     },
   };

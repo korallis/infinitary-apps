@@ -78,6 +78,11 @@ export class LoginMoves {
    * `deliver` hands the lane to the conversation the task ends up with.
    * False when the task is bound to no move.
    */
+  /** Whether the task still has a move to make (`CrewFacts.laneHold`). */
+  bindsTask(taskId: string): boolean {
+    return this.bound.has(taskId);
+  }
+
   takes(taskId: string, deliver: (task: TaskRuntime) => void): boolean {
     if (!this.bound.has(taskId)) return false;
     void this.move(taskId, deliver);

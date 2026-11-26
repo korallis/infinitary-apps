@@ -402,6 +402,7 @@ it("sends a low login's Move to another login only to views that read it", async
       loginLowCard({
         providerId: "openai-codex",
         providerName: "ChatGPT",
+        accountId: "codex-personal",
         login: "Personal",
         percentLeft: 8,
         other: { accountId: "codex-work", label: "Work" },
@@ -411,7 +412,7 @@ it("sends a low login's Move to another login only to views that read it", async
   });
   const ids = (value: unknown) =>
     (value as { actions: { id: string }[] }).actions.map((action) => action.id);
-  expect(ids(card)).toEqual(["move-login", "wait-for-refill"]);
+  expect(ids(card)).toEqual(["move-login-codex-personal-codex-work", "wait-for-refill"]);
   const at = await home({
     dispatch: (async (channel) => {
       if (channel === "inf:cards:list") return [card];

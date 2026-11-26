@@ -280,7 +280,9 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   One crew card per provider per run-out (`card-login-low-<provider>`, `loginLowCard` in `src/core/orchestrator/loginCards.ts`) names the low login, what it has left, when its allowance refills (a typed cut-off's own reset before the meter's), and the login with the most room, with Move to that login and Wait for the refill.
   Nothing moves until the click.
   Move (`move-login` host op, `crew:<accountId>`) makes that login the one in use, writes one feed line, and binds the started tasks on the low login to that login and no other.
-  The click is checked against the logins as they are now (`LowLogins.move`): it moves work only while the choice still asks, the login the card asked about is still low and the named login still has room; otherwise nothing moves and the logins are read again.
+  The button's id names the login work leaves and the login it goes to (`moveLoginActionId`), on this card and on the first mate's two: a card revised to offer another login declares another button, so a click on the button as it stood before is refused as a choice no longer offered.
+  The click is checked against the logins as they are now (`LowLogins.move`): it moves work only while the choice still asks, the login the card asked about is still low and, under `ask`, still the login in use, and the named login still has room; otherwise nothing moves and the logins are read again.
+  Choosing another login in the accounts list (`inf:accounts:pin`) has the card and the first mate's offers read again at once.
   Wait for the refill leaves everything where it is, and the card comes back only at that login's next run-out.
   The card up is kept apart from that answer: it is revised in place when the low login, the login it offers or what it says of them changes, taken down when the login has room again, when no other login has room or when the choice becomes `wait`, and put up again when there is something to offer once more.
   The home keeps the card it has up and a Wait answer in memory, so a restart may ask once more.
@@ -296,7 +298,9 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   A backend that keeps its own transcript, as Pi does, opens it under the new login.
   A Claude conversation is never copied across accounts: each login's client keeps its transcripts in its own folder, so the new login opens a new conversation, which is told its brief and where the earlier transcript is saved, as any conversation that could not be reopened is.
   Nothing is retried inside a refused turn.
-  A task inside a turn at the click stays bound to the named login and moves at its lane's next delivery (`LoginMoves.takes`, from `CrewTurns.deliverPendingToTask`), before any of it goes to the old login; the binding ends when its old login has room again or the choice becomes `wait`.
+  A named login the provider has cut off for a spent allowance since (`cutOff` on the selector's pool) takes none of it either, whatever its meter reads.
+  A task inside a turn at the click stays bound to the named login and moves at its turn's end or its lane's next delivery, with due rows or none (`LoginMoves.takes`, from `CrewTurns.deliverPendingToTask` and the lane sweep), before any of it goes to the old login.
+  A cut-off on the login it leaves does not hold its lane meanwhile (`CrewFacts.laneHold`), and every other hold still does; the binding ends when its old login has room again or the choice becomes `wait`.
   Only tasks whose crewmate runs on this computer move.
 - **The first mate.**
   The first mate's account is its own setting, and its ladder's step to another login of the same provider follows the choice (`FirstmateSeat.admitTurn`, `docs/architecture.md` §16).

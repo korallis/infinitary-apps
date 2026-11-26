@@ -30,9 +30,23 @@ export function moveLoginSaid(login: string): Said {
   return said("cardLoginLowMove", { login });
 }
 
-export function moveLoginAction(move: LoginMove, label: string, primary: boolean): CardAction {
+/**
+ * The button's id names the login work leaves and the login it goes to: a
+ * card revised to offer another login declares another id, so a click on
+ * the button as it stood before is refused as a choice no longer offered,
+ * never read as the login the card names now.
+ */
+export function moveLoginActionId(from: string, to: string): string {
+  return `move-login-${from}-${to}`;
+}
+
+export function moveLoginAction(
+  move: LoginMove & { from: string },
+  label: string,
+  primary: boolean,
+): CardAction {
   return {
-    id: "move-login",
+    id: moveLoginActionId(move.from, move.accountId),
     label: englishOf(moveLoginSaid(label)),
     variant: primary ? "primary" : "secondary",
     ...(primary ? { default: true } : {}),

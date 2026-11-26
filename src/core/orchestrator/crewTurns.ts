@@ -1421,11 +1421,12 @@ export class CrewTurns {
     // the captain or the first mate sent, told it stays there.
     const backlog = this.core.facts.inBacklog(task.id);
     if (backlog && !options.sent) return;
-    const rows = this.core.facts.deliverableRows(task.id, this.core.now());
-    if (rows.length === 0) return;
-    // A task bound to another login takes this delivery there (`LoginMoves`).
+    // A task bound to another login moves there first (`LoginMoves`), due
+    // rows or none: what its old login's run-out held is due on the new one.
     if (this.core.loginMoves.takes(task.id, (open) => this.deliverPendingToTask(open, options)))
       return;
+    const rows = this.core.facts.deliverableRows(task.id, this.core.now());
+    if (rows.length === 0) return;
     const pictures = this.core.facts.rowPictures(task.id, rows);
     if (pictures.blocked) return;
     if (options.announce && rows.some((row) => !OWN_LANE_KINDS.has(row.facts?.kind ?? ""))) {
