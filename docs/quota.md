@@ -310,6 +310,7 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   The same move named again, as each reading under `move` names it until the task has moved, keeps its binding and the pick already out.
   A restart of a bound task's conversation, after the context limit or the provider's repeated refusals, names the login on its record first and then opens the new conversation there with its restart reason (`LoginMoves.beforeRestart`, from `CrewTurns.recoverContext` and `CrewTurns.unstick`).
   While anything else holds the task, that restart moves and opens nothing: its reason is kept on the lane (`CrewSessions.keepRestart`), and the delivery after the hold moves the task and opens the new conversation.
+  A hold that comes up while the restarted conversation opens starts no turn either: the hold is read again before the first turn, by the context restart and by the lane sweep that reopens a task, and the turn waits on the lane for the delivery after the hold (`CrewTurns.continueAfterHold`).
   A cut-off on the login it leaves does not hold its lane meanwhile (`CrewFacts.laneHold`), and every other hold still does; the binding ends when its old login has room again or the choice becomes `wait`.
   Only tasks whose crewmate runs on this computer move.
 - **The first mate.**
