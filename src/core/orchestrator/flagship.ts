@@ -477,8 +477,13 @@ export class Flagship {
     if (!row) return undefined;
     if (row.unread) return { read: false };
     const shareRead = row.windows.some((window) => typeof window.percentRemaining === "number");
+    // The time named is a share reading's: an answer that carried no share
+    // was last read at no time.
     if (row.status !== "ok" || row.stale || !shareRead)
-      return { read: false, ...(row.measuredAt !== undefined ? { at: row.measuredAt } : {}) };
+      return {
+        read: false,
+        ...(shareRead && row.measuredAt !== undefined ? { at: row.measuredAt } : {}),
+      };
     const identity = this.options.vault.identitySync?.(accountId);
     return {
       at: row.measuredAt ?? this.options.quota.latest()?.fetchedAt ?? Date.now(),

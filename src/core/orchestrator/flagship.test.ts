@@ -734,8 +734,15 @@ describe("the allowance check a pause card reports", () => {
     if (!row) throw new Error("the login has no row");
     expect(row).toMatchObject({ status: "ok", windows: [] });
     expect(checkOf(row)).toEqual({ read: false });
-    // Nor for a row whose one window names a reset and no share.
-    const dated = { ...row, windows: [{ id: "five_hour", label: "session", resetsAtMs: NOW + 1 }] };
+    // Nor for an answer whose one window names a reset and no share, built
+    // through the app's own proxy row builder, which stamps its time: that
+    // time is no reading's, so the receipt names none.
+    const dated = rowOfOutcome(
+      row,
+      { status: "ok", windows: [{ id: "five_hour", label: "session", resetsAtMs: NOW + 1 }] },
+      NOW - 2_000,
+    );
+    expect(dated.measuredAt).toBe(NOW - 2_000);
     expect(checkOf(dated)).toEqual({ read: false });
   });
 
@@ -760,7 +767,19 @@ describe("the allowance check a pause card reports", () => {
       NOW,
     );
     if (!read) throw new Error("the login has no row");
-    expect(checkOf(read)?.read).toBe(true);
+    // The receipt's time is the session's own, not the snapshot's (NOW).
+    expect(checkOf(read)).toEqual({ at: NOW - 1_000, read: true });
+    // A later refusal that names no share does not move that time.
+    const [refusedSince] = pushedOnlyProviderViews(
+      [account],
+      () => [
+        { windowId: "seven_day", status: "allowed" as const, utilization: 0.4, at: NOW - 5_000 },
+        refusalAlone,
+      ],
+      NOW,
+    );
+    if (!refusedSince) throw new Error("the login has no row");
+    expect(checkOf(refusedSince)).toEqual({ at: NOW - 5_000, read: true });
   });
 
   it("is no check when the reading answered with no share and a refusal stands", () => {

@@ -142,8 +142,19 @@ export class PushedQuotaStore {
 }
 
 /**
+ * When a session last reported a share of the allowance: the newest reading
+ * that carries one. A refusal that names only its reset is no such reading.
+ */
+function shareReadAt(readings: PushedWindow[]): number | undefined {
+  const at = readings.flatMap((reading) => (reading.utilization !== undefined ? [reading.at] : []));
+  return at.length > 0 ? Math.max(...at) : undefined;
+}
+
+/**
  * Render pushed readings as the same QuotaProviderView the sensor produces,
  * so one account row looks the same whichever way its quota was measured.
+ * The row's `measuredAt` is when a session last reported a share, never the
+ * snapshot's own time.
  */
 export function pushedProviderViews(
   accounts: { accountId: string; accountLabel: string; quotaId: string; providerLabel: string }[],
@@ -154,11 +165,13 @@ export function pushedProviderViews(
     const readings = windowsFor(account.accountId);
     const stale = readings.some((reading) => now - reading.at > PUSHED_STALE_AFTER_MS);
     const credits = pushedCredits(readings, now)?.credits;
+    const measuredAt = shareReadAt(readings);
     return {
       provider: account.quotaId,
       label: account.providerLabel,
       accountId: account.accountId,
       accountLabel: account.accountLabel,
+      ...(measuredAt !== undefined ? { measuredAt } : {}),
       // No reading yet is unknown quota, not zero: the account stays
       // eligible and the card says "no data" rather than inventing a meter.
       status: "ok",
@@ -207,12 +220,14 @@ export function pushedOnlyProviderViews(
       }),
     now,
   ).map((view) => {
-    // The share a refusal reads as used up is the refusal's word, not a
-    // reading: a login whose sessions reported no share is unread.
+    // The share a refusal or a passed reset reads is not a reading: the
+    // row's time is that of the shares its sessions reported, and a login
+    // whose sessions reported none is unread.
     const readings = view.accountId ? windowsFor(view.accountId) : [];
-    return readings.length > 0 && readings.every((reading) => reading.utilization === undefined)
-      ? { ...view, unread: true }
-      : view;
+    const { measuredAt: _projected, ...row } = view;
+    const measuredAt = shareReadAt(readings);
+    if (measuredAt !== undefined) return { ...row, measuredAt };
+    return readings.length > 0 ? { ...row, unread: true } : row;
   });
 }
 

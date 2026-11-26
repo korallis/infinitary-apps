@@ -163,6 +163,7 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
   So is a row the sensor answered for with no share in any window, and a session-only login's row when its sessions reported a refusal and never a share (`pushedOnlyProviderViews`).
   The card says the same of a row none of whose windows carries a share, such as a login no session has reported on yet.
   A proxy's next reading replaces the mark with the rest of the last measurement (`rowOfOutcome`), so a reading taken after a refusal is a check again.
+  The time the card names is a share reading's own: a row built from sessions' readings carries when a session last reported a share as its `measuredAt` (`pushedProviderViews`), never a refusal's time, a passed reset's or the snapshot's, and an answer that carried a reset and no share is named no time.
   The row the sensor measured keeps its other windows; a row it could not measure carries only the refusal; `auth_required` is left standing.
   Only a `rejected` reading's reset is trusted (rows from before migration 51 held seconds).
   The vault still records `no_headroom` with its reset for the lane and seat phases, and holds none with no reset named, since nothing could clear it.
