@@ -816,8 +816,13 @@ export class FirstmateSeat {
   ): void {
     const hostCards = this.options.supervisor.cards.hostCards;
     const asking = sibling ? `${accountId}>${sibling.id}` : undefined;
-    if (asking === this.creditsAsked) return;
-    if (this.creditsAsked) hostCards.withdrawHostCard(FIRSTMATE_ON_CREDITS_CARD_ID, "superseded");
+    // A card the card store kept open from the last launch is up too,
+    // offering a move this launch has not checked.
+    const up =
+      this.creditsAsked ??
+      (this.options.supervisor.cards.get(FIRSTMATE_ON_CREDITS_CARD_ID) ? "" : undefined);
+    if (asking === up) return;
+    if (up !== undefined) hostCards.withdrawHostCard(FIRSTMATE_ON_CREDITS_CARD_ID, "superseded");
     this.creditsAsked = asking;
     if (!sibling) return;
     hostCards.raiseHostCard(

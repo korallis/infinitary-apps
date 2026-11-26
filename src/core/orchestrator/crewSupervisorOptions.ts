@@ -352,6 +352,12 @@ export type CrewSupervisorOptions = {
   loginMoveRecord?: {
     read(): Record<string, { from: string; to: string }>;
     write(moves: Record<string, { from: string; to: string }>): void;
+    /**
+     * Whether the click that named this move is still to be checked against
+     * the logins as they are now (`LowLogins.accept`), read from saved
+     * state so a launch answers it before anything is delivered.
+     */
+    unchecked?(move: { from: string; to: string }): boolean;
   };
   /**
    * A typed cut-off a crewmate's turn observed, recorded on its account

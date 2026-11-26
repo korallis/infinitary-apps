@@ -385,6 +385,22 @@ describe("the home's watch after a relaunch, when the app quit while it made the
     expect(after.raised).toEqual([]);
   });
 
+  it("keeps the tasks' moves to the named login when the app quit after the login in use was saved", () => {
+    const before = home(offeringSpare());
+    before.watch.read();
+    before.saved.chosen = moveLoginActionId("personal", "spare");
+
+    // The pin already names Spare; the answer was not yet recorded as over.
+    const after = home(workRoomier(), before.saved);
+    after.state.pin = "spare";
+    after.watch.read();
+    expect(after.order).toEqual(["tasks personal to spare"]);
+    expect(after.discarded).toEqual([]);
+    expect(after.state.pin).toBe("spare");
+    expect(after.saved.over).toBeDefined();
+    expect(after.raised).toEqual([]);
+  });
+
   it("moves nothing and asks about what is true now, when the named login has no room left at the next launch", () => {
     const before = home(offeringSpare());
     before.watch.read();
@@ -394,11 +410,10 @@ describe("the home's watch after a relaunch, when the app quit while it made the
       [login("personal", "Personal", 4), login("work", "Work", 95), login("spare", "Spare", 3)],
       before.saved,
     );
-    // Before any reading, the click's moves the last launch saved are no longer to make.
-    expect(after.discarded).toEqual(["personal to spare"]);
     after.watch.read();
     expect(after.order).toEqual([]);
-    expect(after.discarded).toEqual(["personal to spare", "personal to spare"]);
+    // The moves the last launch saved for the click are no longer to make.
+    expect(after.discarded).toEqual(["personal to spare"]);
     expect(after.raised).toHaveLength(1);
     expect(after.raised[0]?.actions?.[0]?.label).toBe("Move to Work");
   });

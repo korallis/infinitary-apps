@@ -285,7 +285,10 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   The move is made in an order a quit cannot split (`LowLogins.accept`): every task's move is saved in one write and bound only once that write succeeded (`LoginMoves.moveOff`), then the login in use changes, then the answer is recorded as over.
   A write that fails leaves no task bound, the login in use and the answer as they were, and the next reading makes the whole move again.
   The card store saves the click before any of that, so a launch that finds the card answered Move and the answer not over finishes the same move to the same login, however much room another login has by then, and asks nothing again; when the logins no longer bear the click out, nothing moves and the card asks about what is true now.
-  Until that launch has checked the click, none of the moves it saved is still to make (`LowLogins` drops them as it starts, and `accept` saves them again whole), and a click that is refused leaves no task named for its login.
+  Until that launch has checked the click, each task it named waits: its lane is held (`LoginMoves.awaitsCheck`, read from the saved card and the record of ended answers, so it holds from the supervisor's first wake), and it neither moves nor takes a delivery on the login it would leave.
+  A quit after the login in use was saved leaves the named login in use: the check accepts it as the same click and keeps the tasks' moves.
+  A click that is refused leaves no task named for its login, and the tasks carry on where they are.
+  The first mate's credits card is settled the same way: one the card store kept open is taken down or replaced at the seat's first check, by the choice and the readings as they are then.
   Choosing another login in the accounts list (`inf:accounts:pin`) has the card and the first mate's offers read again at once.
   Wait for the refill leaves everything where it is, and the card comes back only at that login's next run-out.
   The answer is read from the saved card, which names the login it asked about, its refill time and that raising of the card (`loginLowAsked`), so it holds the same way while the app runs and after a relaunch (`LowLogins.stillWaited`).
