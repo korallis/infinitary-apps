@@ -370,16 +370,19 @@ A pool is a reading of its logins, never an allowance of its own: each login kee
   A provider with fewer than two such logins has no pool.
 - **The fold.**
   `accountPools` (`src/shared/accountPools.ts`) reads each login from its account row and hands them to `poolReading`, the same math a proxy's logins use, each login weighing one.
-  A login whose every-model allowance is used up is spent and counts as zero in every window until the window holding it resets; from that moment it serves again with no new reading.
+  A login with an account-wide window used up is spent and counts as zero in every window until its last such window resets: one that resets earlier leaves it blocked by the other, so the pool is back with the first login that can serve.
   A login whose row is missing, stale or not a reading is unread, and one whose sign-in ended cannot serve: both are counted on the pool and never weigh as zero.
 - **Where it lives.**
   The snapshot carries the pools beside the account rows, in `pools` (`quotaSnapshotViewSchema`), one row per pooled provider with no account id; `pool.source` is `accounts` and `pool.accounts` names the logins.
   The account rows stay as they are, so everything that reads one account's row reads what it read before.
-  The pools are folded again on every snapshot and whenever an account is paused or resumed (`QuotaService.restamp`), and a reader that decides something folds them once more at the moment it reads (`accountsPoolAt`), so a reset that has passed counts at once.
+  The pools are folded on every snapshot, as of the time its rows were read, and again whenever the logins change: an account added, removed, paused or resumed (`QuotaService.restamp`), or a login whose reading is forgotten (`forgetAccount`).
+  A pool is never folded at the moment it is looked at: a login's row keeps what it read until the next reading, so the pooled meter, both reset gates, the catalog and the first mate's seat change together, on the reading that crosses a reset.
 - **Routing.**
-  A model of a pooled provider is read as its pool, not as its best login (`effectiveFromPool` in `src/core/quota/catalog.ts`): what is left is the pool's, and its place in the spend order is the mean of the scores of the logins that still have allowance (`poolRank`), since pooled windows have no one cycle to score.
+  A model of a pooled provider is read as its pool, not as its best login (`pooledView` in `src/core/quota/catalog.ts`): what is left is the pool's, and its place in the spend order is the mean of the scores of the logins that still have allowance (`poolRank`), since pooled windows have no one cycle to score.
   The pool lasts through its resets when one such login does.
-  Crew routing ranks the model by the pool while the login that would serve it still has allowance, and keeps that login as the one that serves and whose reset the reading holds until (`PlacedWorkScores.catalog`); a spent login in use keeps its own reading, so the pool orders the models and the login in use decides whether one can start now.
+  A model is spent in its pool exactly when no read login can serve it: a model's own window that one login alone reports never spends the model for a login that has room, and the share left is then the mean of the logins' own.
+  Crew routing ranks the model by the pool while the login that would serve it has included allowance, and keeps that login as the one that serves, whose charge is counted and whose reset the reading holds until (`PlacedWorkScores.catalog`).
+  A login in use that is spent, or that serves on credits, keeps its own reading, band and credits mark, so the pool orders the models and the login in use decides whether one can start now and what it is paid from.
   Another computer's models are ranked by that computer's own readings.
 - **Pausing.**
   The first mate moves off a spent login to another of the provider with allowance and pauses only when none has any (`Flagship.sibling`).

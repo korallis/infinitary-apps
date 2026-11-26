@@ -303,6 +303,9 @@ function phoneMeters(meters: RowView["meters"], stale: boolean): PhoneMeter[] {
   });
 }
 
+/** What the id of a pooled row starts with: such a row is a reading, never an account. */
+const POOL_ROW_PREFIX = "pool:";
+
 /**
  * A provider's pooled allowance as a row of its own, above that provider's
  * accounts (docs/quota.md, "A pool of your own logins"): the pooled meters,
@@ -311,7 +314,7 @@ function phoneMeters(meters: RowView["meters"], stale: boolean): PhoneMeter[] {
  */
 function poolRow(view: PoolRowView, provider: string): PhoneAccountRow {
   return {
-    id: `pool:${view.provider}`,
+    id: `${POOL_ROW_PREFIX}${view.provider}`,
     provider,
     name: view.name,
     sub: view.sub,
@@ -390,7 +393,11 @@ export function intelligencePage(input: IntelligenceInput): PhoneIntelligence {
   ];
   const every = groups.flatMap((group) => group.rows);
   return {
-    summary: accountsSummary(every.map((row) => ({ signIn: row.signIn !== undefined }))),
+    summary: accountsSummary(
+      every
+        .filter((row) => !row.id.startsWith(POOL_ROW_PREFIX))
+        .map((row) => ({ signIn: row.signIn !== undefined })),
+    ),
     ...(snapshot && snapshot.providers.length > 0
       ? { asOf: PHONE_SETTINGS_WORDS.asOf(clockOf(snapshot.fetchedAt)) }
       : {}),

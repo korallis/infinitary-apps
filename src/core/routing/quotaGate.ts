@@ -1,4 +1,4 @@
-import { accountsPoolAt } from "@shared/accountPools";
+import { accountsPoolOf } from "@shared/accountPools";
 import { SLOTS, type Slot } from "@shared/modelSlots";
 import {
   answersOnCredits,
@@ -58,7 +58,7 @@ export function quotaGateCleared(ref: string, reads: QuotaGateReads): boolean {
   }
   const snapshot = reads.quota.latest();
   const now = Date.now();
-  const pool = snapshot && accountsPoolAt(snapshot.pools, snapshot.providers, ref, now);
+  const pool = accountsPoolOf(snapshot?.pools, ref);
   if (snapshot && pool)
     return !allowanceSpent(effectiveFromPool(pool, poolMembers(pool, snapshot.providers), now));
   return (

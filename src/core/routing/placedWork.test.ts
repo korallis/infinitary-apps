@@ -763,4 +763,51 @@ describe("INF-443 learned placed-work ranking", () => {
     });
     w.db.close();
   });
+
+  // The review's ask: the pool orders a model, and the login in use alone
+  // decides whether it can start and whether it is paid from credits.
+  it("leaves whether a pooled model can start, and its credits, to the login in use", () => {
+    const w = world();
+    const model = { provider: "codex", id: CODEX.id, label: "Codex" };
+    const rank = (rows: QuotaProviderView[], boundId: string) =>
+      w.scores.catalog(
+        [model],
+        rows,
+        AT,
+        () => boundId,
+        w.scores.data(AT),
+        accountPools(
+          rows,
+          rows.map((each) => ({ accountId: each.accountId ?? "", provider: each.provider })),
+          AT,
+        ),
+      )[0];
+
+    // The login in use is spent and answers on credits: it stays a credits
+    // pick, read from itself, though the pool has (84 + 0) / 2 left.
+    const credited: QuotaProviderView = {
+      ...row("codex", "work-codex", 0),
+      keepGoingOnCredits: true,
+      credits: { state: "available" },
+    };
+    expect(rank([row("codex", "home-codex", 84), credited], "work-codex")).toMatchObject({
+      accountId: "work-codex",
+      effectivePercentRemaining: 0,
+      onCredits: true,
+    });
+
+    // The other login alone reports this model's own window, used up. The
+    // pooled window reads 0, yet the login in use has 60 left for the model:
+    // the model has (0 + 60) / 2 left and is not spent.
+    const home = row("codex", "home-codex", 84);
+    const modelSpent: QuotaProviderView = {
+      ...home,
+      windows: [...home.windows, { id: "model:sol", label: "Sol", percentRemaining: 0 }],
+    };
+    expect(rank([modelSpent, row("codex", "work-codex", 60)], "work-codex")).toMatchObject({
+      accountId: "work-codex",
+      effectivePercentRemaining: 30,
+    });
+    w.db.close();
+  });
 });

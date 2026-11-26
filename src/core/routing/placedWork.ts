@@ -1,18 +1,18 @@
-import { accountsPoolAt } from "@shared/accountPools";
+import { accountsPoolOf } from "@shared/accountPools";
 import type { CatalogModelView, QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
 import { allowanceProviderOf, inAccountsPool, rowMeasuresModel } from "@shared/quota";
 import {
   allowanceSpent,
   classifyProviderWindows,
   compareBandRank,
+  poolRank,
   type SpendBand,
   spendBand,
 } from "@shared/quotaSignals";
 import {
-  effectiveFromPool,
   effectiveFromProvider,
   limitingResetOf,
-  poolMembers,
+  pooledView,
   scopeAppliesToModel,
 } from "../quota/catalog";
 import type { AppDatabase } from "../storage/db";
@@ -427,9 +427,11 @@ export class PlacedWorkScores {
    *
    * Where that account is a login of one of `pools` (docs/quota.md, "A pool
    * of your own logins"), the pool ranks the model - what is left, the band
-   * and the score - while the login still has allowance; the login keeps
-   * naming who serves and until when its reading holds. A spent login keeps
-   * its own reading: the login in use decides whether the model can start.
+   * and the score - while the login has included allowance; the login keeps
+   * naming who serves, its charge and until when its reading holds. A login
+   * that is spent, or serves on credits, keeps its own reading: the login in
+   * use decides whether the model can start, and the pool never reads as
+   * spent while that login has room.
    */
   catalog(
     catalog: CatalogModelView[],
@@ -470,28 +472,34 @@ export class PlacedWorkScores {
       const measuredAt = best.score.charge?.measuredAt ?? best.row.measuredAt;
       // Whether it keeps going on credits is the serving account's reading.
       const { onCredits: _catalog, ...base } = model;
-      const pool = allowanceSpent(best.raw)
-        ? undefined
-        : accountsPoolAt(pools, rows, model.provider, now);
+      // The pool ranks the model only while the login in use has included
+      // allowance of its own: a spent one, and one that serves on credits,
+      // keeps its own reading, band and charge.
+      const pool =
+        allowanceSpent(best.raw) || best.raw.onCredits === true
+          ? undefined
+          : accountsPoolOf(pools, model.provider);
       if (pool && inAccountsPool(pool, best.row.accountId)) {
-        const members = poolMembers(pool, rows);
-        const raw = effectiveFromPool(pool, members, now, model.id);
-        const placed = effectiveFromPool(
+        const members = candidates.filter((c) => inAccountsPool(pool, c.row.accountId));
+        const raw = pooledView(
           pool,
-          members,
           now,
           model.id,
-          members.map((member) => {
-            const { spendPriority, lastsThroughReset } = this.score(member, now, model.id, data);
-            return {
-              ...(spendPriority !== undefined ? { spendPriority } : {}),
-              ...(lastsThroughReset !== undefined ? { lastsThroughReset } : {}),
-            };
-          }),
+          members.map((c) => c.raw),
         );
-        const { effectivePercentRemaining: _own, paceStatus: _pace, ...rest } = base;
+        const placed = poolRank(members.map((c) => ({ ...c.raw, ...c.score })));
+        const {
+          effectivePercentRemaining: _own,
+          paceStatus: _pace,
+          spendPriority: _score,
+          lastsThroughReset: _lasts,
+          ...rest
+        } = base;
         return {
           ...rest,
+          ...(raw.effectivePercentRemaining !== undefined
+            ? { effectivePercentRemaining: raw.effectivePercentRemaining }
+            : {}),
           ...placed,
           band: spendBand(raw),
           ...(best.score.charge ? { charge: best.score.charge } : {}),

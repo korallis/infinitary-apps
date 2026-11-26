@@ -90,4 +90,29 @@ describe("a model of a provider whose own logins pool", () => {
     );
     expect(credited).toMatchObject({ effectivePercentRemaining: 0, onCredits: true });
   });
+
+  it("is not spent by a window one login alone reports while another login has room", () => {
+    const opusSpent = login("personal", 80, {
+      windows: [
+        ...login("personal", 80).windows,
+        { id: "seven_day_opus", label: "weekly (Opus)", percentRemaining: 0 },
+      ],
+    });
+    const opus = { provider: "anthropic-claude", id: "claude-opus-4-5", name: "Claude Opus 4.5" };
+    const rows = [opusSpent, login("work", 40)];
+    const [model] = buildModelsCatalog(
+      [opus],
+      rows,
+      new Date(NOW).toISOString(),
+      NOW,
+      accountPools(
+        rows,
+        rows.map((row) => ({ accountId: row.accountId ?? "", provider: row.provider })),
+        NOW,
+      ),
+    ).models;
+    // The pooled Opus window reads 0, from the one login that reports it; the
+    // other login serves Opus from its week, so the model has (0 + 40) / 2 left.
+    expect(model?.effectivePercentRemaining).toBe(20);
+  });
 });

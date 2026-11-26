@@ -478,7 +478,7 @@ export function startHomeQuota(options: {
           const quotaId = quotaEntryForPiProvider(account.providerId)?.quotaId;
           return account.enabled && quotaId ? [{ accountId: account.id, provider: quotaId }] : [];
         }),
-        Date.now(),
+        snapshot.fetchedAt,
       ),
     broadcast: options.broadcast,
     ...(readProxy
@@ -641,16 +641,7 @@ export function startHomeQuota(options: {
 export function quotaContextLine(snapshot: QuotaSnapshotView | undefined): string {
   if (!snapshot || snapshot.providers.length === 0) return "unknown";
   const now = Date.now();
-  const pools = accountPools(
-    snapshot.providers,
-    (snapshot.pools ?? []).flatMap((pool) =>
-      (pool.pool?.source === "accounts" ? (pool.pool.accounts ?? []) : []).map((accountId) => ({
-        accountId,
-        provider: pool.provider,
-      })),
-    ),
-    now,
-  );
+  const pools = (snapshot.pools ?? []).filter((pool) => pool.pool?.source === "accounts");
   const parts = [...pools, ...snapshot.providers]
     .filter((provider) => provider.status === "ok")
     .flatMap((provider) => {

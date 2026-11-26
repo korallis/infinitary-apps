@@ -394,7 +394,9 @@ export function poolRowViews(
 
 /**
  * The header each account's row follows: its provider's pool, on the first
- * of `accounts` (in the order they are listed) that is a login of it.
+ * of `accounts` (in the order they are listed) of the provider its logins
+ * are of, so it heads the provider's whole group, a paused account or one a
+ * proxy answers for included.
  */
 export function poolHeads(
   accounts: readonly AccountView[],
@@ -404,7 +406,8 @@ export function poolHeads(
   const heads = new Map<string, PoolRowView>();
   for (const view of poolRowViews(pools, now)) {
     const members = pools?.find((row) => row.provider === view.provider)?.pool?.accounts ?? [];
-    const first = accounts.find((account) => members.includes(account.id));
+    const providerId = accounts.find((account) => members.includes(account.id))?.providerId;
+    const first = accounts.find((account) => account.providerId === providerId);
     if (first) heads.set(first.id, view);
   }
   return heads;

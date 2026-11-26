@@ -349,4 +349,38 @@ describe("the phone's row of a provider whose own logins pool", () => {
   it("shows no pooled row while the home sends no pool", () => {
     expect(pageOf(false)?.map((row) => row.id)).toEqual(["acct_a", "acct_b", "acct_c"]);
   });
+
+  it("heads the provider's whole group, a paused account included, and counts only accounts", () => {
+    const pooled = [reading("acct_a", 80), reading("acct_b", 20)];
+    const page = intelligencePage({
+      accounts: [
+        // The oldest account of the provider is paused: it is no login of the pool.
+        account("acct_old", "Old team", { createdAt: 1, enabled: false }),
+        account("acct_a", "Personal", { createdAt: 2 }),
+        account("acct_b", "Work", { createdAt: 3 }),
+      ],
+      snapshot: quotaSnapshotViewSchema.parse({
+        generatedAt: new Date(NOW).toISOString(),
+        fetchedAt: NOW,
+        providers: pooled,
+        pools: accountPools(
+          pooled,
+          pooled.map((row) => ({ accountId: row.accountId, provider: row.provider })),
+          NOW,
+        ),
+      }),
+      providers,
+      devices: [],
+      firstmateAccount: null,
+      home: "Studio",
+      now: NOW,
+    });
+    expect(page.groups[0]?.rows.map((row) => row.id)).toEqual([
+      "pool:codex",
+      "acct_old",
+      "acct_a",
+      "acct_b",
+    ]);
+    expect(page.summary).toBe("3 accounts");
+  });
 });

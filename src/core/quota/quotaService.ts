@@ -55,8 +55,8 @@ export type QuotaServiceOptions = {
   /**
    * The pools of the person's own logins over a snapshot's rows
    * (`QuotaSnapshotView.pools`, docs/quota.md "A pool of your own logins"),
-   * folded again on every snapshot and on `restamp`: none leaves the
-   * snapshot without the field.
+   * folded on every snapshot, on `restamp` and when a login's reading is
+   * forgotten: none leaves the snapshot without the field.
    */
   pools?: (snapshot: QuotaSnapshotView) => QuotaProviderView[];
   /**
@@ -240,6 +240,8 @@ export class QuotaService {
       ...latest,
       providers: latest.providers.filter((provider) => provider.accountId !== accountId),
     };
+    // A pool that folded the old login's reading is folded again without it.
+    if (latest.pools) this.restamp();
   }
 
   /**

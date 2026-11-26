@@ -65,6 +65,9 @@ export function accountHandlers(services: CoreServices, emit: CoreEventSink): Ac
         await services.supervisor.sessions.disconnectAccount(accountId);
       }
       await services.vault.remove(accountId);
+      // Its provider's pool no longer folds it (docs/quota.md, "A pool of
+      // your own logins").
+      services.quota.restamp();
       services.servedModels.forget(accountId);
       if (custom && removed) {
         services.slots.forgetProvider(removed.providerId);

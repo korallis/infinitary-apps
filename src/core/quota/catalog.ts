@@ -1,8 +1,9 @@
-import { accountsPoolAt } from "@shared/accountPools";
+import { accountsPoolOf } from "@shared/accountPools";
 import type { CatalogModelView, ModelsCatalogView, QuotaProviderView } from "@shared/quota";
 import { allowanceProviderOf, answersOnCredits, inAccountsPool } from "@shared/quota";
 import {
   allowanceSpent,
+  type BandFacts,
   compareSpendRank,
   poolRank,
   providerScopes,
@@ -120,36 +121,59 @@ export function effectiveFromProvider(
 
 /**
  * A model's view over a pool of the person's own logins (docs/quota.md, "A
- * pool of your own logins"): what is left is the pool's, its place in the
- * spend order is `poolRank` of `members`' own views, and a spent pool keeps
- * going on credits when a member answers on them. `adjusted`, when given,
- * are the members' places with placed work counted, in the members' order.
+ * pool of your own logins"), from `members`' own views of that model: what
+ * is left is the pool's, its place in the spend order is `poolRank` of the
+ * members, and a spent pool keeps going on credits when a member answers on
+ * them. The pool is spent for the model exactly when no read member can
+ * serve it: a window only some logins report can read zero in the pool
+ * while another login has room, and the share left is then the mean of the
+ * members' own.
  */
+export function pooledView(
+  pool: QuotaProviderView,
+  nowMs: number,
+  modelId: string | undefined,
+  members: readonly BandFacts[],
+): EffectiveView {
+  const known = members.flatMap((member) =>
+    typeof member.effectivePercentRemaining === "number"
+      ? [Math.max(0, member.effectivePercentRemaining)]
+      : [],
+  );
+  const room = known.some((left) => left > 0);
+  const pooled = effectiveFromProvider(pool, nowMs, modelId).effectivePercentRemaining;
+  const left =
+    pooled === undefined
+      ? undefined
+      : room
+        ? pooled > 0
+          ? pooled
+          : known.reduce((sum, each) => sum + each, 0) / known.length
+        : known.length > 0 && known.length === members.length
+          ? 0
+          : pooled;
+  return {
+    ...(left !== undefined ? { effectivePercentRemaining: left } : {}),
+    ...poolRank(members),
+    ...(left !== undefined && left <= 0 && members.some((member) => member.onCredits === true)
+      ? { onCredits: true as const }
+      : {}),
+  };
+}
+
+/** `pooledView` over the member rows themselves, as read at `nowMs`. */
 export function effectiveFromPool(
   pool: QuotaProviderView,
   members: readonly QuotaProviderView[],
   nowMs: number,
   modelId?: string,
-  adjusted?: readonly { spendPriority?: number; lastsThroughReset?: boolean }[],
 ): EffectiveView {
-  const pooled = effectiveFromProvider(pool, nowMs, modelId);
-  const raw = members.map((member) => effectiveFromProvider(member, nowMs, modelId));
-  const rank = poolRank(
-    raw.map((view, index) => {
-      const placed = adjusted?.[index];
-      if (!placed) return view;
-      const { spendPriority: _score, lastsThroughReset: _lasts, ...rest } = view;
-      return { ...rest, ...placed };
-    }),
+  return pooledView(
+    pool,
+    nowMs,
+    modelId,
+    members.map((member) => effectiveFromProvider(member, nowMs, modelId)),
   );
-  const left = pooled.effectivePercentRemaining;
-  return {
-    ...(left !== undefined ? { effectivePercentRemaining: left } : {}),
-    ...rank,
-    ...(left !== undefined && left <= 0 && members.some((member) => answersOnCredits(member))
-      ? { onCredits: true as const }
-      : {}),
-  };
 }
 
 /** The rows of the logins an `accounts` pool folds. */
@@ -288,7 +312,7 @@ export function buildModelsCatalog(
     );
     // A provider whose own logins pool is read as that pool, not as its
     // best login (docs/quota.md, "A pool of your own logins").
-    const pool = model.pool ? undefined : accountsPoolAt(pools, providers, quotaId, at);
+    const pool = model.pool ? undefined : accountsPoolOf(pools, quotaId);
     const effective = pool
       ? effectiveFromPool(pool, poolMembers(pool, providers), at, model.id)
       : effectiveAcrossAccounts(rows, at, model.id);

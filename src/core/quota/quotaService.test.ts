@@ -253,6 +253,36 @@ describe("QuotaService", () => {
     expect(options.refresh).toHaveBeenCalledTimes(1);
   });
 
+  it("folds the pools again without a login whose reading it forgets", async () => {
+    const login = (accountId: string) => ({
+      provider: "claude",
+      label: "Claude",
+      accountId,
+      status: "ok" as const,
+      stale: false,
+      windows: [{ id: "weekly", label: "weekly", percentRemaining: 55 }],
+    });
+    const snapshot = { ...SNAPSHOT, providers: [login("personal"), login("work")] };
+    const pool = { ...login("pool"), accountId: undefined };
+    const broadcast = vi.fn();
+    const service = new QuotaService({
+      refresh: vi.fn(async () => ({ snapshot, catalog: CATALOG })),
+      db: openInMemoryDatabase(),
+      broadcast,
+      // A pool while two logins have a row, as the home folds them.
+      pools: (laid) => (laid.providers.length > 1 ? [pool] : []),
+    });
+    await service.refresh("demand");
+    expect(service.latest()?.pools).toEqual([pool]);
+    broadcast.mockClear();
+
+    service.forgetAccount("work");
+    expect(service.latest()?.providers.map((row) => row.accountId)).toEqual(["personal"]);
+    expect(service.latest()).not.toHaveProperty("pools");
+    // Every surface hears it now, before the next reading lands.
+    expect(broadcast).toHaveBeenCalledTimes(1);
+  });
+
   it("rebuilds the model catalog over the last snapshot without fetching, and re-pushes it", async () => {
     // docs/model-lists.md: a runtime catalog read landed a model the catalog
     // had no row for, so routing could neither name nor pick it.

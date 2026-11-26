@@ -356,6 +356,8 @@ The routing row's candidate facts carry each model's band, the score it ranked b
 A model the person named or pinned shows that reason and no comparison; a choice recorded before the bands reads "Comparison not recorded".
 The projection reads only what was saved when the choice was made, so a later reading, a refresh or a restart never rewrites it.
 
+Where the provider's own logins pool (`docs/quota.md`, "A pool of your own logins"), a candidate's share left, band and score come from all of the pool's logins, while the account the routing row records, its reset and its charge are the serving login's alone; a serving login that is spent or on credits is ranked by its own reading.
+
 The crew account the model ranking reads is the account the task binds: at home `AccountSelector.crewAccount` previews the same model-scoped, pin-first, reserve-respecting choice `selectForSpawn` records, and on a computer that runs work the pool's own binding for that model.
 
 ## Operations

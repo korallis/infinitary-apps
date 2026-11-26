@@ -5,7 +5,7 @@ import {
   QUOTA_POOL_NAMES,
   type QuotaProviderView,
 } from "./quota";
-import { type PoolLogin, poolReading, providerScopes } from "./quotaSignals";
+import { classifyProviderWindows, type PoolLogin, poolReading } from "./quotaSignals";
 
 /** One of the person's own logins a pool may fold: an enabled account and its quota provider. */
 export type PoolMember = { accountId: string; provider: string };
@@ -13,8 +13,10 @@ export type PoolMember = { accountId: string; provider: string };
 /**
  * One own login as the pool weighs it, from its account row. A row that is
  * missing, stale or not a reading is unread, never zero; a sign-in that
- * ended cannot serve; a reading whose every-model allowance is used up is
- * spent until the window holding it resets, and serves again from then.
+ * ended cannot serve; a reading with an account-wide window used up is
+ * spent until every such window has reset - the last of them, since one
+ * that resets earlier leaves the login blocked by the other - and serves
+ * again from then.
  */
 function loginOfRow(row: QuotaProviderView | undefined, nowMs: number): PoolLogin {
   if (row?.status === "auth_required") return { state: "sign_in_ended" };
@@ -32,13 +34,19 @@ function loginOfRow(row: QuotaProviderView | undefined, nowMs: number): PoolLogi
       : [],
   );
   if (windows.length === 0) return { state: "serving" };
-  const all = providerScopes(row, nowMs).allModels;
-  if (all?.effectivePercentRemaining !== undefined && all.effectivePercentRemaining <= 0) {
-    const backAtMs = row.windows.find((window) => window.id === all.limitingWindowId)?.resetsAtMs;
-    if (backAtMs === undefined || backAtMs > nowMs)
-      return { state: "spent", windows, ...(backAtMs !== undefined ? { backAtMs } : {}) };
-  }
-  return { state: "serving", windows };
+  const { combined, bounding } = classifyProviderWindows(row.provider, row.windows);
+  const blocking = combined
+    ? bounding.filter(
+        (window) =>
+          typeof window.percentRemaining === "number" &&
+          window.percentRemaining <= 0 &&
+          (window.resetsAtMs === undefined || window.resetsAtMs > nowMs),
+      )
+    : [];
+  if (blocking.length === 0) return { state: "serving", windows };
+  const resets = blocking.map((window) => window.resetsAtMs);
+  const backAtMs = resets.every((at) => at !== undefined) ? Math.max(...resets) : undefined;
+  return { state: "spent", windows, ...(backAtMs !== undefined ? { backAtMs } : {}) };
 }
 
 /**
@@ -48,7 +56,9 @@ function loginOfRow(row: QuotaProviderView | undefined, nowMs: number): PoolLogi
  * over those logins' account rows as read at `nowMs`. A login a CLI proxy
  * answers for is that proxy's pool already and is no member. The row names
  * no account: each login keeps its own row, and the pool is a reading of
- * them, never an allowance of its own.
+ * them, never an allowance of its own. `nowMs` is when the rows were read
+ * (the snapshot's own time), not when the pool is looked at: a login's row
+ * keeps what it read until the next reading, and the pool agrees with it.
  */
 export function accountPools(
   providers: readonly QuotaProviderView[],
@@ -96,22 +106,10 @@ export function accountPools(
   return pools;
 }
 
-/**
- * The pool of the person's own logins of `provider` as it stands at `nowMs`:
- * the snapshot's pool names the logins, and their rows are folded again, so
- * a reset that passed since the snapshot was made counts with no new reading.
- */
-export function accountsPoolAt(
+/** The snapshot's pool of the person's own logins of `provider`, when it has one. */
+export function accountsPoolOf(
   pools: readonly QuotaProviderView[] | undefined,
-  providers: readonly QuotaProviderView[],
   provider: string,
-  nowMs: number,
 ): QuotaProviderView | undefined {
-  const saved = pools?.find((row) => row.provider === provider && row.pool?.source === "accounts");
-  if (!saved?.pool?.accounts) return undefined;
-  return accountPools(
-    providers,
-    saved.pool.accounts.map((accountId) => ({ accountId, provider })),
-    nowMs,
-  )[0];
+  return pools?.find((row) => row.provider === provider && row.pool?.source === "accounts");
 }

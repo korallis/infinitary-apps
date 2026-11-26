@@ -1,6 +1,9 @@
+import { accountPools } from "@shared/accountPools";
 import type { QuotaSnapshotView } from "@shared/quota";
 import { describe, expect, it } from "vitest";
 import type { ModelRuntime } from "../pi/types";
+import { buildModelsCatalog } from "../quota/catalog";
+import { quotaGateCleared } from "../routing/quotaGate";
 import { Flagship, type FlagshipVaultView } from "./flagship";
 import {
   firstmatePauseCard,
@@ -647,6 +650,114 @@ describe("a seat whose allowance is spent but whose provider has credits", () =>
       kind: "host",
       op: "keep-going-on-credits",
       arg: "acct",
+    });
+  });
+});
+
+// The review's ask on pooled logins (docs/quota.md, "A pool of your own
+// logins"): the provider's wait, a level's wait and the first mate's seat
+// agree, reading by reading, on when a spent pool serves again - with the
+// first login that can serve, not with a login's first window to reset.
+describe("a spent pool of two logins, across its resets", () => {
+  const T = Date.parse("2026-11-25T16:40:00Z");
+  const HOUR = 60 * 60 * 1000;
+  type Left = [percent: number, resetsAtMs: number];
+  const login = (accountId: string, session: Left, weekly: Left) => ({
+    provider: "codex",
+    label: "Codex",
+    accountId,
+    status: "ok" as const,
+    stale: false,
+    windows: [
+      { id: "session", label: "session", percentRemaining: session[0], resetsAtMs: session[1] },
+      { id: "weekly", label: "weekly", percentRemaining: weekly[0], resetsAtMs: weekly[1] },
+    ],
+  });
+  const reading = (at: number, rows: ReturnType<typeof login>[]): QuotaSnapshotView => ({
+    generatedAt: new Date(at).toISOString(),
+    fetchedAt: at,
+    providers: rows,
+    pools: accountPools(
+      rows,
+      rows.map((row) => ({ accountId: row.accountId, provider: row.provider })),
+      at,
+    ),
+  });
+  const sol = { provider: "openai-codex", id: "gpt-6-sol" };
+  const standing = (snapshot: QuotaSnapshotView) => {
+    const flagship = new Flagship({
+      vault: vaultOf([
+        { id: "a", providerId: "openai-codex", label: "A", enabled: true },
+        { id: "b", providerId: "openai-codex", label: "B", enabled: true },
+      ]),
+      settings: settingsOf("a"),
+      quota: { latest: () => snapshot },
+      baseRuntime,
+    });
+    const reads = {
+      availableModels: () => [sol],
+      slotsOf: () => ["high" as const],
+      quota: {
+        latest: () => snapshot,
+        latestModels: () =>
+          buildModelsCatalog(
+            [{ ...sol, name: "Sol" }],
+            snapshot.providers,
+            snapshot.generatedAt,
+            snapshot.fetchedAt,
+            snapshot.pools,
+          ),
+      },
+    };
+    return {
+      provider: quotaGateCleared("codex", reads),
+      level: quotaGateCleared("bucket:high", reads),
+      seatA: flagship.pause("a")?.class,
+      seatB: flagship.pause("b")?.class,
+      moveTo: flagship.sibling("a")?.id,
+      poolBackAt: snapshot.pools?.[0]?.pool?.backAtMs,
+    };
+  };
+  const week = T + 72 * HOUR;
+
+  it("holds every wait and the seat until the first login can serve, then clears them together", () => {
+    // A's session resets in 1 hour and its week in 72; B's session in 2 hours.
+    const spent = standing(
+      reading(T, [login("a", [0, T + HOUR], [0, week]), login("b", [0, T + 2 * HOUR], [50, week])]),
+    );
+    expect(spent).toEqual({
+      provider: false,
+      level: false,
+      seatA: "no_headroom",
+      seatB: "no_headroom",
+      moveTo: undefined,
+      poolBackAt: T + 2 * HOUR,
+    });
+
+    // A's session has reset; its week still blocks it, so nothing serves yet.
+    const firstReset = standing(
+      reading(T + 1.1 * HOUR, [
+        login("a", [100, T + 6 * HOUR], [0, week]),
+        login("b", [0, T + 2 * HOUR], [50, week]),
+      ]),
+    );
+    expect(firstReset).toEqual(spent);
+
+    // B's session has reset: B serves, and every reader says so at once.
+    expect(
+      standing(
+        reading(T + 2.1 * HOUR, [
+          login("a", [100, T + 6 * HOUR], [0, week]),
+          login("b", [100, T + 7 * HOUR], [50, week]),
+        ]),
+      ),
+    ).toEqual({
+      provider: true,
+      level: true,
+      seatA: "no_headroom",
+      seatB: undefined,
+      moveTo: "b",
+      poolBackAt: week,
     });
   });
 });

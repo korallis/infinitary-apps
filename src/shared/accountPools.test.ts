@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountPools, accountsPoolAt, type PoolMember } from "./accountPools";
+import { accountPools, accountsPoolOf, type PoolMember } from "./accountPools";
 import type { QuotaProviderView } from "./quota";
 import { poolRank } from "./quotaSignals";
 
@@ -167,15 +167,36 @@ describe("accountPools", () => {
   });
 });
 
-describe("accountsPoolAt", () => {
-  it("folds the snapshot's pool again at the moment it is read", () => {
+describe("a login with more than one account-wide window used up", () => {
+  // Both of a's windows are used up; b's session is, and its week has half left.
+  const rows = [login("a", 0, 0), login("b", 0, 50)];
+
+  it("is back only when its last blocking window resets, so the pool returns with the first login that can serve", () => {
+    const [pool] = accountPools(rows, members("a", "b"), NOW);
+    // b returns with its session, in 3 hours; a not before its week, in 72.
+    expect(pool?.pool).toMatchObject({ read: 0, spent: 2, backAtMs: NOW + 3 * HOUR });
+    expect(left(pool, "five_hour")).toBe(0);
+    // Two such logins: neither is back before its week resets.
+    const [both] = accountPools([login("a", 0, 0), login("c", 0, 0)], members("a", "c"), NOW);
+    expect(both?.pool).toMatchObject({ spent: 2, backAtMs: NOW + 72 * HOUR });
+  });
+
+  it("stays spent after its first window reset while the other still blocks it", () => {
+    const [pool] = accountPools(rows, members("a", "b"), NOW + 4 * HOUR);
+    // Only b serves: (100 + 0) / 2 of the session and (50 + 0) / 2 of the week.
+    expect(pool?.pool).toMatchObject({ read: 1, spent: 1, backAtMs: NOW + 72 * HOUR });
+    expect(left(pool, "five_hour")).toBe(50);
+    expect(left(pool, "seven_day")).toBe(25);
+  });
+});
+
+describe("accountsPoolOf", () => {
+  it("finds a provider's pool of own logins among the snapshot's, and no other", () => {
     const rows = [login("personal", 0, 90), login("work", 60, 40)];
     const saved = accountPools(rows, members("personal", "work"), NOW);
-    expect(left(accountsPoolAt(saved, rows, "claude", NOW), "five_hour")).toBe(30);
-    // (100 + 100) / 2: both session windows reset since the snapshot was made.
-    expect(left(accountsPoolAt(saved, rows, "claude", NOW + 4 * HOUR), "five_hour")).toBe(100);
-    expect(accountsPoolAt(saved, rows, "codex", NOW)).toBeUndefined();
-    expect(accountsPoolAt(undefined, rows, "claude", NOW)).toBeUndefined();
+    expect(accountsPoolOf(saved, "claude")).toBe(saved[0]);
+    expect(accountsPoolOf(saved, "codex")).toBeUndefined();
+    expect(accountsPoolOf(undefined, "claude")).toBeUndefined();
   });
 });
 

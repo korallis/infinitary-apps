@@ -19651,7 +19651,8 @@ ${events}` : prompt;
     const heads = /* @__PURE__ */ new Map();
     for (const view of poolRowViews(pools, now)) {
       const members2 = pools?.find((row) => row.provider === view.provider)?.pool?.accounts ?? [];
-      const first = accounts.find((account) => members2.includes(account.id));
+      const providerId = accounts.find((account) => members2.includes(account.id))?.providerId;
+      const first = accounts.find((account) => account.providerId === providerId);
       if (first) heads.set(first.id, view);
     }
     return heads;
@@ -20336,9 +20337,10 @@ ${events}` : prompt;
       };
     });
   }
+  const POOL_ROW_PREFIX = "pool:";
   function poolRow(view, provider) {
     return {
-      id: `pool:${view.provider}`,
+      id: `${POOL_ROW_PREFIX}${view.provider}`,
       provider,
       name: view.name,
       sub: view.sub,
@@ -20405,7 +20407,9 @@ ${events}` : prompt;
     ];
     const every = groups.flatMap((group) => group.rows);
     return {
-      summary: accountsSummary(every.map((row) => ({ signIn: row.signIn !== void 0 }))),
+      summary: accountsSummary(
+        every.filter((row) => !row.id.startsWith(POOL_ROW_PREFIX)).map((row) => ({ signIn: row.signIn !== void 0 }))
+      ),
       ...snapshot && snapshot.providers.length > 0 ? { asOf: PHONE_SETTINGS_WORDS.asOf(clockOf(snapshot.fetchedAt)) } : {},
       groups,
       marks: [
