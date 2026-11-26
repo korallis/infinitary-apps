@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { BATCH_BRANCH_PREFIX } from "@shared/batches";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { captureLoginPath, resetLoginPathForTests } from "../hostEnv";
@@ -268,7 +268,8 @@ describe("dependency install at commission (interaction P0, WI-7)", () => {
      * that never checks its writes does, so only being ended ends it;
      * `orphan` puts a program that ends at once between the two, so nothing
      * leads from the first program to the last and Windows cannot find it
-     * to end it.
+     * to end it. Whatever is still running is ended when the test finishes,
+     * failed or out of time included.
      */
     function unendingPnpm(mode: "quiet" | "loud" | "orphan") {
       const dir = scratchDir("infinitary-pnpm-unending-");
@@ -319,7 +320,7 @@ setTimeout(() => {}, 600000);
             return false;
           }
         });
-      const end = () => {
+      onTestFinished(() => {
         for (const pid of [...started("top"), ...started("under")]) {
           try {
             process.kill(pid);
@@ -327,64 +328,52 @@ setTimeout(() => {}, 600000);
             // Already ended, as the test expects.
           }
         }
-      };
-      return { bin, started, running, end };
+      });
+      return { bin, started, running };
     }
 
     it("has ended every program an install started by the time it reports running past its time", {
       timeout: 60_000,
     }, async () => {
       const pnpm = unendingPnpm("quiet");
-      try {
-        const { paths } = emptyService();
-        const workspace = new WorkspaceService(paths, { pnpm: pnpm.bin, installTimeoutMs: 4_000 });
-        const result = await workspace.installDependencies(lockfileFolder());
-        expect(pnpm.running([...pnpm.started("top"), ...pnpm.started("under")])).toEqual([]);
-        expect(result).toMatchObject({ outcome: "failed", error: "timed out" });
-        // The offline attempt and the online one each started both programs.
-        expect(pnpm.started("top")).toHaveLength(2);
-        expect(pnpm.started("under")).toHaveLength(2);
-      } finally {
-        pnpm.end();
-      }
+      const { paths } = emptyService();
+      const workspace = new WorkspaceService(paths, { pnpm: pnpm.bin, installTimeoutMs: 4_000 });
+      const result = await workspace.installDependencies(lockfileFolder());
+      expect(pnpm.running([...pnpm.started("top"), ...pnpm.started("under")])).toEqual([]);
+      expect(result).toMatchObject({ outcome: "failed", error: "timed out" });
+      // The offline attempt and the online one each started both programs.
+      expect(pnpm.started("top")).toHaveLength(2);
+      expect(pnpm.started("under")).toHaveLength(2);
     });
 
     it("has ended every program an install started by the time it reports printing too much", {
       timeout: 60_000,
     }, async () => {
       const pnpm = unendingPnpm("loud");
-      try {
-        const { paths } = emptyService();
-        const workspace = new WorkspaceService(paths, { pnpm: pnpm.bin });
-        const result = await workspace.installDependencies(lockfileFolder());
-        expect(pnpm.running([...pnpm.started("top"), ...pnpm.started("under")])).toEqual([]);
-        expect(result).toMatchObject({
-          outcome: "failed",
-          error: "stdout maxBuffer length exceeded",
-        });
-        expect(pnpm.started("top")).toHaveLength(2);
-        expect(pnpm.started("under")).toHaveLength(2);
-      } finally {
-        pnpm.end();
-      }
+      const { paths } = emptyService();
+      const workspace = new WorkspaceService(paths, { pnpm: pnpm.bin });
+      const result = await workspace.installDependencies(lockfileFolder());
+      expect(pnpm.running([...pnpm.started("top"), ...pnpm.started("under")])).toEqual([]);
+      expect(result).toMatchObject({
+        outcome: "failed",
+        error: "stdout maxBuffer length exceeded",
+      });
+      expect(pnpm.started("top")).toHaveLength(2);
+      expect(pnpm.started("under")).toHaveLength(2);
     });
 
     it("fails in bounded time, and starts no second attempt, when a program of the install cannot be ended", {
       timeout: 60_000,
     }, async () => {
       const pnpm = unendingPnpm("orphan");
-      try {
-        const { paths } = emptyService();
-        const workspace = new WorkspaceService(paths, { pnpm: pnpm.bin, installTimeoutMs: 4_000 });
-        const result = await workspace.installDependencies(lockfileFolder());
-        expect(result).toMatchObject({ outcome: "failed", error: "timed out" });
-        expect(pnpm.started("top")).toHaveLength(1);
-        expect(pnpm.running(pnpm.started("top"))).toEqual([]);
-        // The program Windows could not find is why no second attempt may start.
-        expect(pnpm.running(pnpm.started("under"))).toHaveLength(1);
-      } finally {
-        pnpm.end();
-      }
+      const { paths } = emptyService();
+      const workspace = new WorkspaceService(paths, { pnpm: pnpm.bin, installTimeoutMs: 4_000 });
+      const result = await workspace.installDependencies(lockfileFolder());
+      expect(result).toMatchObject({ outcome: "failed", error: "timed out" });
+      expect(pnpm.started("top")).toHaveLength(1);
+      expect(pnpm.running(pnpm.started("top"))).toEqual([]);
+      // The program Windows could not find is why no second attempt may start.
+      expect(pnpm.running(pnpm.started("under"))).toHaveLength(1);
     });
   });
 
