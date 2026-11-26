@@ -441,6 +441,8 @@ export class CrewWatch {
       // Streaming: a due row here is a failed native steer past its grace.
       // A followup-queue backend's rows simply wait for the turn to end.
       if (task.session.controlProfile.steer !== "native") return;
+      // Nor is one steered into a turn on a login the task is leaving (`LoginMoves`).
+      if (this.core.loginMoves.bindsTask(taskId)) return;
       const pictures = this.core.facts.rowPictures(taskId, due);
       if (pictures.blocked) return;
       const ids = this.core.turns.deliverRows(taskId, due);

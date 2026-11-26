@@ -41,6 +41,8 @@ const reading: QuotaSnapshotView = {
 function crew(
   start: {
     busy?: boolean;
+    /** Something other than its login holds the task's lane, as a cost limit does. */
+    held?: boolean;
     machine?: string;
     /** The provider's login in use when the task moves; Work unless named. */
     pin?: string;
@@ -89,6 +91,7 @@ function crew(
     model: MODEL,
   });
   const turn = { busy: start.busy ?? false };
+  const hold = { held: start.held ?? false };
   const runtime = { id: "task-1", turn } as unknown as TaskRuntime;
   const live = new Map<string, TaskRuntime>([["task-1", runtime]]);
   const moves = new LoginMoves(
@@ -112,10 +115,11 @@ function crew(
         steps.push(`lane ${taskId}`);
       },
       machineOf: () => start.machine ?? "local",
+      laneHeld: () => hold.held,
       disposed: () => false,
     },
   );
-  return { moves, tasks, events, steps, live, db, turn, runtime };
+  return { moves, tasks, events, steps, live, db, turn, hold, runtime };
 }
 
 describe("a started task's move to another login", () => {
@@ -163,6 +167,20 @@ describe("a started task's move to another login", () => {
     expect(t.steps).toEqual(["released task-1", "selected work", "resumed task-1 on work"]);
     // Moved, it is bound to nothing: the next delivery is an ordinary one.
     expect(t.moves.takes("task-1", () => {})).toBe(false);
+  });
+
+  it("leaves an idle task held by something else unopened, and moves it at the delivery after that hold", async () => {
+    const t = crew({ held: true });
+    await t.moves.moveOff("personal", "work");
+    expect(t.tasks.get("task-1")?.accountId).toBe("personal");
+    expect(t.steps).toEqual([]);
+    expect(t.events).toEqual([]);
+    t.hold.held = false;
+    const delivered: string[] = [];
+    expect(t.moves.takes("task-1", (task) => delivered.push(task.id))).toBe(true);
+    await expect.poll(() => delivered).toEqual(["task-1"]);
+    expect(t.tasks.get("task-1")?.accountId).toBe("work");
+    expect(t.steps).toEqual(["released task-1", "selected work", "resumed task-1 on work"]);
   });
 
   it("takes no delivery of a task bound to no move, or one whose login has room again", async () => {

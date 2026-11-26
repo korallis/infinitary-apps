@@ -1,3 +1,4 @@
+import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -9,6 +10,7 @@ import {
 } from "../../../tests/helpers/crewHarness";
 import type { FakeSessionOptions } from "../../../tests/helpers/fakeSession";
 import { type AccountPool, AccountSelector } from "../routing/accountRouter";
+import { CostLimitStore } from "../storage/costLimitStore";
 import { DecisionStore } from "../storage/decisionStore";
 import { seedTask } from "../tasks/seedTask";
 import { crewmateRestartText } from "./crewSession";
@@ -51,6 +53,7 @@ function threeLogins(
   claude: boolean,
   cutOffs = new Map<string, typeof RAN_OUT>(),
 ) {
+  let costs: CostLimitStore | undefined;
   const pool: AccountPool = {
     list: () =>
       [
@@ -68,6 +71,10 @@ function threeLogins(
   let accounts: AccountSelector | undefined;
   const h = setup(first, {
     crewmates: [second],
+    costLimits: (db) => {
+      costs = new CostLimitStore(db);
+      return { store: costs, appLimit: () => DEFAULT_COST_LIMIT };
+    },
     serveability: {
       cutOff: (accountId) => cutOffs.get(accountId),
       providerName: () => "ChatGPT",
@@ -92,7 +99,7 @@ function threeLogins(
     decisions: new DecisionStore(h.db),
     loginInUse: { whenLow: () => "ask", pin: () => {} },
   });
-  return h;
+  return { ...h, costs: costs as CostLimitStore };
 }
 
 function seedRunning(
@@ -264,6 +271,68 @@ describe("a task inside a turn when its login's work is moved", () => {
     expect(h.tasks.get("t-move")?.accountId).toBe("acct_personal");
     expect(h.sessionSpecs).toHaveLength(1);
     expect(second.promptCalls).toHaveLength(0);
+  });
+});
+
+// The plan's "A moved lane" again, for the two ways round it: words sent
+// after the click on a backend that takes them mid-turn, and a move made at
+// once for a task another hold keeps closed.
+describe("a task whose backend takes words mid-turn, after its login's work is moved", () => {
+  it("keeps words sent after the click out of the turn on the old login, and reads them on the named one", async () => {
+    const first = fakeCrewmate({});
+    const second = fakeCrewmate({});
+    const h = threeLogins("openai-codex", first, second, false);
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+
+    await h.supervisor.steer.steerCrewmate("t-move", "carry on");
+    await tick();
+    expect(first.promptCalls).toHaveLength(1);
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    await expect(h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "queued-next-turn",
+    );
+    // The sweep that steers a waiting row into a running turn passes it too.
+    await h.supervisor.watch.sweepTaskLane("t-move", Date.now() + 3_600_000);
+    await tick();
+    expect(first.steer).not.toHaveBeenCalled();
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_personal");
+
+    first.finishPrompt();
+    await vi.waitFor(() => expect(second.promptCalls).toHaveLength(1));
+    expect(boundAccount(h, 1)).toBe("acct_work");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_work");
+    expect(second.promptCalls[0]).toContain("Check the footer too.");
+    expect(first.steer).not.toHaveBeenCalled();
+    expect(first.promptCalls).toHaveLength(1);
+  });
+});
+
+describe("an idle task held at its cost limit when its login's work is moved", () => {
+  it("is not reopened by the move, and takes its next words on the named login once the limit is answered", async () => {
+    const first = fakeCrewmate({});
+    const h = threeLogins("openai-codex", first, fakeCrewmate({}), false);
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    await tick();
+    expect(h.sessionSpecs).toHaveLength(0);
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_personal");
+    await expect(h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "recorded-held",
+    );
+    await tick();
+    expect(h.sessionSpecs).toHaveLength(0);
+
+    // The captain allows more: the task's next words open it on Work alone.
+    h.costs.clearHold("t-move");
+    await h.supervisor.steer.steerCrewmate("t-move", "And the header.");
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    expect(h.sessionSpecs).toHaveLength(1);
+    expect(boundAccount(h, 0)).toBe("acct_work");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_work");
+    expect(first.promptCalls[0]).toContain("Check the footer too.");
+    expect(first.promptCalls[0]).toContain("And the header.");
   });
 });
 
