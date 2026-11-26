@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "windows-task-packages",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "On a Windows PC, a task starts with its project's packages installed",
+      "body": "On a Windows PC, Infinitary now installs a project's packages into a task's working copy before its crewmate starts, as it does on a Mac. Before, that install never started there, and a working copy reused from an earlier task kept packages that pointed at that task's deleted folder, so builds and tests could fail until the crewmate installed them again.",
+      "noPicture": "This changes what a task's working copy holds before its crewmate starts, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

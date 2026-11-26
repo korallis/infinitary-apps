@@ -18,6 +18,7 @@ import { processRoots } from "../placed/processRoots";
 import { hostPlatform } from "../platform";
 import { removeAll } from "../removeWhole";
 import type { TaskRecord } from "../storage/taskRecords";
+import { endWindowsTree } from "../windowsTree";
 import { type KeptJobs, keptJobsAt } from "./keptJobs";
 import { keepLeftovers, LeftBehindHere, type LeftBehindOptions } from "./leftBehind";
 import { handOverStops, takeKeeps, takeStops } from "./taskStops";
@@ -53,17 +54,6 @@ export type LeftoverSweep = {
   stopTimeMs?: number;
   graceMs?: number;
 };
-
-/** Ends a program and every program under it on Windows, by force; `fallback` where taskkill cannot start. */
-function endWindowsTree(pid: number, fallback: () => void): void {
-  const root = process.env.SystemRoot ?? "C:\\Windows";
-  const kill = spawn(join(root, "System32", "taskkill.exe"), ["/F", "/T", "/PID", String(pid)], {
-    env: hostEnv(),
-    stdio: "ignore",
-    windowsHide: true,
-  });
-  kill.once("error", fallback);
-}
 
 /**
  * Runs one stop in its own process group, in the folder it was registered in

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readdirSync, realpathSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { lstat, mkdir, readdir, realpath } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { git } from "./git";
 
 /**
@@ -12,6 +12,16 @@ import { git } from "./git";
  * untracked or ignored file gone except `node_modules` - and parked here,
  * so the next task on the same repository starts from a tree whose
  * dependencies only need an incremental install instead of a full one.
+ *
+ * The dependency trees are kept only while their package links still lead
+ * inside the slot (`leadsInside`). Parking renames the working copy, and a
+ * link that holds an absolute path - every folder link on Windows, where
+ * pnpm links packages with junctions - then leads to the closed task's
+ * folder. pnpm does not repair such a tree: its install answers "Already up
+ * to date" and leaves every link as it was. One install made every tree of
+ * a working copy, and a package's own tree links into the root's, so when
+ * one leads out they all go; the checked-out files stay, and the next
+ * task's install builds them again.
  *
  * Treehouse's safety rules, not its binary:
  * - fail closed: a slot is handed out only when git proves it is a
@@ -165,8 +175,9 @@ export class WorktreePool {
   }
 
   /**
-   * The slow half of a return: everything but the dependency tree goes,
-   * then the slot is proven pristine and renamed idle - or retired.
+   * The slow half of a return: everything but the dependency trees goes,
+   * and so do they when a link of theirs leads out of the slot, then the
+   * slot is proven pristine and renamed idle - or retired.
    */
   private async finishReturn(staging: string): Promise<void> {
     try {
@@ -175,6 +186,10 @@ export class WorktreePool {
       // -x: ignored files go too (build output, .env, reports from the last
       // task); -e keeps every node_modules, at any depth, out of the clean.
       await git(staging, ["clean", "-ffdxq", "-e", KEPT_DIR]);
+      const { trees } = await slotContents(staging);
+      if (!(await allLeadInside(staging, trees))) {
+        for (const tree of trees) await this.discard(join(staging, tree));
+      }
       await this.serial(async () => {
         if (!(await isPristineSlot(staging, common))) {
           await this.retire(staging);
@@ -266,38 +281,93 @@ export class WorktreePool {
 /**
  * Whether a slot may be handed out: the root of its own checkout, of the
  * expected repository, detached (no task branch rides along), and holding
- * nothing but dependency trees - no change, no untracked or ignored file.
+ * nothing but dependency trees - no change, no untracked or ignored file -
+ * whose package links lead inside it. A slot parked before the pool read
+ * those links is refused here, so it is retired, never handed out.
  */
 export async function isPristineSlot(dir: string, common: string): Promise<boolean> {
   try {
     await assertCheckoutOf(dir, common);
-    // One status answers both questions: the branch header says whether HEAD
-    // is detached, and the entries are everything the tree holds. Untracked
-    // and ignored files are asked for explicitly, so a repository that hides
-    // them in its config cannot make a dirty slot read as clean.
-    const status = await git(dir, [
-      "status",
-      "--porcelain=v2",
-      "--branch",
-      "--ignored",
-      "--untracked-files=normal",
-    ]);
-    const lines = status.split("\n").filter(Boolean);
-    // Detached, as a parked slot must be: no task branch rides along.
-    if (!lines.includes("# branch.head (detached)")) return false;
-    return lines
-      .filter((line) => !line.startsWith("# "))
-      .every((line) => isKeptDependencyTree(line));
+    const contents = await slotContents(dir);
+    return contents.detached && !contents.other && (await allLeadInside(dir, contents.trees));
   } catch {
     return false;
   }
 }
 
-/** `! node_modules/` or `! packages/x/node_modules/` - an ignored dependency tree. */
-function isKeptDependencyTree(line: string): boolean {
-  if (!line.startsWith("! ")) return false;
+/**
+ * What a slot holds, from one status: the branch header says whether HEAD
+ * is detached, as a parked slot must be, and the entries are everything in
+ * the tree - its dependency trees, by their paths from the slot, and
+ * whether there is anything else. Untracked and ignored files are asked for
+ * explicitly, so a repository that hides them in its config cannot make a
+ * dirty slot read as clean.
+ */
+async function slotContents(
+  dir: string,
+): Promise<{ detached: boolean; trees: string[]; other: boolean }> {
+  const status = await git(dir, [
+    "status",
+    "--porcelain=v2",
+    "--branch",
+    "--ignored",
+    "--untracked-files=normal",
+  ]);
+  const lines = status.split("\n").filter(Boolean);
+  const entries = lines.filter((line) => !line.startsWith("# "));
+  const trees = entries.map(keptDependencyTree).filter((tree) => tree !== null);
+  return {
+    detached: lines.includes("# branch.head (detached)"),
+    trees,
+    other: trees.length < entries.length,
+  };
+}
+
+/** `! node_modules/` or `! packages/x/node_modules/` - an ignored dependency tree, as its path. */
+function keptDependencyTree(line: string): string | null {
+  if (!line.startsWith("! ")) return null;
   const path = line.slice(2).replace(/\/$/, "");
-  return basename(path) === KEPT_DIR;
+  return basename(path) === KEPT_DIR ? path : null;
+}
+
+/** Whether every one of a slot's dependency trees works where the slot stands now. */
+async function allLeadInside(slot: string, trees: readonly string[]): Promise<boolean> {
+  for (const tree of trees) if (!(await leadsInside(slot, tree))) return false;
+  return true;
+}
+
+/**
+ * Whether a dependency tree works where the slot stands now: the tree, each
+ * link at its top and each link in a `@scope` folder there leads to
+ * something inside the slot. Those are a project's own packages, where a
+ * package manager that links at all puts its links; the links deeper in
+ * the tree come from the same install and lead where these do. One that
+ * copies packages into plain folders has none, and its tree survives any
+ * rename. A link that leads nowhere counts as leading out.
+ */
+async function leadsInside(slot: string, tree: string): Promise<boolean> {
+  const root = await realpath(slot);
+  const inside = async (path: string): Promise<boolean> => {
+    try {
+      const from = relative(root, await realpath(path));
+      return from !== ".." && !from.startsWith(`..${sep}`) && !isAbsolute(from);
+    } catch {
+      return false;
+    }
+  };
+  const top = join(slot, tree);
+  if ((await lstat(top)).isSymbolicLink()) return inside(top);
+  for (const entry of await readdir(top, { withFileTypes: true })) {
+    const path = join(top, entry.name);
+    if (entry.isSymbolicLink()) {
+      if (!(await inside(path))) return false;
+    } else if (entry.isDirectory() && entry.name.startsWith("@")) {
+      for (const scoped of await readdir(path, { withFileTypes: true })) {
+        if (scoped.isSymbolicLink() && !(await inside(join(path, scoped.name)))) return false;
+      }
+    }
+  }
+  return true;
 }
 
 /** The repository's shared git directory, resolved: one pool per repository. */

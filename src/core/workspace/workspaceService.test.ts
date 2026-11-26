@@ -57,14 +57,33 @@ async function service() {
 /**
  * A pnpm stand-in that logs its arguments and answers each attempt the way
  * the test asks: the offline attempt (`--offline` present) and the online
- * one exit with their own codes.
+ * one exit with their own codes. On Windows it is a batch file, as the pnpm
+ * npm or Corepack installs is, which hands the same work to a Node script.
  */
 function stubPnpm(dir: string, offlineExit: number, onlineExit: number) {
   const log = join(dir, "pnpm-calls.log");
-  const bin = join(dir, "pnpm-stub.sh");
-  writeFileSync(
-    bin,
-    `#!/bin/sh
+  const windows = process.platform === "win32";
+  const bin = join(dir, windows ? "pnpm-stub.cmd" : "pnpm-stub.sh");
+  if (windows) {
+    const script = join(dir, "pnpm-stub.cjs");
+    writeFileSync(
+      script,
+      `const { appendFileSync, realpathSync } = require("node:fs");
+const args = process.argv.slice(2).join(" ");
+appendFileSync(${JSON.stringify(log)}, realpathSync(process.cwd()) + "|" + args + "\\n");
+const offline = args.includes("--offline");
+const exit = offline ? ${offlineExit} : ${onlineExit};
+if (exit !== 0) {
+  console.error(offline ? "ERR_PNPM_NO_OFFLINE_TARBALL missing from the store" : "ERR_PNPM_FETCH_404 not found");
+}
+process.exit(exit);
+`,
+    );
+    writeFileSync(bin, `@node "${script}" %*\r\n`);
+  } else {
+    writeFileSync(
+      bin,
+      `#!/bin/sh
 echo "$PWD|$*" >> "${log}"
 case "$*" in
   *--offline*) [ ${offlineExit} -eq 0 ] || echo "ERR_PNPM_NO_OFFLINE_TARBALL missing from the store" >&2; exit ${offlineExit} ;;
@@ -72,8 +91,9 @@ esac
 [ ${onlineExit} -eq 0 ] || echo "ERR_PNPM_FETCH_404 not found" >&2
 exit ${onlineExit}
 `,
-  );
-  chmodSync(bin, 0o755);
+    );
+    chmodSync(bin, 0o755);
+  }
   const calls = () =>
     existsSync(log)
       ? readFileSync(log, "utf8")
@@ -154,6 +174,100 @@ describe("dependency install at commission (interaction P0, WI-7)", () => {
       process.env.PATH = saved.PATH;
       process.env.SHELL = saved.SHELL;
     }
+  });
+
+  describe.runIf(process.platform === "win32")("on Windows", () => {
+    /** A folder to put first on the search path, holding pnpm the way npm installs it there. */
+    function npmInstalledPnpm(stub: string): string {
+      const bin = scratchDir("infinitary-npm-bin-");
+      // The shim a Git Bash runs, which Windows itself cannot start.
+      writeFileSync(join(bin, "pnpm"), "#!/bin/sh\nexit 1\n");
+      writeFileSync(join(bin, "pnpm.cmd"), `@"${stub}" %*\r\n`);
+      return bin;
+    }
+
+    function lockfileFolder(): string {
+      const cwd = scratchDir("infinitary-install-windows-");
+      writeFileSync(join(cwd, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
+      return cwd;
+    }
+
+    async function withSearchPath<T>(path: string, run: () => Promise<T>): Promise<T> {
+      const saved = process.env.PATH;
+      process.env.PATH = path;
+      try {
+        return await run();
+      } finally {
+        process.env.PATH = saved;
+      }
+    }
+
+    it("starts a pnpm that is a batch file, found by its name on the search path", async () => {
+      const stub = stubPnpm(scratchDir("infinitary-pnpm-"), 0, 0);
+      const bin = npmInstalledPnpm(stub.bin);
+      const { workspace } = emptyService();
+      const cwd = lockfileFolder();
+      const result = await withSearchPath(`${bin};${process.env.PATH}`, () =>
+        workspace.installDependencies(cwd),
+      );
+      expect(result).toMatchObject({ outcome: "offline" });
+      expect(stub.calls()).toEqual([[realpathSync(cwd), "install --frozen-lockfile --offline"]]);
+    });
+
+    it("never runs a file named pnpm that the project itself holds", async () => {
+      const stub = stubPnpm(scratchDir("infinitary-pnpm-"), 0, 0);
+      const bin = npmInstalledPnpm(stub.bin);
+      const { workspace } = emptyService();
+      const cwd = lockfileFolder();
+      writeFileSync(join(cwd, "pnpm.cmd"), "@echo ran > project-pnpm-ran.txt\r\n@exit /b 1\r\n");
+      const result = await withSearchPath(`${bin};${process.env.PATH}`, () =>
+        workspace.installDependencies(cwd),
+      );
+      expect(result).toMatchObject({ outcome: "offline" });
+      expect(existsSync(join(cwd, "project-pnpm-ran.txt"))).toBe(false);
+    });
+
+    it("says pnpm could not be started when no folder on the search path holds it", async () => {
+      const { workspace } = emptyService();
+      const cwd = lockfileFolder();
+      const result = await withSearchPath(scratchDir("infinitary-empty-path-"), () =>
+        workspace.installDependencies(cwd),
+      );
+      expect(result).toMatchObject({ outcome: "failed", error: "spawn pnpm ENOENT" });
+    });
+
+    it("ends every program an install started when it runs past its time", {
+      timeout: 60_000,
+    }, async () => {
+      const dir = scratchDir("infinitary-pnpm-hang-");
+      const pids = join(dir, "pids.log");
+      const script = join(dir, "hang.cjs");
+      writeFileSync(
+        script,
+        `require("node:fs").appendFileSync(${JSON.stringify(pids)}, process.pid + "\\n");
+setTimeout(() => {}, 600000);
+`,
+      );
+      const bin = join(dir, "pnpm-hang.cmd");
+      writeFileSync(bin, `@node "${script}"\r\n`);
+      const { paths } = emptyService();
+      const workspace = new WorkspaceService(paths, { pnpm: bin, installTimeoutMs: 4_000 });
+      const result = await workspace.installDependencies(lockfileFolder());
+      expect(result).toMatchObject({ outcome: "failed", error: "timed out" });
+      // The offline attempt's program and the online attempt's, both started by the batch file.
+      const started = readFileSync(pids, "utf8").trim().split("\n").map(Number);
+      expect(started).toHaveLength(2);
+      const running = () =>
+        started.filter((pid) => {
+          try {
+            process.kill(pid, 0);
+            return true;
+          } catch {
+            return false;
+          }
+        });
+      await vi.waitFor(() => expect(running()).toEqual([]), { timeout: 20_000, interval: 200 });
+    });
   });
 
   it("skips a directory with no pnpm lockfile without running anything", async () => {

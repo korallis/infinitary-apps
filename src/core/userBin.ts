@@ -58,6 +58,21 @@ export function onSearchPath(name: string, env: NodeJS.ProcessEnv, platform: str
     .some((dir) => programFiles(dir, name, env, platform).some(isExecutable));
 }
 
+/**
+ * The file Windows itself starts for program `name`: in the first
+ * search-path folder that holds one, the first of the endings Windows runs
+ * a program by. Never the bare name, which `programFiles` lists first: a
+ * file without an ending is the shim a Git Bash runs, and Windows cannot
+ * start it.
+ */
+export function windowsProgram(name: string, env: NodeJS.ProcessEnv): string | undefined {
+  for (const dir of (env.PATH ?? "").split(win32.delimiter).filter(Boolean)) {
+    const file = programFiles(dir, name, env, "win32").slice(1).find(isExecutable);
+    if (file) return file;
+  }
+  return undefined;
+}
+
 export function findOnPath(name: string, env: NodeJS.ProcessEnv): string | undefined {
   for (const entry of (env.PATH ?? "").split(delimiter)) {
     if (!entry) continue;

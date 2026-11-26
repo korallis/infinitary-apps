@@ -43,6 +43,21 @@ A failed step says what failed, installs nothing further, and offers to try agai
 A run of the app with no window (`docs/run.md`) has nobody to ask, so it ends with the reason, and a run from source keeps Pi's own lookup.
 Moving to a newer Git for Windows changes the version, file, address, SHA-256 and size together, each read from the release's own page.
 
+## A task's working copy
+
+The app installs a project's packages into a task's working copy before its crewmate's first turn (`WorkspaceService.installDependencies`), and on Windows it looks pnpm up itself (`runInstall`, `src/core/workspace/installProcess.ts`).
+Node starts a program's bare name only as an `.exe`, and the pnpm that npm or Corepack installs is a batch file, `pnpm.cmd`, which reads as not installed.
+The app takes the first search-path folder that holds pnpm under one of the endings Windows runs programs by (`windowsProgram`, `src/core/userBin.ts`), never a file in the working copy, and runs a batch file through `cmd.exe`.
+An install that runs past its time ends with every program under it (`endWindowsTree`, `src/core/windowsTree.ts`): ending `cmd.exe` alone would leave pnpm writing into the working copy.
+
+A working copy taken from the warm pool arrives there without its packages.
+On Windows pnpm links packages with junctions, and a junction holds its whole path, so once the pool renames a closed task's working copy every link in its `node_modules` leads to the folder that task had.
+The next install there repairs none of them: pnpm answers that everything is up to date.
+The pool keeps a working copy's dependency trees only while their links lead inside it (`leadsInside`, `src/core/workspace/worktreePool.ts`), so on Windows a pnpm project's trees go when the copy is parked, the checked-out files stay, and the next task's install links every package again from pnpm's store.
+When one tree's links lead out, every tree of that working copy goes: one install made them all, and a package's own tree links into the root's.
+A tree of plain folders, as npm leaves one, has no such link and stays, and so does a pnpm tree on a Mac or a Linux computer, where its links are relative.
+A spare working copy parked by an earlier version of the app, whose links lead out of it, is never handed to a task: it is deleted and the task gets a new one.
+
 ## Joining another computer
 
 Infinitary at its first launch on a Windows PC joins a first mate on a Mac, a Linux computer or another Windows PC by a pasted link or by that computer's address (`docs/view.md`, "Joining"), and both controls it and runs its work, as a Mac that joined by its window does (`systemRunsWork` in `src/shared/devices.ts`).

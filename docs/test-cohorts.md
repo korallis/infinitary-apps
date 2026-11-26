@@ -159,7 +159,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/workspace/naming.test.ts` | real git for incoming commit range, at the run's own priority | 5 s default |
 | `tests/catalog-merges.test.ts` | real git and the message compiler in a throwaway project holding the real catalogs: two changes adding messages combined, with and without rebuilding the phone's card and panel hosts, and a change from before the catalog move brought up to date; two cases also hold the code the phone's card generator bundles and run it three times | 20 s (Mac slowest case 3.2 s); each card generator case 105 s (Linux check 20.2 s) |
 | `tests/naming-replacement.test.ts` | real git: a project's, the default workspace's and the personal workspace's commits, and a task branch's, at the run's own priority | 5 s default |
-| `src/core/workspace/workspaceService.test.ts` | real git, at the run's own priority | 15 s |
+| `src/core/workspace/workspaceService.test.ts` | real git, at the run's own priority | 15 s for the file; the Windows-only test of an install's time limit is 60 s |
 | `src/core/folderMove/copy.test.ts` | the system's copier on a scratch data folder, on a Mac whose disks are numbered as on another startup | 5 s default (Mac slowest per-case minimum 0.007 s) |
 | `src/core/folderMove/move.test.ts` | real git, the system's copier, SQLite, a vite build and the Electron binary: the one-time move of a scratch data folder | 10 s (Mac slowest per-case minimum 0.588 s) |
 | `src/core/folderMove/takeOver.integration.test.ts` | real Node processes holding a scratch older folder by its locks, `ps` on a Mac or `/proc` on Linux, and the ordinary stop and a forced one: taking over from an older copy before the one-time move | 10 s |

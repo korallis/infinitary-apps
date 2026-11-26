@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { join } from "node:path";
 import { cutText, cutTextEnd } from "@shared/textCut";
 import { hostEnv, SHELL_CAP_ENV, SHELL_ID_ENV, SHELL_STARTED_ENV, withTaskShell } from "../hostEnv";
 import type { TypedWake, WakeLane } from "../orchestrator/wakes";
@@ -14,6 +13,7 @@ import type { TaskShell } from "../session/session";
 import type { AppDatabase } from "../storage/db";
 import { type InterruptedJob, JobStore } from "../storage/jobStore";
 import { atUtilityQos } from "../utilityQos";
+import { endWindowsTree } from "../windowsTree";
 
 /**
  * Background jobs for the event-driven bash tool (R2): a command that
@@ -413,13 +413,7 @@ export function killGroup(
   if (job.windows) {
     // Windows' own taskkill ends the job and every program under it, by
     // force, as Pi's bash does; nothing there takes a gentler signal.
-    const root = process.env.SystemRoot ?? "C:\\Windows";
-    const kill = spawn(join(root, "System32", "taskkill.exe"), ["/F", "/T", "/PID", String(pid)], {
-      env: hostEnv(),
-      stdio: "ignore",
-      windowsHide: true,
-    });
-    kill.once("error", () => job.child.kill(signal));
+    endWindowsTree(pid, () => job.child.kill(signal));
     return;
   }
   try {

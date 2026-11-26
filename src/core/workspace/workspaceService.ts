@@ -25,6 +25,7 @@ import {
   releaseTaskRemote,
   taskRemoteName,
 } from "./git";
+import { runInstall } from "./installProcess";
 import { composedName, requireNamedRange } from "./naming";
 import {
   defaultTaskBranch,
@@ -304,9 +305,9 @@ export class WorkspaceService {
     // An install links thousands of files and may build native modules:
     // below the UI, with everything it starts (../utilityQos.ts).
     const command = atUtilityQos(this.options.pnpm ?? "pnpm", args);
-    await execFileAsync(command.file, command.args, {
+    await runInstall(command.file, command.args, {
       cwd,
-      timeout: this.options.installTimeoutMs ?? INSTALL_TIMEOUT_MS,
+      timeoutMs: this.options.installTimeoutMs ?? INSTALL_TIMEOUT_MS,
       maxBuffer: 16 * 1024 * 1024,
       env: hostEnv({ CI: "true" }),
     });
