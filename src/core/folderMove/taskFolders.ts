@@ -12,6 +12,31 @@ function columns(db: Database.Database, table: string): Set<string> {
 }
 
 /**
+ * Rewrites one whole-path column, where the table has it, from each older
+ * folder to `to`: in one statement for a folder written under this
+ * computer's folder rules, row by row for one written under another
+ * system's (./folderRules.ts).
+ */
+export function moveColumn(
+  db: Database.Database,
+  table: string,
+  column: string,
+  froms: readonly string[],
+  to: string,
+  where = "1",
+): void {
+  if (!columns(db, table).has(column)) return;
+  const statement = db.prepare(
+    `UPDATE ${table} SET ${column} = @to || substr(${column}, length(@from) + 1)
+     WHERE (${where}) AND (${column} = @from OR substr(${column}, 1, length(@prefix)) = @prefix)`,
+  );
+  for (const from of froms) {
+    if (fromOtherRules(from)) moveColumnAcross(db, table, column, where, from, to);
+    else statement.run({ from, to, prefix: `${from}${sep}` });
+  }
+}
+
+/**
  * A task's project folder and working copy name this Mac, so a folder move
  * rewrites both for every row. Its conversation file names the computer that
  * holds the conversation: this Mac's when `device_id` is null, and the other
@@ -22,24 +47,13 @@ export function rewriteTaskFolders(
   froms: readonly string[],
   to: string,
 ): void {
-  const update = (table: string, column: string, where = "1") => {
-    if (!columns(db, table).has(column)) return;
-    const statement = db.prepare(
-      `UPDATE ${table} SET ${column} = @to || substr(${column}, length(@from) + 1)
-       WHERE (${where}) AND (${column} = @from OR substr(${column}, 1, length(@prefix)) = @prefix)`,
-    );
-    for (const from of froms) {
-      if (fromOtherRules(from)) moveColumnAcross(db, table, column, where, from, to);
-      else statement.run({ from, to, prefix: `${from}${sep}` });
-    }
-  };
-  update("tasks", "repo_dir");
-  update("tasks", "worktree_dir");
+  moveColumn(db, "tasks", "repo_dir", froms, to);
+  moveColumn(db, "tasks", "worktree_dir", froms, to);
   // The resume token is on the task's execution row (INF-1296 piece 3), or
   // on the task row of a database from before it.
   const running = columns(db, "task_execution").has("session_file") ? "task_execution" : "tasks";
   const here = columns(db, running).has("device_id") ? "device_id IS NULL" : "1";
-  update(running, "session_file", here);
+  moveColumn(db, running, "session_file", froms, to, here);
 }
 
 /**

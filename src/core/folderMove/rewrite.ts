@@ -10,9 +10,9 @@ import { writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import Database from "better-sqlite3";
 import { KNOWLEDGE_DB_FILE } from "../storage/knowledgeStore";
-import { fromOtherRules, moveColumnAcross, movedAcross } from "./folderRules";
+import { fromOtherRules, movedAcross } from "./folderRules";
 import type { OutsideChange } from "./record";
-import { rewriteTaskFolders } from "./taskFolders";
+import { moveColumn, rewriteTaskFolders } from "./taskFolders";
 import type { GitLink } from "./tree";
 
 /**
@@ -105,20 +105,10 @@ export class DatabaseCheckError extends Error {
  * the next time it opens (`repairMovedTaskFolders`).
  */
 function rewriteMainDatabase(db: Database.Database, froms: Froms, to: string): void {
-  const update = (table: string, column: string, where = "1") => {
-    if (!columns(db, table).has(column)) return;
-    const statement = db.prepare(
-      `UPDATE ${table} SET ${column} = @to || substr(${column}, length(@from) + 1)
-       WHERE (${where}) AND (${column} = @from OR substr(${column}, 1, length(@prefix)) = @prefix)`,
-    );
-    for (const from of froms) {
-      if (fromOtherRules(from)) moveColumnAcross(db, table, column, where, from, to);
-      else statement.run({ from, to, prefix: `${from}${sep}` });
-    }
-  };
-  update("repos", "path");
+  moveColumn(db, "repos", "path", froms, to);
   rewriteTaskFolders(db, froms, to);
-  if (columns(db, "plugins").has("source")) update("plugins", "spec", "source = 'path'");
+  if (columns(db, "plugins").has("source"))
+    moveColumn(db, "plugins", "spec", froms, to, "source = 'path'");
   // Settings hold JSON: the Firstmate's own session file is one.
   const settings = db.prepare("SELECT key, value FROM settings").all() as {
     key: string;
