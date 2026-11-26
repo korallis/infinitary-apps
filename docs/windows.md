@@ -49,12 +49,14 @@ For a project that holds a pnpm lockfile, the app installs its packages into a t
 Node starts a program's bare name only as an `.exe`, and the pnpm that npm or Corepack installs is a batch file, `pnpm.cmd`, which reads as not installed.
 The app takes the first search-path folder, named by its whole path, that holds pnpm as a `.com`, `.exe`, `.bat` or `.cmd` file, in the order `PATHEXT` lists those endings (`windowsProgram`, `src/core/userBin.ts`), and never a file in the working copy.
 A batch file runs through Windows' own `cmd.exe` with a person's AutoRun commands off, and `cmd.exe` reads the file's path from a variable of the run's environment, so a folder named like a variable (`%SystemRoot%`) stays as it is written.
-An install that runs past its time, or prints more than the app reads, has every program under it ended before it fails (`endWindowsTree`, `src/core/windowsTree.ts`): ending `cmd.exe` alone would leave pnpm writing into the working copy while the next attempt starts.
-When ten seconds do not end them all, the install fails without its second, online attempt.
+When an install runs past its time, or prints more than the app reads, the app asks Windows to end every program under it before it fails (`endWindowsTree`, `src/core/windowsTree.ts`): ending `cmd.exe` alone would leave pnpm writing into the working copy while the next attempt starts.
+The second, online attempt starts only once Windows has answered that it ended them and the install's output has closed.
+When Windows does not answer so, or the output is still held after ten seconds, the install fails without that attempt.
+Windows finds a program through its parent, so one whose parent has already ended, and which holds none of the install's output, passes both checks unseen and can still be running when the online attempt starts.
 
 On Windows a pnpm project's working copy arrives from the warm pool without its packages.
 There pnpm links packages with junctions, and a junction holds its whole path, so once the pool renames a closed task's working copy every link in its `node_modules` leads to the folder that task had.
-The next install there repairs none of them: pnpm answers that everything is up to date.
+The next install is no repair to rely on: in a project of one package pnpm 11 answers that everything is up to date and leaves every link as it was, while in a workspace it links the packages again.
 So on Windows the pool reads every folder of a parked working copy's dependency trees, following no link, and keeps the trees only when a rename cannot break them (`survivesMove`, `src/core/workspace/worktreePool.ts`): no link holds an absolute path, and each relative one stays inside the working copy.
 A pnpm project's trees therefore go when the copy is parked, the checked-out files stay, and the next task's install links every package again from pnpm's store.
 When one tree cannot move, every tree of that working copy goes: one install made them all, and a package's own tree links into the root's.

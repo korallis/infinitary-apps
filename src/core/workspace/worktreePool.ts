@@ -18,8 +18,9 @@ import { git } from "./git";
  * them (`survivesMove`). Parking renames the working copy, and so does
  * handing it out; a link that holds an absolute path - every junction, which
  * is how pnpm links packages there - then leads to a folder the slot has
- * left. pnpm does not repair such a tree: its install answers "Already up
- * to date" and leaves every link as it was. One install made every tree of
+ * left. pnpm's next install is no repair to rely on: in a project of one
+ * package it answers "Already up to date" and leaves every link as it was,
+ * though in a workspace it links again. One install made every tree of
  * a working copy, and a package's own tree links into the root's, so when
  * one cannot move they all go; the checked-out files stay, and the next
  * task's install builds them again. The trees are found by reading the
