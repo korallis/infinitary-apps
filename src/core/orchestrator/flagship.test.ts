@@ -896,9 +896,11 @@ describe("a spent pool of two logins, across its resets", () => {
     expect(standingOn(service, refusedB)).toEqual(serving);
   });
 
-  // The review's finding: a refused login's return is its last blocker, the
-  // refusal's end or a used-up window's own reset, whichever is later, and
-  // never the first window that happens to read used up.
+  // The review's findings: a refused pooled login's return is its last
+  // blocker among the windows that bound the model, the refusal's end or a
+  // used-up window's own reset, whichever is later; no time is named when a
+  // blocker's reset is not known; and a login outside a pool is read as
+  // before, by the first window with the least left.
   it.each([
     {
       blocker: "a used-up week that outlasts the refusal",
@@ -908,6 +910,8 @@ describe("a spent pool of two logins, across its resets", () => {
       ],
       backAt: week,
       last: "weekly",
+      // Outside a pool: the session, read used up until the refusal ends.
+      unpooledBackAt: T + 3 * HOUR,
     },
     {
       blocker: "the refusal, which outlasts a used-up session",
@@ -917,51 +921,87 @@ describe("a spent pool of two logins, across its resets", () => {
       ],
       backAt: T + 3 * HOUR,
       last: "weekly",
+      unpooledBackAt: T + 2 * HOUR,
     },
-  ])("names a refused login's return by $blocker", async ({ windows, backAt, last }) => {
-    const service = new QuotaService({
-      refresh: async () => ({
-        snapshot: {
-          generatedAt: new Date(T).toISOString(),
-          fetchedAt: T,
-          providers: [
-            login("a", [0, T + HOUR], [0, week]),
-            {
-              ...login("b", [0, 0], [0, 0]),
-              windows: windows.map((window) => ({ ...window, resetText: `as read: ${window.id}` })),
-            },
-          ],
-        },
-        catalog: { generatedAt: new Date(T).toISOString(), models: [] },
-      }),
-      db: openInMemoryDatabase(),
-      broadcast: () => {},
-      now: () => T,
-      catalogFor: catalogOf,
-      pools,
-      refusedUntil: (accountId) => (accountId === "b" ? T + 3 * HOUR : undefined),
-    });
-    await service.refresh("demand");
-    service.stop();
-    const flagship = new Flagship({
-      vault: vaultOf([
-        { id: "a", providerId: "openai-codex", label: "A", enabled: true },
-        { id: "b", providerId: "openai-codex", label: "B", enabled: true },
-      ]),
-      settings: settingsOf("a"),
-      quota: service,
-      baseRuntime,
-    });
-    const row = service.latest()?.providers.find((entry) => entry.accountId === "b");
-    if (!row) throw new Error("login B has no served row");
-    // Both windows read used up while the refusal stands.
-    expect(row.windows.map((window) => window.percentRemaining)).toEqual([0, 0]);
-    expect(limitingResetOf(row, T)).toBe(backAt);
-    const text = row.windows.find((window) => window.id === last)?.resetText;
-    expect(text).toBeTruthy();
-    expect(text).not.toBe(row.windows.find((window) => window.id !== last)?.resetText);
-    expect(flagship.resetText("b")).toBe(text);
-  });
+    {
+      blocker: "no time, when a used-up week has no known reset",
+      windows: [
+        { id: "session", label: "session", percentRemaining: 0, resetsAtMs: T + 2 * HOUR },
+        { id: "weekly", label: "weekly", percentRemaining: 0 },
+      ],
+      backAt: undefined,
+      last: undefined,
+      unpooledBackAt: T + 2 * HOUR,
+    },
+    {
+      blocker: "the refusal, whatever another model's window and credits say",
+      windows: [
+        { id: "session", label: "session", percentRemaining: 50, resetsAtMs: T + 2 * HOUR },
+        { id: "weekly", label: "weekly", percentRemaining: 50, resetsAtMs: week },
+        { id: "model:other", label: "Other", percentRemaining: 0, resetsAtMs: week + HOUR },
+        { id: "overage", label: "credits", percentRemaining: 0, resetsAtMs: week + 2 * HOUR },
+      ],
+      backAt: T + 3 * HOUR,
+      last: "weekly",
+      unpooledBackAt: T + 3 * HOUR,
+    },
+  ])(
+    "names a refused login's return by $blocker",
+    async ({ windows, backAt, last, unpooledBackAt }) => {
+      const service = new QuotaService({
+        refresh: async () => ({
+          snapshot: {
+            generatedAt: new Date(T).toISOString(),
+            fetchedAt: T,
+            providers: [
+              login("a", [0, T + HOUR], [0, week]),
+              {
+                ...login("b", [0, 0], [0, 0]),
+                windows: windows.map((window) => ({
+                  ...window,
+                  resetText: `as read: ${window.id}`,
+                })),
+              },
+            ],
+          },
+          catalog: { generatedAt: new Date(T).toISOString(), models: [] },
+        }),
+        db: openInMemoryDatabase(),
+        broadcast: () => {},
+        now: () => T,
+        catalogFor: catalogOf,
+        pools,
+        refusedUntil: (accountId) => (accountId === "b" ? T + 3 * HOUR : undefined),
+      });
+      await service.refresh("demand");
+      service.stop();
+      const seatOver = (quota: { latest: () => QuotaSnapshotView | undefined }) =>
+        new Flagship({
+          vault: vaultOf([
+            { id: "a", providerId: "openai-codex", label: "A", enabled: true },
+            { id: "b", providerId: "openai-codex", label: "B", enabled: true },
+          ]),
+          settings: settingsOf("a"),
+          quota,
+          baseRuntime,
+        });
+      const snapshot = service.latest();
+      const row = snapshot?.providers.find((entry) => entry.accountId === "b");
+      if (!snapshot || !row) throw new Error("login B has no served row");
+      const textOf = (id: string | undefined) =>
+        row.windows.find((window) => window.id === id)?.resetText;
+
+      expect(limitingResetOf(row, T, undefined, snapshot.pools)).toBe(backAt);
+      if (last) expect(textOf(last)).toBeTruthy();
+      expect(seatOver(service).resetText("b")).toBe(textOf(last));
+
+      // The same row with no pool over it.
+      const { pools: _pools, ...unpooled } = snapshot;
+      expect(limitingResetOf(row, T)).toBe(unpooledBackAt);
+      expect(textOf("session")).toBeTruthy();
+      expect(seatOver({ latest: () => unpooled }).resetText("b")).toBe(textOf("session"));
+    },
+  );
 
   // The review's finding: the refusal itself holds the login, whatever its
   // reading says. A reading taken before the refusal shows room; a reading

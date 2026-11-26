@@ -468,7 +468,7 @@ export class PlacedWorkScores {
       // which is the provider's whole reading, a spent sibling's included.
       if (!best)
         return boundId ? { provider: model.provider, id: model.id, label: model.label } : model;
-      const resetsAtMs = limitingResetOf(best.row, now, model.id);
+      const resetsAtMs = limitingResetOf(best.row, now, model.id, pools);
       const measuredAt = best.score.charge?.measuredAt ?? best.row.measuredAt;
       // Whether it keeps going on credits is the serving account's reading.
       const { onCredits: _catalog, ...base } = model;

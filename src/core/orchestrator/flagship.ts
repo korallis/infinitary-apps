@@ -1,3 +1,4 @@
+import { accountsPoolOf } from "@shared/accountPools";
 import type { CutOffClass } from "@shared/authFailure";
 import { CLAUDE_ACCESS_PAUSED_SENTENCE, type ClaudeAccessSource } from "@shared/claudeAccess";
 import { isClientIssueReason } from "@shared/claudeClient";
@@ -10,11 +11,17 @@ import {
   PROVIDER_CATALOG,
   providerServesRole,
 } from "@shared/providers";
-import { creditsOfferOf, type QuotaSnapshotView, quotaRowOf, savedResetsNow } from "@shared/quota";
+import {
+  creditsOfferOf,
+  inAccountsPool,
+  type QuotaSnapshotView,
+  quotaRowOf,
+  savedResetsNow,
+} from "@shared/quota";
 import { allowanceSpent } from "@shared/quotaSignals";
 import { CUT_OFF_REFUSED, CUT_OFF_SIGNED_OUT } from "../accounts/credentialHealth";
 import type { ModelRuntime } from "../pi/types";
-import { effectiveFromProvider, lastBlockerOf } from "../quota/catalog";
+import { effectiveFromProvider, pooledBlockerOf } from "../quota/catalog";
 import { SessionBinder } from "../session/binding";
 import type { AccountDecisionInput } from "../storage/decisionStore";
 import { allowanceSpentWords, type SeatBinding, type SeatPause, signedOutSentence } from "./seat";
@@ -478,10 +485,16 @@ export class Flagship {
   resetText(accountId: string): string | undefined {
     const row = this.snapshotRow(accountId);
     if (!row) return undefined;
-    const read = row.windows.filter((window) => typeof window.percentRemaining === "number");
-    const bounding =
-      lastBlockerOf(read) ??
-      [...read].sort((a, b) => (a.percentRemaining ?? 0) - (b.percentRemaining ?? 0))[0];
+    // A login of a pool is back when what blocks the first mate's model is
+    // gone, and names no time when that is not known.
+    const pools = this.options.quota.latest()?.pools;
+    if (inAccountsPool(accountsPoolOf(pools, row.provider), accountId)) {
+      const blocker = pooledBlockerOf(row, Date.now(), this.modelOn(accountId));
+      if (blocker) return blocker.window?.resetText;
+    }
+    const bounding = [...row.windows]
+      .filter((window) => typeof window.percentRemaining === "number")
+      .sort((a, b) => (a.percentRemaining ?? 0) - (b.percentRemaining ?? 0))[0];
     return bounding?.resetText;
   }
 
@@ -550,15 +563,19 @@ export class Flagship {
     return lines.length > 0 ? lines.join("; ") : "no reset times are known yet";
   }
 
+  /** The first mate's model, when `accountId` is a login of its provider. */
+  private modelOn(accountId: string): string | undefined {
+    const selected = this.options.settings.getFirstmateModel?.();
+    return selected && selected.provider === this.providerOf(accountId) ? selected.id : undefined;
+  }
+
   /**
    * The reading of the account that serves the first mate's model: a
    * connection to a CLI proxy has a row per pool, and the first mate's
    * model's pool is the one it pauses, keeps headroom and resets by.
    */
   private snapshotRow(accountId: string, as?: "measured") {
-    const selected = this.options.settings.getFirstmateModel?.();
-    const modelId =
-      selected && selected.provider === this.providerOf(accountId) ? selected.id : undefined;
+    const modelId = this.modelOn(accountId);
     const { quota } = this.options;
     const snapshot =
       as === "measured" && quota.latestMeasured ? quota.latestMeasured() : quota.latest();
