@@ -282,15 +282,18 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   Move (`move-login` host op, `crew:<accountId>`) makes that login the one in use, writes one feed line, and binds the started tasks on the low login to that login and no other.
   The button's id names the login work leaves and the login it goes to (`moveLoginActionId`), on this card and on the first mate's two: a card revised to offer another login declares another button, so a click on the button as it stood before is refused as a choice no longer offered.
   The click is checked against the logins as they are now (`LowLogins.move`): it moves work only while the choice still asks, the login the card asked about is still low and, under `ask`, still the login in use, and the named login still has room; otherwise nothing moves and the logins are read again.
-  The move is made in an order a quit cannot split (`LowLogins.accept`): every task's move is saved in one write, then the login in use changes, then the answer is recorded as over.
+  The move is made in an order a quit cannot split (`LowLogins.accept`): every task's move is saved in one write and bound only once that write succeeded (`LoginMoves.moveOff`), then the login in use changes, then the answer is recorded as over.
+  A write that fails leaves no task bound, the login in use and the answer as they were, and the next reading makes the whole move again.
   The card store saves the click before any of that, so a launch that finds the card answered Move and the answer not over finishes the same move to the same login, however much room another login has by then, and asks nothing again; when the logins no longer bear the click out, nothing moves and the card asks about what is true now.
+  Until that launch has checked the click, none of the moves it saved is still to make (`LowLogins` drops them as it starts, and `accept` saves them again whole), and a click that is refused leaves no task named for its login.
   Choosing another login in the accounts list (`inf:accounts:pin`) has the card and the first mate's offers read again at once.
   Wait for the refill leaves everything where it is, and the card comes back only at that login's next run-out.
   The answer is read from the saved card, which names the login it asked about, its refill time and that raising of the card (`loginLowAsked`), so it holds the same way while the app runs and after a relaunch (`LowLogins.stillWaited`).
   It ends once that login is read with room again, once the refill time the card named has passed, or once the login is gone; a login no reading has read yet keeps it.
   An ended answer is saved by the raising it answered (the `login-low-answers-over` settings row, written by the home's watch alone), so a later launch does not take it up again and the next run-out puts the card up.
   The card up is kept apart from that answer: it is revised in place when the low login, the login it offers or what it says of them changes, taken down when the login has room again, when no other login has room or when the choice becomes `wait`, and put up again when there is something to offer once more.
-  The home keeps the card it has up in memory, so a launch puts an unanswered card up again for a login still low.
+  The card store keeps an unanswered card open across a launch, and the watch starts from it (`openOffers`): the first reading that reads the login it asks about revises it, or takes it down when that login has room again, no other login has room, the provider has no login left or the choice no longer asks.
+  The watch's own index of the card up (`offers`) is rebuilt from that card at each launch and is never saved.
 - **`move`.**
   The same without the card: the pin moves to the login with the most room with one feed line naming both logins, and each task on the low login is bound to that login and writes its own line as it moves.
 - **`spread`.**
@@ -299,7 +302,7 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   Nothing is asked and nothing moves; work on the low login waits for its refill.
 - **A moved task.**
   `LoginMoves` (`src/core/orchestrator/loginMoves.ts`) moves a started task between turns, never inside one, to the login the move named: it lets go of the task's conversation, records that login's pick in `account_decisions`, names the login on the task's placement, writes one feed line naming the task and both logins, and reopens the conversation the way a resume does (`docs/inbox.md`, "A lane on a withheld account").
-  The pick reads the named login alone (`only` on `AccountSelector.pickForSpawn`): a login with more room, or a pin set since, takes none of the work, and a named login that no longer serves the task's model leaves the task where it is.
+  The pick reads the named login alone (`only` on `AccountSelector.pickForSpawn`): a login with more room, or a pin set since, takes none of the work, and a named login that no longer serves the task's model, was cut off for a spent allowance, has itself run low or has gone onto credits (`hasRoom`, the rule that offered it) leaves the task where it is.
   A backend that keeps its own transcript, as Pi does, opens it under the new login.
   A Claude conversation is never copied across accounts: each login's client keeps its transcripts in its own folder, so the new login opens a new conversation, which is told its brief and where the earlier transcript is saved, as any conversation that could not be reopened is.
   Nothing is retried inside a refused turn.

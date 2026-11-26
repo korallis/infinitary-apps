@@ -250,6 +250,23 @@ describe("a pick under each choice for a login that runs low", () => {
     expect(none.accountId).toBeUndefined();
   });
 
+  it("picks no named login that has itself run low since it was named, under ask, spread and move", async () => {
+    // Work was named with room and has 3% left by the task's next delivery.
+    const logins = [
+      { id: "personal", percent: 0 },
+      { id: "work", percent: 3 },
+      { id: "spare", percent: 95 },
+    ];
+    for (const choice of ["ask", "spread", "move"] as const) {
+      const t = selectorOver(logins, choice, "personal");
+      const pick = await t.selector.pickForSpawn("task-1", "openai-codex", {
+        ...TERRA,
+        only: "work",
+      });
+      expect([choice, pick.accountId]).toEqual([choice, undefined]);
+    }
+  });
+
   it("pins nothing for a provider with one login", async () => {
     const t = selectorOver([{ id: "personal", percent: 60 }], "ask");
     expect(await t.selector.selectForSpawn("task-1", "openai-codex")).toBe("personal");

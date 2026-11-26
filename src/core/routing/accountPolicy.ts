@@ -1,6 +1,7 @@
 import {
   allowanceSpent,
   bandOf,
+  CREW_NEAR_FLOOR_PERCENT,
   compareBandRank,
   compareSpendRank,
   type SpendBand,
@@ -328,4 +329,43 @@ function compareMeasured(a: AccountCandidate, b: AccountCandidate, bands: boolea
     return remainingB - remainingA;
   }
   return (a.lastSelectedAt ?? 0) - (b.lastSelectedAt ?? 0);
+}
+
+/**
+ * A login as a pick reads it: whether it serves, and how much of its
+ * allowance is left. `runOut` is the vault's typed `no_headroom` cut-off: the
+ * provider refused the login for a spent allowance, whatever its meter says.
+ */
+export type LoginReading = Pick<
+  AccountCandidate,
+  | "accountId"
+  | "label"
+  | "enabled"
+  | "connected"
+  | "withheld"
+  | "effectivePercentRemaining"
+  | "onCredits"
+> & { runOut?: { resetsAt?: number } };
+
+/**
+ * The moment: a typed run-out, or 10% of its allowance or less left by a
+ * measured reading.
+ */
+export function runsLow(login: LoginReading): boolean {
+  return (
+    login.runOut !== undefined ||
+    (login.effectivePercentRemaining !== undefined &&
+      login.effectivePercentRemaining <= CREW_NEAR_FLOOR_PERCENT)
+  );
+}
+
+/** Whether work may move to the login: on, serving, on its included allowance and not low itself. */
+export function hasRoom(login: LoginReading): boolean {
+  return (
+    login.enabled &&
+    login.connected !== false &&
+    login.withheld === undefined &&
+    !login.onCredits &&
+    !runsLow(login)
+  );
 }

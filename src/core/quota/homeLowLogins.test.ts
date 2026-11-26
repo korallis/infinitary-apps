@@ -31,7 +31,13 @@ afterEach(() => {
  * What the app keeps across launches: the provider's card, the action that
  * answered it, and the answers the watch recorded as over.
  */
-type SavedCard = { card?: HostCard; chosen?: string; over?: Record<string, string> };
+type SavedCard = {
+  card?: HostCard;
+  /** The card is up, unanswered. */
+  open?: boolean;
+  chosen?: string;
+  over?: Record<string, string>;
+};
 
 function home(
   logins: LoginReading[],
@@ -41,6 +47,9 @@ function home(
   const listeners: (() => void)[] = [];
   const raised: HostCard[] = [];
   const moved: string[] = [];
+  /** The moves to one named login that the watch had dropped. */
+  const discarded: string[] = [];
+  const withdrawn: string[] = [];
   /** The tasks' moves and the pin's, in the order the watch recorded them. */
   const order: string[] = [];
   const events: FmEvent[] = [];
@@ -48,6 +57,9 @@ function home(
     pin: "personal" as string | undefined,
     /** The app quits as the pin is about to be saved. */
     quitsAtPin: false,
+    /** The record of the tasks' moves cannot be written. */
+    movesUnwritable: false,
+    choice: "ask" as "ask" | "wait" | "move" | "spread",
     get chosen() {
       return saved.chosen;
     },
@@ -57,15 +69,20 @@ function home(
   };
   const loginMoves = {
     tasksOn: () => ["task-1"],
-    moveOff: async (from: string, to: string) => {
+    // As `LoginMoves.moveOff`: a record that cannot be written throws before the promise.
+    moveOff: (from: string, to: string) => {
+      if (state.movesUnwritable) throw new Error("the record could not be written");
       moved.push(`${from} to ${to}`);
       order.push(`tasks ${from} to ${to}`);
+      return Promise.resolve();
     },
-    forget: () => {},
+    forget: (from: string, to?: string) => {
+      if (to !== undefined) discarded.push(`${from} to ${to}`);
+    },
   } as unknown as LoginMoves;
   const watch = startLowLogins({
     settings: {
-      getWhenLoginLow: () => "ask",
+      getWhenLoginLow: () => state.choice,
       getLoginAnswersOver: () => saved.over ?? {},
       setLoginAnswersOver: (over) => {
         saved.over = over;
@@ -93,12 +110,21 @@ function home(
           raiseHostCard: (card) => {
             saved.chosen = undefined;
             saved.card = card;
+            saved.open = true;
             raised.push(card);
           },
-          withdrawHostCard: () => {},
+          withdrawHostCard: (id) => {
+            if (!saved.open) return;
+            saved.open = false;
+            withdrawn.push(id);
+          },
         },
         chosenAction: () => saved.chosen,
-        stored: () => saved.card,
+        stored: (id) => (id === saved.card?.id ? saved.card : undefined),
+        get: (id) =>
+          id === saved.card?.id && saved.open && saved.chosen === undefined
+            ? saved.card
+            : undefined,
       },
       loginMoves,
     },
@@ -107,7 +133,19 @@ function home(
   const cutOffChanged = () => {
     for (const listener of listeners) listener();
   };
-  return { watch, cutOffs, cutOffChanged, raised, moved, order, state, loginMoves, saved };
+  return {
+    watch,
+    cutOffs,
+    cutOffChanged,
+    raised,
+    moved,
+    discarded,
+    withdrawn,
+    order,
+    state,
+    loginMoves,
+    saved,
+  };
 }
 
 const login = (accountId: string, label: string, percent?: number): LoginReading => ({
@@ -356,9 +394,74 @@ describe("the home's watch after a relaunch, when the app quit while it made the
       [login("personal", "Personal", 4), login("work", "Work", 95), login("spare", "Spare", 3)],
       before.saved,
     );
+    // Before any reading, the click's moves the last launch saved are no longer to make.
+    expect(after.discarded).toEqual(["personal to spare"]);
     after.watch.read();
     expect(after.order).toEqual([]);
+    expect(after.discarded).toEqual(["personal to spare", "personal to spare"]);
     expect(after.raised).toHaveLength(1);
     expect(after.raised[0]?.actions?.[0]?.label).toBe("Move to Work");
+  });
+
+  it("changes neither the login in use nor the answer when the tasks' moves cannot be saved, and makes the whole move at the next reading", () => {
+    const t = home(offeringSpare());
+    t.watch.read();
+    t.saved.chosen = moveLoginActionId("personal", "spare");
+    t.state.movesUnwritable = true;
+    expect(() => t.loginMoves.onClick?.("spare")).toThrow("the record could not be written");
+    expect(t.order).toEqual([]);
+    expect(t.state.pin).toBe("personal");
+    expect(t.saved.over).toBeUndefined();
+
+    t.state.movesUnwritable = false;
+    t.watch.read();
+    expect(t.order).toEqual(["tasks personal to spare", "pin spare"]);
+    expect(t.saved.over).toBeDefined();
+  });
+});
+
+// The approved plan: `wait` raises no card, and `ask` offers a move only
+// while another login has room. The card store keeps an unanswered card
+// open across a launch, so the first reading after it settles that card too.
+describe("the home's watch after a relaunch, over a card still open from the last launch", () => {
+  const cardId = "card-login-low-openai-codex";
+  const openCard = () => {
+    const before = home([login("personal", "Personal", 4), login("work", "Work", 60)]);
+    before.watch.read();
+    expect(before.saved.open).toBe(true);
+    return before.saved;
+  };
+
+  it("takes it down at the first reading when the login it asks about has room again", () => {
+    const after = home([login("personal", "Personal", 100), login("work", "Work", 60)], openCard());
+    after.watch.read();
+    expect(after.withdrawn).toEqual([cardId]);
+  });
+
+  it("takes it down when no other login has room, when the choice is wait or move, and when the provider has no login left", () => {
+    const noRoom = home([login("personal", "Personal", 4), login("work", "Work", 2)], openCard());
+    noRoom.watch.read();
+    expect(noRoom.withdrawn).toEqual([cardId]);
+
+    for (const choice of ["wait", "move"] as const) {
+      const t = home([login("personal", "Personal", 4), login("work", "Work", 60)], openCard());
+      t.state.choice = choice;
+      t.watch.read();
+      expect([choice, t.withdrawn]).toEqual([choice, [cardId]]);
+    }
+
+    const gone = home([], openCard());
+    gone.watch.read();
+    expect(gone.withdrawn).toEqual([cardId]);
+  });
+
+  it("leaves it up while the login it asks about is not read yet, and once that login is read low", () => {
+    const logins = [login("personal", "Personal"), login("work", "Work", 60)];
+    const after = home(logins, openCard());
+    after.watch.read();
+    logins[0] = login("personal", "Personal", 4);
+    after.watch.read();
+    expect(after.withdrawn).toEqual([]);
+    expect(after.saved.open).toBe(true);
   });
 });

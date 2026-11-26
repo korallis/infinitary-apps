@@ -6,6 +6,7 @@ import type { DecisionStore } from "../storage/decisionStore";
 import {
   type AccountCandidate,
   type AccountSelectionDecision,
+  hasRoom,
   isExhausted,
   selectAccount,
 } from "./accountPolicy";
@@ -252,8 +253,10 @@ export class AccountSelector {
     if (crew?.only) {
       // A run-out the provider typed since the move was named leaves no room there.
       if (this.options.pool.cutOff?.(crew.only)?.class === "no_headroom") return undefined;
+      // Nor does a login that has itself run low or gone onto credits since: the
+      // same rule that offered it (`hasRoom`).
       const named = this.candidatesFor(piProviderId, crew.model, placed, crew.only).filter(
-        (row) => row.accountId === crew.only,
+        (row) => row.accountId === crew.only && hasRoom(row),
       );
       return named.length > 0
         ? selectAccount({ providerId: piProviderId, candidates: named, bands: true })

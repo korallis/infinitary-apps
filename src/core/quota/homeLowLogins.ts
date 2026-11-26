@@ -40,6 +40,8 @@ export function startLowLogins(options: {
       hostCards: LowLoginsOptions["cards"];
       chosenAction(id: string): string | undefined;
       stored(id: string): { body?: string } | undefined;
+      /** A card that is up, unanswered. */
+      get(id: string): { actions?: readonly { id: string }[] } | undefined;
     };
     loginMoves: LoginMoves;
   };
@@ -104,7 +106,19 @@ export function startLowLogins(options: {
     },
     tasksOn: (accountId) => supervisor.loginMoves.tasksOn(accountId),
     moveOff: (from, to) => supervisor.loginMoves.moveOff(from, to),
-    forget: (from) => supervisor.loginMoves.forget(from),
+    forget: (from, to) => supervisor.loginMoves.forget(from, to),
+    openOffers: () =>
+      PROVIDER_CATALOG.flatMap((entry) => {
+        const card = supervisor.cards.get(loginLowCardId(entry.id));
+        if (!card) return [];
+        const from = askedOn(entry.id)?.accountId;
+        const to = vault
+          .list(entry.id)
+          .find((account) =>
+            card.actions?.some((action) => action.id === moveLoginActionId(from ?? "", account.id)),
+          )?.id;
+        return [{ providerId: entry.id, ...(from ? { from } : {}), ...(to ? { to } : {}) }];
+      }),
     endAnswer: (providerId) =>
       settings.setLoginAnswersOver({
         ...settings.getLoginAnswersOver(),
