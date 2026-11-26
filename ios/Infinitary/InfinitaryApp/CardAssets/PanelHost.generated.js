@@ -93740,6 +93740,221 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `on pace ✓`;
   }
+  function settingsSubscriptionsOwnPoolAccounts(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `حسابات مجمّعة: ${count}`;
+          case "one":
+            return `حسابات مجمّعة: ${count}`;
+          case "two":
+            return `حسابات مجمّعة: ${count}`;
+          case "few":
+            return `حسابات مجمّعة: ${count}`;
+          case "many":
+            return `حسابات مجمّعة: ${count}`;
+          default:
+            return `حسابات مجمّعة: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Konto gebündelt`;
+          default:
+            return `${count} Konten gebündelt`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} cuenta agrupada`;
+          case "many":
+            return `${count} de cuentas agrupadas`;
+          default:
+            return `${count} cuentas agrupadas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} compte regroupé`;
+          case "many":
+            return `${count} de comptes regroupés`;
+          default:
+            return `${count} comptes regroupés`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件のアカウントをまとめて使用中`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `계정 ${count}개가 합쳐져 있음`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} conta agrupada`;
+          case "many":
+            return `${count} de contas agrupadas`;
+          default:
+            return `${count} contas agrupadas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `合并了 ${count} 个账户`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `合併了 ${count} 個帳號`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} áççöûñţ þööļéð ~~~~~]`;
+          default:
+            return `[${count} áççöûñţš þööļéð ~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ account pooled‬`;
+          default:
+            return `${count}‮ accounts pooled‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} account pooled`;
+      default:
+        return `${count} accounts pooled`;
+    }
+  }
+  function settingsSubscriptionsOwnPoolName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل الحسابات`;
+      case "de":
+        return `Alle Konten`;
+      case "es":
+        return `Todas las cuentas`;
+      case "fr":
+        return `Tous les comptes`;
+      case "ja":
+        return `すべてのアカウント`;
+      case "ko":
+        return `모든 계정`;
+      case "pt-BR":
+        return `Todas as contas`;
+      case "zh-Hans":
+        return `所有账户`;
+      case "zh-Hant":
+        return `所有帳號`;
+      case "en-XA":
+        return `[Åļļ áççöûñţš ~~~~]`;
+      case "ar-XB":
+        return `‮All accounts‬`;
+    }
+    return `All accounts`;
+  }
+  function settingsSubscriptionsOwnPoolSignedOut(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "one":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "two":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "few":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "many":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          default:
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} muss neu angemeldet werden`;
+          default:
+            return `${count} müssen neu angemeldet werden`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} debe volver a iniciar sesión`;
+          case "many":
+            return `${count} deben volver a iniciar sesión`;
+          default:
+            return `${count} deben volver a iniciar sesión`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} doit se reconnecter`;
+          case "many":
+            return `${count} doivent se reconnecter`;
+          default:
+            return `${count} doivent se reconnecter`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件は再度サインインが必要`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count}개는 다시 로그인해야 함`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} precisa fazer login de novo`;
+          case "many":
+            return `${count} precisam fazer login de novo`;
+          default:
+            return `${count} precisam fazer login de novo`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个需要重新登录`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個需要重新登入`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ñééðš šîĝñîñĝ îñ áĝáîñ ~~~~~~~~]`;
+          default:
+            return `[${count} ñééð šîĝñîñĝ îñ áĝáîñ ~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ needs signing in again‬`;
+          default:
+            return `${count}‮ need signing in again‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} needs signing in again`;
+      default:
+        return `${count} need signing in again`;
+    }
+  }
   function settingsSubscriptionsPaused() {
     switch (currentLanguage()) {
       case "ar":
@@ -116236,6 +116451,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsNotReady,
     settingsSubscriptionsOnPace,
     settingsSubscriptionsOnPaceAll,
+    settingsSubscriptionsOwnPoolAccounts,
+    settingsSubscriptionsOwnPoolName,
+    settingsSubscriptionsOwnPoolSignedOut,
     settingsSubscriptionsPaused,
     settingsSubscriptionsPersonalResourcesDescription,
     settingsSubscriptionsPersonalResourcesTitle,
@@ -119854,6 +120072,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsNotReady": [],
     "settingsSubscriptionsOnPace": [],
     "settingsSubscriptionsOnPaceAll": [],
+    "settingsSubscriptionsOwnPoolAccounts": ["count"],
+    "settingsSubscriptionsOwnPoolName": [],
+    "settingsSubscriptionsOwnPoolSignedOut": ["count"],
     "settingsSubscriptionsPaused": [],
     "settingsSubscriptionsPersonalResourcesDescription": ["computer", "computers"],
     "settingsSubscriptionsPersonalResourcesTitle": [],
@@ -122646,6 +122867,357 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     batch: cardFilesSavedSchema.omit({ path: true }).nullable()
   });
   _enum(["opened", "revealed", "missing", "failed"]);
+  const crewSpeedSchema = _enum(["standard", "fast", "ultrafast"]);
+  object({
+    requested: crewSpeedSchema,
+    sent: crewSpeedSchema,
+    /** Only a provider reply can confirm service. */
+    confirmed: string().optional(),
+    reason: string().optional()
+  });
+  const providerViewSchema = object({
+    id: string(),
+    name: string(),
+    /**
+     * Catalog placement. `key` is an API-key sign-in. `escape_hatch` remains
+     * so an older view still parses; nothing in the catalog uses it, and the
+     * chip labels both as "API key".
+     */
+    tier: _enum(["subscription", "key", "escape_hatch"]),
+    /** Auth methods Pi offers for this provider. */
+    authTypes: array(_enum(["oauth", "api_key"])),
+    /**
+     * Why there is no way in right now, when the provider's backend has a
+     * sentence for it and `authTypes` is empty: `note` is the short line on the
+     * chip, `detail` the sentence behind it. A Claude account runs the Claude
+     * Code the person installed (F14), so a Mac without it says so here.
+     */
+    unavailable: object({ note: string(), detail: string() }).optional(),
+    connected: boolean(),
+    activeAuthType: _enum(["oauth", "api_key"]).optional(),
+    billedPerToken: boolean()
+  });
+  const authPromptSchema = object({
+    promptId: string(),
+    providerId: string(),
+    /** Which account row this prompt belongs to, when a login is account-scoped. */
+    accountId: string().optional(),
+    kind: _enum(["text", "secret", "select", "manual_code"]),
+    message: string(),
+    placeholder: string().optional(),
+    options: array(object({ id: string(), label: string(), description: string().optional() })).optional()
+  });
+  const authNoticeSchema = object({
+    providerId: string(),
+    /** Which account row this notice belongs to, when a login is account-scoped. */
+    accountId: string().optional(),
+    kind: _enum(["info", "auth_url", "device_code", "progress"]),
+    message: string(),
+    url: string().optional(),
+    userCode: string().optional(),
+    /**
+     * When a device code stops working, in epoch milliseconds, from the
+     * provider's own answer (`expires_in`): the code step says the code
+     * expired once a sign-in ends past it.
+     */
+    expiresAt: number().optional()
+  });
+  const backendIdSchema = _enum(["pi", "claude"]);
+  const reasoningSchema = object({
+    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "default"]),
+    lower: _enum(["quick", "capped"]).optional()
+  });
+  const slotSchema = _enum(["premium", "high", "medium", "low"]);
+  const slotMembershipSchema = union([slotSchema, array(slotSchema)]).transform((value) => Array.isArray(value) ? value : [value]);
+  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh"]);
+  const reasoningCapabilitiesSchema = object({
+    levels: array(reasoningChoiceSchema),
+    fixed: _enum(["off", "default"]).optional()
+  });
+  const reasoningOverridesSchema = record(
+    string(),
+    partialRecord(slotSchema, reasoningChoiceSchema)
+  );
+  object({
+    version: literal(1),
+    /** offering → slots. An absent key or an empty array is OFF: never auto-picked, still pinnable. */
+    assignments: record(string(), slotMembershipSchema),
+    /** every offering this install has ever been offered. Seeding only touches keys absent here. */
+    seen: array(string()),
+    /** Choices survive membership changes; absent means inherit. */
+    reasoning: reasoningOverridesSchema.optional(),
+    /** Per offering, shared by every account; absent means Standard. */
+    speed: record(string(), crewSpeedSchema).optional(),
+    /**
+     * offering → when it arrived as announced news (epoch ms), for the board's
+     * "new" mark. Saved, so a later catalog read or a restart keeps the mark
+     * until the person changes the model's levels or it has had a week.
+     */
+    arrived: record(string(), number()).optional()
+  });
+  record(string(), array(string()));
+  const servedStartersSchema = object({
+    schema: literal(1),
+    starters: record(string(), record(string(), array(slotSchema)))
+  });
+  object({
+    starters: servedStartersSchema.shape.starters.nullable(),
+    checkedAt: number()
+  });
+  const slotModelViewSchema = object({
+    /** Pi provider id serving this model (never the quota id). */
+    provider: string(),
+    providerLabel: string(),
+    id: string(),
+    label: string(),
+    /** empty = off (in no slot); may carry more than one. */
+    slots: array(slotSchema),
+    reasoningCapabilities: reasoningCapabilitiesSchema.optional(),
+    speed: crewSpeedSchema.optional(),
+    /** Union of fresh account capabilities, not a promise about a routed account. */
+    speeds: array(crewSpeedSchema).optional(),
+    reasoning: partialRecord(
+      slotSchema,
+      object({
+        chosen: reasoningChoiceSchema.optional(),
+        effective: reasoningSchema.optional()
+      })
+    ).optional(),
+    /**
+     * Arrived as announced news after this install had already seen the
+     * provider's catalog, within the last week and with its levels untouched since.
+     */
+    isNew: boolean().optional(),
+    /** The computer the model runs on, when it is not this Mac's. */
+    place: string().min(1).max(64).optional()
+  });
+  object({
+    /** The listed rows (docs/model-lists.md): what the board shows. */
+    models: array(slotModelViewSchema),
+    /**
+     * Everything else the signed-in accounts serve, for the "use a model by
+     * name" controls. Never rows on the board; choosing one keeps it, which
+     * lists it from then on.
+     */
+    byName: array(slotModelViewSchema).default([]),
+    /**
+     * True when nothing currently available is assigned, so routing is running
+     * off the starter map (or the whole signed-in pool). The surface says so.
+     */
+    usingDefaults: boolean()
+  });
+  const intelligenceBucketSchema = slotSchema;
+  const quotaWindowViewSchema = object({
+    id: string(),
+    label: string(),
+    percentRemaining: number().optional(),
+    /**
+     * Pace vocabulary: "ahead" is usage ahead of the reset
+     * clock (burning faster than linear - conserve), "behind" is usage behind
+     * the clock (allowance on track to go unused).
+     */
+    pace: _enum(["ahead", "on_pace", "behind", "unknown"]).optional(),
+    resetText: string().optional(),
+    /**
+     * The trusted cycle evidence: the window's own reset
+     * instant and cycle length, when the vendor supplied them. Everything
+     * derived - pace, runway, spend priority - is recomputed from these at
+     * read time rather than persisted, so a stored snapshot never carries a
+     * stale projection.
+     */
+    resetsAtMs: number().optional(),
+    startsAtMs: number().optional(),
+    windowSeconds: number().optional()
+  });
+  const QUOTA_CREDIT_STATES = ["available", "spent", "off", "unknown"];
+  const quotaCreditsViewSchema = object({
+    state: _enum(QUOTA_CREDIT_STATES),
+    /** The share of a monthly spend limit used, 0–100, where the provider gives one (Claude). */
+    usedPercent: number().optional(),
+    /** The balance left, in the provider's own words (ChatGPT's "15.00"). */
+    balance: string().optional(),
+    /** The provider says the credits have no limit. */
+    unlimited: boolean().optional(),
+    /** The provider says this account is answering on credits right now. */
+    inUse: boolean().optional()
+  });
+  const quotaSavedResetsViewSchema = object({
+    available: number().int().nonnegative(),
+    applicable: number().int().nonnegative().optional()
+  });
+  const QUOTA_POOL_KINDS = ["claude", "chatgpt"];
+  const QUOTA_POOL_SOURCES = ["accounts", "proxy"];
+  const quotaPoolViewSchema = object({
+    kind: _enum(QUOTA_POOL_KINDS),
+    /**
+     * Whose logins the pool folds: a CLI proxy's (`proxy`, also what a row
+     * without it means), or the person's own logins of one provider signed in
+     * here (`accounts`, docs/quota.md "A pool of your own logins").
+     */
+    source: _enum(QUOTA_POOL_SOURCES).optional(),
+    /** The accounts an `accounts` pool folds, by id. */
+    accounts: array(string()).optional(),
+    logins: number().int().nonnegative(),
+    /** Serving logins whose limits were read: they make the pooled windows. */
+    read: number().int().nonnegative(),
+    /** Serving logins nothing has read yet. */
+    unread: number().int().nonnegative(),
+    /** Logins whose allowance is spent until they come back. */
+    spent: number().int().nonnegative(),
+    /** The earliest moment a spent login serves again. */
+    backAtMs: number().optional(),
+    /** Logins switched off in the proxy. */
+    switchedOff: number().int().nonnegative(),
+    /** Logins whose sign-in ended in the proxy: they cannot serve. */
+    signInEnded: number().int().nonnegative(),
+    /** Serving logins the proxy says need signing in again there. */
+    signInSoon: number().int().nonnegative(),
+    /** The earliest moment one of those stops serving. */
+    signInByMs: number().optional(),
+    /**
+     * The connection's models this pool serves, on a custom connection's row:
+     * the row measures those models alone (`rowMeasuresModel`). Absent on a
+     * Claude account's row, which measures every model of its account.
+     */
+    models: array(string()).optional()
+  });
+  const quotaProviderViewSchema = object({
+    /** Quota provider id: codex, grok, claude, copilot. */
+    provider: string(),
+    label: string(),
+    /**
+     * The vault account these windows belong to (broker phase 2). Absent only
+     * in legacy fixtures/snapshots, which render as a single unnamed account.
+     */
+    accountId: string().optional(),
+    /** The account's user label ("Personal", "Work #2"). */
+    accountLabel: string().optional(),
+    plan: string().optional(),
+    /** Provider-reported identity (an email or org), when the fetch knows it. */
+    account: string().optional(),
+    /**
+     * What the sensor actually established, kept distinct so the surface can
+     * say it (quota reliability, 2026-09-04):
+     * - `ok` a real reading,
+     * - `auth_required` the terminal re-auth state (CD-3): reached only from
+     *   proof - a lapsed refresh token (`refresh_token_lapsed`) or a vendor
+     *   rejection that SURVIVED a real renewal (`rejected_after_renewal`).
+     *   The ONLY status that may say "sign in again", raise the re-auth card,
+     *   or clear a recovered card. Transient failures never take this shape,
+     * - `rate_limited` the vendor asked us to back off (`retryAfter` when given),
+     * - `unavailable` we could not find out this time (network, timeout, a
+     *   non-2xx, an unreadable store, a renewal that could not run). Transient
+     *   by assumption; last-known-good survives it,
+     * - `not_measured` Infinitary does not read a usage window for this sign-in.
+     *   NOT a claim that the credential cannot expose one,
+     * - `skipped` the account was not sensed on this pass.
+     * `error` remains only so older persisted snapshots still parse.
+     */
+    status: _enum([
+      "ok",
+      "auth_required",
+      "rate_limited",
+      "unavailable",
+      "not_measured",
+      "error",
+      "skipped"
+    ]),
+    stale: boolean(),
+    /**
+     * When these windows were actually measured. Present whenever a row is
+     * carried forward, so a stale card can state its age instead of borrowing
+     * the new snapshot's fetch time.
+     */
+    measuredAt: number().optional(),
+    /**
+     * A sanitized machine reason for a non-ok status: a code from our own
+     * vocabulary, never provider text, never a header, never a URL.
+     */
+    reason: string().optional(),
+    /** RFC 9110 Retry-After, as the vendor sent it, when it sent one. */
+    retryAfter: string().optional(),
+    windows: array(quotaWindowViewSchema),
+    /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
+    credits: quotaCreditsViewSchema.optional(),
+    savedResets: quotaSavedResetsViewSchema.optional(),
+    /**
+     * The account's Keep going on credits switch is on, as the vault holds it
+     * (`answersOnCredits`). Absent is off.
+     */
+    keepGoingOnCredits: boolean().optional(),
+    /**
+     * The row is a CLI proxy's pool of logins (`quotaPoolViewSchema`): its
+     * windows are the pooled share left, and the logins' standing rides here.
+     * The proxy's own sign-ins never make the row `auth_required`.
+     */
+    pool: quotaPoolViewSchema.optional(),
+    /**
+     * The row reads a CLI proxy, whether or not the proxy answered: a reading
+     * it could not refresh keeps only the proxy's own last reading of the same
+     * pool, never another source's (`mergeStaleProviders`).
+     */
+    fromProxy: literal(true).optional(),
+    /**
+     * Disclosed uncertainty, in the user's words, for a row with no window.
+     * The surface renders it instead of a silent blank, and it is never a
+     * substitute for a real window. It says what Infinitary did or did not do -
+     * never that a credential is incapable of exposing usage, which no test
+     * here has established.
+     */
+    detail: string().optional()
+  });
+  const quotaSnapshotViewSchema = object({
+    generatedAt: string(),
+    fetchedAt: number(),
+    providers: array(quotaProviderViewSchema),
+    /**
+     * One row per provider with two or more enabled logins of the person's
+     * own (docs/quota.md, "A pool of your own logins"): its windows are the
+     * pooled share left across those logins, and `pool` says how they stand.
+     * Derived from `providers` each time the snapshot is made, never a
+     * reading of its own; it names no account, and each login keeps its row.
+     */
+    pools: array(quotaProviderViewSchema).optional()
+  });
+  const catalogModelViewSchema = object({
+    /** Quota provider id. */
+    provider: string(),
+    id: string(),
+    label: string(),
+    effectivePercentRemaining: number().optional(),
+    paceStatus: _enum(["ahead", "on_pace", "behind", "unknown"]).optional(),
+    /**
+     * The per-scope selection signal: positive means paid
+     * allowance is on track to reach reset unused (spend here first), zero is
+     * exact utilization, negative is overdrawn against the reset clock.
+     * Absent means unmeasurable - never rendered or ranked as zero.
+     */
+    spendPriority: number().optional(),
+    /**
+     * Whether every window bounding this scope is projected, at its observed
+     * burn, to last until its reset (INF-898): true lasts, false runs out
+     * first (or is spent). Absent means the runway is unknown.
+     */
+    lastsThroughReset: boolean().optional(),
+    /**
+     * Every allowance serving this model is spent, and an account serving it
+     * answers on credits (`answersOnCredits`): the model still routes, in the
+     * last band, after every included allowance. Absent is not on credits.
+     */
+    onCredits: boolean().optional()
+  });
+  object({
+    generatedAt: string(),
+    models: array(catalogModelViewSchema)
+  });
+  const modelPinSchema = object({ provider: string(), id: string() });
+  object({ provider: string(), id: string() });
+  object({
+    // Kept on the wire for older paired views; the home always reports true.
+    dynamicRouting: boolean(),
+    pins: array(modelPinSchema),
+    dormantPins: array(modelPinSchema).optional()
+  });
   function formatDurationShort(ms) {
     const totalMinutes = Math.max(0, Math.round(ms / 6e4));
     const days = Math.floor(totalMinutes / (60 * 24));
@@ -127487,54 +128059,6 @@ ${FRAME_KEYBOARD_SCRIPT}
     object({ ok: literal(true) }),
     object({ ok: literal(false), text: string() })
   ]);
-  const providerViewSchema = object({
-    id: string(),
-    name: string(),
-    /**
-     * Catalog placement. `key` is an API-key sign-in. `escape_hatch` remains
-     * so an older view still parses; nothing in the catalog uses it, and the
-     * chip labels both as "API key".
-     */
-    tier: _enum(["subscription", "key", "escape_hatch"]),
-    /** Auth methods Pi offers for this provider. */
-    authTypes: array(_enum(["oauth", "api_key"])),
-    /**
-     * Why there is no way in right now, when the provider's backend has a
-     * sentence for it and `authTypes` is empty: `note` is the short line on the
-     * chip, `detail` the sentence behind it. A Claude account runs the Claude
-     * Code the person installed (F14), so a Mac without it says so here.
-     */
-    unavailable: object({ note: string(), detail: string() }).optional(),
-    connected: boolean(),
-    activeAuthType: _enum(["oauth", "api_key"]).optional(),
-    billedPerToken: boolean()
-  });
-  const authPromptSchema = object({
-    promptId: string(),
-    providerId: string(),
-    /** Which account row this prompt belongs to, when a login is account-scoped. */
-    accountId: string().optional(),
-    kind: _enum(["text", "secret", "select", "manual_code"]),
-    message: string(),
-    placeholder: string().optional(),
-    options: array(object({ id: string(), label: string(), description: string().optional() })).optional()
-  });
-  const authNoticeSchema = object({
-    providerId: string(),
-    /** Which account row this notice belongs to, when a login is account-scoped. */
-    accountId: string().optional(),
-    kind: _enum(["info", "auth_url", "device_code", "progress"]),
-    message: string(),
-    url: string().optional(),
-    userCode: string().optional(),
-    /**
-     * When a device code stops working, in epoch milliseconds, from the
-     * provider's own answer (`expires_in`): the code step says the code
-     * expired once a sign-in ends past it.
-     */
-    expiresAt: number().optional()
-  });
-  const backendIdSchema = _enum(["pi", "claude"]);
   const STATUS_PATTERNS = [
     // formatProviderError "<status>: <body>"; SDK messages leading with the status.
     /^\s*40[13]\b/,
@@ -128451,98 +128975,6 @@ ${FRAME_KEYBOARD_SCRIPT}
   lastRoundSchema.extend({
     previous: lastRoundSchema.nullable().optional()
   });
-  const crewSpeedSchema = _enum(["standard", "fast", "ultrafast"]);
-  object({
-    requested: crewSpeedSchema,
-    sent: crewSpeedSchema,
-    /** Only a provider reply can confirm service. */
-    confirmed: string().optional(),
-    reason: string().optional()
-  });
-  const reasoningSchema = object({
-    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "default"]),
-    lower: _enum(["quick", "capped"]).optional()
-  });
-  const slotSchema = _enum(["premium", "high", "medium", "low"]);
-  const slotMembershipSchema = union([slotSchema, array(slotSchema)]).transform((value) => Array.isArray(value) ? value : [value]);
-  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh"]);
-  const reasoningCapabilitiesSchema = object({
-    levels: array(reasoningChoiceSchema),
-    fixed: _enum(["off", "default"]).optional()
-  });
-  const reasoningOverridesSchema = record(
-    string(),
-    partialRecord(slotSchema, reasoningChoiceSchema)
-  );
-  object({
-    version: literal(1),
-    /** offering → slots. An absent key or an empty array is OFF: never auto-picked, still pinnable. */
-    assignments: record(string(), slotMembershipSchema),
-    /** every offering this install has ever been offered. Seeding only touches keys absent here. */
-    seen: array(string()),
-    /** Choices survive membership changes; absent means inherit. */
-    reasoning: reasoningOverridesSchema.optional(),
-    /** Per offering, shared by every account; absent means Standard. */
-    speed: record(string(), crewSpeedSchema).optional(),
-    /**
-     * offering → when it arrived as announced news (epoch ms), for the board's
-     * "new" mark. Saved, so a later catalog read or a restart keeps the mark
-     * until the person changes the model's levels or it has had a week.
-     */
-    arrived: record(string(), number()).optional()
-  });
-  record(string(), array(string()));
-  const servedStartersSchema = object({
-    schema: literal(1),
-    starters: record(string(), record(string(), array(slotSchema)))
-  });
-  object({
-    starters: servedStartersSchema.shape.starters.nullable(),
-    checkedAt: number()
-  });
-  const slotModelViewSchema = object({
-    /** Pi provider id serving this model (never the quota id). */
-    provider: string(),
-    providerLabel: string(),
-    id: string(),
-    label: string(),
-    /** empty = off (in no slot); may carry more than one. */
-    slots: array(slotSchema),
-    reasoningCapabilities: reasoningCapabilitiesSchema.optional(),
-    speed: crewSpeedSchema.optional(),
-    /** Union of fresh account capabilities, not a promise about a routed account. */
-    speeds: array(crewSpeedSchema).optional(),
-    reasoning: partialRecord(
-      slotSchema,
-      object({
-        chosen: reasoningChoiceSchema.optional(),
-        effective: reasoningSchema.optional()
-      })
-    ).optional(),
-    /**
-     * Arrived as announced news after this install had already seen the
-     * provider's catalog, within the last week and with its levels untouched since.
-     */
-    isNew: boolean().optional(),
-    /** The computer the model runs on, when it is not this Mac's. */
-    place: string().min(1).max(64).optional()
-  });
-  object({
-    /** The listed rows (docs/model-lists.md): what the board shows. */
-    models: array(slotModelViewSchema),
-    /**
-     * Everything else the signed-in accounts serve, for the "use a model by
-     * name" controls. Never rows on the board; choosing one keeps it, which
-     * lists it from then on.
-     */
-    byName: array(slotModelViewSchema).default([]),
-    /**
-     * True when nothing currently available is assigned, so routing is running
-     * off the starter map (or the whole signed-in pool). The surface says so.
-     */
-    usingDefaults: boolean()
-  });
-  const intelligenceBucketSchema = slotSchema;
   const remoteLoginAddressSchema = string().trim().min(1).max(255).regex(
     /^(?:(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\]-]{0,190}|ssh:\/\/(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,190}|\[[A-Za-z0-9:.%]{2,64}\]):[1-9][0-9]{0,4})$/
   );
@@ -129856,200 +130288,6 @@ ${FRAME_KEYBOARD_SCRIPT}
     reachable: boolean(),
     changes: array(forgeChangeRowSchema)
   }).strict();
-  const quotaWindowViewSchema = object({
-    id: string(),
-    label: string(),
-    percentRemaining: number().optional(),
-    /**
-     * Pace vocabulary: "ahead" is usage ahead of the reset
-     * clock (burning faster than linear - conserve), "behind" is usage behind
-     * the clock (allowance on track to go unused).
-     */
-    pace: _enum(["ahead", "on_pace", "behind", "unknown"]).optional(),
-    resetText: string().optional(),
-    /**
-     * The trusted cycle evidence: the window's own reset
-     * instant and cycle length, when the vendor supplied them. Everything
-     * derived - pace, runway, spend priority - is recomputed from these at
-     * read time rather than persisted, so a stored snapshot never carries a
-     * stale projection.
-     */
-    resetsAtMs: number().optional(),
-    startsAtMs: number().optional(),
-    windowSeconds: number().optional()
-  });
-  const QUOTA_CREDIT_STATES = ["available", "spent", "off", "unknown"];
-  const quotaCreditsViewSchema = object({
-    state: _enum(QUOTA_CREDIT_STATES),
-    /** The share of a monthly spend limit used, 0–100, where the provider gives one (Claude). */
-    usedPercent: number().optional(),
-    /** The balance left, in the provider's own words (ChatGPT's "15.00"). */
-    balance: string().optional(),
-    /** The provider says the credits have no limit. */
-    unlimited: boolean().optional(),
-    /** The provider says this account is answering on credits right now. */
-    inUse: boolean().optional()
-  });
-  const quotaSavedResetsViewSchema = object({
-    available: number().int().nonnegative(),
-    applicable: number().int().nonnegative().optional()
-  });
-  const QUOTA_POOL_KINDS = ["claude", "chatgpt"];
-  const quotaPoolViewSchema = object({
-    kind: _enum(QUOTA_POOL_KINDS),
-    logins: number().int().nonnegative(),
-    /** Serving logins whose limits were read: they make the pooled windows. */
-    read: number().int().nonnegative(),
-    /** Serving logins nothing has read yet. */
-    unread: number().int().nonnegative(),
-    /** Logins whose allowance is spent until they come back. */
-    spent: number().int().nonnegative(),
-    /** The earliest moment a spent login serves again. */
-    backAtMs: number().optional(),
-    /** Logins switched off in the proxy. */
-    switchedOff: number().int().nonnegative(),
-    /** Logins whose sign-in ended in the proxy: they cannot serve. */
-    signInEnded: number().int().nonnegative(),
-    /** Serving logins the proxy says need signing in again there. */
-    signInSoon: number().int().nonnegative(),
-    /** The earliest moment one of those stops serving. */
-    signInByMs: number().optional(),
-    /**
-     * The connection's models this pool serves, on a custom connection's row:
-     * the row measures those models alone (`rowMeasuresModel`). Absent on a
-     * Claude account's row, which measures every model of its account.
-     */
-    models: array(string()).optional()
-  });
-  const quotaProviderViewSchema = object({
-    /** Quota provider id: codex, grok, claude, copilot. */
-    provider: string(),
-    label: string(),
-    /**
-     * The vault account these windows belong to (broker phase 2). Absent only
-     * in legacy fixtures/snapshots, which render as a single unnamed account.
-     */
-    accountId: string().optional(),
-    /** The account's user label ("Personal", "Work #2"). */
-    accountLabel: string().optional(),
-    plan: string().optional(),
-    /** Provider-reported identity (an email or org), when the fetch knows it. */
-    account: string().optional(),
-    /**
-     * What the sensor actually established, kept distinct so the surface can
-     * say it (quota reliability, 2026-09-04):
-     * - `ok` a real reading,
-     * - `auth_required` the terminal re-auth state (CD-3): reached only from
-     *   proof - a lapsed refresh token (`refresh_token_lapsed`) or a vendor
-     *   rejection that SURVIVED a real renewal (`rejected_after_renewal`).
-     *   The ONLY status that may say "sign in again", raise the re-auth card,
-     *   or clear a recovered card. Transient failures never take this shape,
-     * - `rate_limited` the vendor asked us to back off (`retryAfter` when given),
-     * - `unavailable` we could not find out this time (network, timeout, a
-     *   non-2xx, an unreadable store, a renewal that could not run). Transient
-     *   by assumption; last-known-good survives it,
-     * - `not_measured` Infinitary does not read a usage window for this sign-in.
-     *   NOT a claim that the credential cannot expose one,
-     * - `skipped` the account was not sensed on this pass.
-     * `error` remains only so older persisted snapshots still parse.
-     */
-    status: _enum([
-      "ok",
-      "auth_required",
-      "rate_limited",
-      "unavailable",
-      "not_measured",
-      "error",
-      "skipped"
-    ]),
-    stale: boolean(),
-    /**
-     * When these windows were actually measured. Present whenever a row is
-     * carried forward, so a stale card can state its age instead of borrowing
-     * the new snapshot's fetch time.
-     */
-    measuredAt: number().optional(),
-    /**
-     * A sanitized machine reason for a non-ok status: a code from our own
-     * vocabulary, never provider text, never a header, never a URL.
-     */
-    reason: string().optional(),
-    /** RFC 9110 Retry-After, as the vendor sent it, when it sent one. */
-    retryAfter: string().optional(),
-    windows: array(quotaWindowViewSchema),
-    /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
-    credits: quotaCreditsViewSchema.optional(),
-    savedResets: quotaSavedResetsViewSchema.optional(),
-    /**
-     * The account's Keep going on credits switch is on, as the vault holds it
-     * (`answersOnCredits`). Absent is off.
-     */
-    keepGoingOnCredits: boolean().optional(),
-    /**
-     * The row is a CLI proxy's pool of logins (`quotaPoolViewSchema`): its
-     * windows are the pooled share left, and the logins' standing rides here.
-     * The proxy's own sign-ins never make the row `auth_required`.
-     */
-    pool: quotaPoolViewSchema.optional(),
-    /**
-     * The row reads a CLI proxy, whether or not the proxy answered: a reading
-     * it could not refresh keeps only the proxy's own last reading of the same
-     * pool, never another source's (`mergeStaleProviders`).
-     */
-    fromProxy: literal(true).optional(),
-    /**
-     * Disclosed uncertainty, in the user's words, for a row with no window.
-     * The surface renders it instead of a silent blank, and it is never a
-     * substitute for a real window. It says what Infinitary did or did not do -
-     * never that a credential is incapable of exposing usage, which no test
-     * here has established.
-     */
-    detail: string().optional()
-  });
-  const quotaSnapshotViewSchema = object({
-    generatedAt: string(),
-    fetchedAt: number(),
-    providers: array(quotaProviderViewSchema)
-  });
-  const catalogModelViewSchema = object({
-    /** Quota provider id. */
-    provider: string(),
-    id: string(),
-    label: string(),
-    effectivePercentRemaining: number().optional(),
-    paceStatus: _enum(["ahead", "on_pace", "behind", "unknown"]).optional(),
-    /**
-     * The per-scope selection signal: positive means paid
-     * allowance is on track to reach reset unused (spend here first), zero is
-     * exact utilization, negative is overdrawn against the reset clock.
-     * Absent means unmeasurable - never rendered or ranked as zero.
-     */
-    spendPriority: number().optional(),
-    /**
-     * Whether every window bounding this scope is projected, at its observed
-     * burn, to last until its reset (INF-898): true lasts, false runs out
-     * first (or is spent). Absent means the runway is unknown.
-     */
-    lastsThroughReset: boolean().optional(),
-    /**
-     * Every allowance serving this model is spent, and an account serving it
-     * answers on credits (`answersOnCredits`): the model still routes, in the
-     * last band, after every included allowance. Absent is not on credits.
-     */
-    onCredits: boolean().optional()
-  });
-  object({
-    generatedAt: string(),
-    models: array(catalogModelViewSchema)
-  });
-  const modelPinSchema = object({ provider: string(), id: string() });
-  object({ provider: string(), id: string() });
-  object({
-    // Kept on the wire for older paired views; the home always reports true.
-    dynamicRouting: boolean(),
-    pins: array(modelPinSchema),
-    dormantPins: array(modelPinSchema).optional()
-  });
   const savedResetResultSchema = object({
     outcome: _enum(["used", "nothing-to-reset", "none-left"]),
     left: number().int().nonnegative().optional()

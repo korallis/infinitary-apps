@@ -192,6 +192,67 @@ describe("QuotaService", () => {
     expect(restarted.latest()?.providers[0]?.keepGoingOnCredits).toBeUndefined();
   });
 
+  // The captain's ask: the service adds one pool per provider with two or
+  // more enabled logins (docs/quota.md, "A pool of your own logins").
+  it("lays the pools over every snapshot, reads the catalog with them, and drops them when none is left", async () => {
+    const db = openInMemoryDatabase();
+    const broadcast = vi.fn();
+    const pool = {
+      provider: "claude",
+      label: "Claude",
+      status: "ok" as const,
+      stale: false,
+      windows: [{ id: "weekly", label: "weekly", percentRemaining: 55 }],
+      pool: {
+        kind: "claude" as const,
+        source: "accounts" as const,
+        accounts: ["personal", "work"],
+        logins: 2,
+        read: 2,
+        unread: 0,
+        spent: 0,
+        switchedOff: 0,
+        signInEnded: 0,
+        signInSoon: 0,
+      },
+    };
+    let pooled = true;
+    const pooledCatalog = {
+      generatedAt: SNAPSHOT.generatedAt,
+      models: [
+        {
+          provider: "claude",
+          id: "claude-opus-4-5",
+          label: "opus 4.5",
+          effectivePercentRemaining: 55,
+        },
+      ],
+    };
+    const catalogFor = vi.fn(() => pooledCatalog);
+    const options = {
+      refresh: vi.fn(async () => ({ snapshot: SNAPSHOT, catalog: CATALOG })),
+      db,
+      broadcast,
+      catalogFor,
+      pools: () => (pooled ? [pool] : []),
+    };
+    const service = new QuotaService(options);
+    await service.refresh("demand");
+    expect(service.latest()?.pools).toEqual([pool]);
+    // The refresh's own catalog never saw the pools: the catalog is read again with them.
+    expect(catalogFor).toHaveBeenCalledWith(expect.objectContaining({ pools: [pool] }));
+    expect(service.latestModels()?.models[0]?.effectivePercentRemaining).toBe(55);
+
+    // The saved snapshot is read with the pools as they stand at start.
+    expect(new QuotaService(options).latest()?.pools).toEqual([pool]);
+
+    // A login was paused: one is left, and the pool goes with no new reading.
+    pooled = false;
+    service.restamp();
+    expect(service.latest()).not.toHaveProperty("pools");
+    expect(options.refresh).toHaveBeenCalledTimes(1);
+  });
+
   it("rebuilds the model catalog over the last snapshot without fetching, and re-pushes it", async () => {
     // docs/model-lists.md: a runtime catalog read landed a model the catalog
     // had no row for, so routing could neither name nor pick it.

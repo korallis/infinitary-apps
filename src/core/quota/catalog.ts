@@ -1,8 +1,10 @@
+import { accountsPoolAt } from "@shared/accountPools";
 import type { CatalogModelView, ModelsCatalogView, QuotaProviderView } from "@shared/quota";
-import { allowanceProviderOf, answersOnCredits } from "@shared/quota";
+import { allowanceProviderOf, answersOnCredits, inAccountsPool } from "@shared/quota";
 import {
   allowanceSpent,
   compareSpendRank,
+  poolRank,
   providerScopes,
   type ScopeSignals,
 } from "@shared/quotaSignals";
@@ -117,6 +119,50 @@ export function effectiveFromProvider(
 }
 
 /**
+ * A model's view over a pool of the person's own logins (docs/quota.md, "A
+ * pool of your own logins"): what is left is the pool's, its place in the
+ * spend order is `poolRank` of `members`' own views, and a spent pool keeps
+ * going on credits when a member answers on them. `adjusted`, when given,
+ * are the members' places with placed work counted, in the members' order.
+ */
+export function effectiveFromPool(
+  pool: QuotaProviderView,
+  members: readonly QuotaProviderView[],
+  nowMs: number,
+  modelId?: string,
+  adjusted?: readonly { spendPriority?: number; lastsThroughReset?: boolean }[],
+): EffectiveView {
+  const pooled = effectiveFromProvider(pool, nowMs, modelId);
+  const raw = members.map((member) => effectiveFromProvider(member, nowMs, modelId));
+  const rank = poolRank(
+    raw.map((view, index) => {
+      const placed = adjusted?.[index];
+      if (!placed) return view;
+      const { spendPriority: _score, lastsThroughReset: _lasts, ...rest } = view;
+      return { ...rest, ...placed };
+    }),
+  );
+  const left = pooled.effectivePercentRemaining;
+  return {
+    ...(left !== undefined ? { effectivePercentRemaining: left } : {}),
+    ...rank,
+    ...(left !== undefined && left <= 0 && members.some((member) => answersOnCredits(member))
+      ? { onCredits: true as const }
+      : {}),
+  };
+}
+
+/** The rows of the logins an `accounts` pool folds. */
+export function poolMembers(
+  pool: QuotaProviderView,
+  providers: readonly QuotaProviderView[],
+): QuotaProviderView[] {
+  return providers.filter(
+    (row) => row.provider === pool.provider && inAccountsPool(pool, row.accountId),
+  );
+}
+
+/**
  * What an account pick reads of one account row, as read at `nowMs`
  * (`effectiveFromProvider`): whether each scope - every model's, then each a
  * model window names - is spent, and whether the account answers on credits.
@@ -221,6 +267,8 @@ export function buildModelsCatalog(
   providers: QuotaProviderView[],
   generatedAt: string,
   nowMs?: number,
+  /** The snapshot's pools of the person's own logins (`QuotaSnapshotView.pools`). */
+  pools?: readonly QuotaProviderView[],
 ): ModelsCatalogView {
   const at =
     nowMs ?? (Number.isFinite(Date.parse(generatedAt)) ? Date.parse(generatedAt) : Date.now());
@@ -238,7 +286,12 @@ export function buildModelsCatalog(
     const rows = (byQuotaId.get(quotaId) ?? []).filter(
       (row) => !model.pool || row.pool?.kind === model.pool,
     );
-    const effective = effectiveAcrossAccounts(rows, at, model.id);
+    // A provider whose own logins pool is read as that pool, not as its
+    // best login (docs/quota.md, "A pool of your own logins").
+    const pool = model.pool ? undefined : accountsPoolAt(pools, providers, quotaId, at);
+    const effective = pool
+      ? effectiveFromPool(pool, poolMembers(pool, providers), at, model.id)
+      : effectiveAcrossAccounts(rows, at, model.id);
     return [
       {
         provider: quotaId,

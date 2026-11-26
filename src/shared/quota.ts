@@ -185,6 +185,17 @@ export function answersOnCredits(
 export const QUOTA_POOL_KINDS = ["claude", "chatgpt"] as const;
 export type QuotaPoolKind = (typeof QUOTA_POOL_KINDS)[number];
 
+export const QUOTA_POOL_SOURCES = ["accounts", "proxy"] as const;
+
+/**
+ * The quota provider whose own logins fold into each pool (docs/quota.md,
+ * "A pool of your own logins"); no other provider's logins pool.
+ */
+export const POOL_QUOTA_PROVIDER: Record<QuotaPoolKind, string> = {
+  claude: "claude",
+  chatgpt: "codex",
+};
+
 /** Each pool's name on its row. */
 // i18n-exempt: product names, the same in every language
 export const QUOTA_POOL_NAMES: Record<QuotaPoolKind, string> = {
@@ -200,6 +211,14 @@ export const QUOTA_POOL_NAMES: Record<QuotaPoolKind, string> = {
  */
 export const quotaPoolViewSchema = z.object({
   kind: z.enum(QUOTA_POOL_KINDS),
+  /**
+   * Whose logins the pool folds: a CLI proxy's (`proxy`, also what a row
+   * without it means), or the person's own logins of one provider signed in
+   * here (`accounts`, docs/quota.md "A pool of your own logins").
+   */
+  source: z.enum(QUOTA_POOL_SOURCES).optional(),
+  /** The accounts an `accounts` pool folds, by id. */
+  accounts: z.array(z.string()).optional(),
   logins: z.number().int().nonnegative(),
   /** Serving logins whose limits were read: they make the pooled windows. */
   read: z.number().int().nonnegative(),
@@ -227,10 +246,15 @@ export const quotaPoolViewSchema = z.object({
 export type QuotaPoolView = z.infer<typeof quotaPoolViewSchema>;
 
 /** The provider whose credits words a pool's credits are read in. */
-export const POOL_CREDITS_PROVIDER: Record<QuotaPoolKind, string> = {
-  claude: "claude",
-  chatgpt: "codex",
-};
+export const POOL_CREDITS_PROVIDER: Record<QuotaPoolKind, string> = POOL_QUOTA_PROVIDER;
+
+/** Whether `accountId` is one of the logins an `accounts` pool folds. */
+export function inAccountsPool(
+  pool: Pick<QuotaProviderView, "pool"> | undefined,
+  accountId: string | undefined,
+): boolean {
+  return accountId !== undefined && (pool?.pool?.accounts?.includes(accountId) ?? false);
+}
 
 /**
  * Whether `row` measures model `modelId`: a custom connection's pool row
@@ -435,6 +459,14 @@ export const quotaSnapshotViewSchema = z.object({
   generatedAt: z.string(),
   fetchedAt: z.number(),
   providers: z.array(quotaProviderViewSchema),
+  /**
+   * One row per provider with two or more enabled logins of the person's
+   * own (docs/quota.md, "A pool of your own logins"): its windows are the
+   * pooled share left across those logins, and `pool` says how they stand.
+   * Derived from `providers` each time the snapshot is made, never a
+   * reading of its own; it names no account, and each login keeps its row.
+   */
+  pools: z.array(quotaProviderViewSchema).optional(),
 });
 export type QuotaSnapshotView = z.infer<typeof quotaSnapshotViewSchema>;
 

@@ -110,6 +110,9 @@ export function accountHandlers(services: CoreServices, emit: CoreEventSink): Ac
           enabled,
         });
       services.vault.setEnabled(accountId, enabled);
+      // Which logins a provider's pool folds just moved (docs/quota.md, "A
+      // pool of your own logins").
+      services.quota.restamp();
       if (enabled && isCustomApiProvider(services.vault.get(accountId)?.providerId ?? ""))
         await services.vault.runtimeFor(accountId);
       if (enabled) void services.servedModels.refresh(accountId);

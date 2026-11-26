@@ -1310,6 +1310,15 @@
   "settingsSubscriptionsNotReady": "準備中",
   "settingsSubscriptionsOnPace": "ペースどおり",
   "settingsSubscriptionsOnPaceAll": "ペースどおり ✓",
+  "settingsSubscriptionsOwnPoolAccounts": {
+    "plural": "count",
+    "other": "{count} 件のアカウントをまとめて使用中"
+  },
+  "settingsSubscriptionsOwnPoolName": "すべてのアカウント",
+  "settingsSubscriptionsOwnPoolSignedOut": {
+    "plural": "count",
+    "other": "{count} 件は再度サインインが必要"
+  },
   "settingsSubscriptionsPaused": "一時停止中",
   "settingsSubscriptionsPersonalResourcesDescription": "新しい乗組員の会話では、一等航海士がいる {computer} の全体の指示とスキルと、そこでオンにしたエージェントプラグインのスキルを使います。作業を実行するほかの {computers} はその写しを持ち、変更されたときだけ送り直されます。届け方は乗組員のルールが決め、あなたのファイルは書き方と判断の指針になります。",
   "settingsSubscriptionsPersonalResourcesTitle": "全体の指示とスキル",

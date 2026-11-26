@@ -1370,6 +1370,19 @@
   "settingsSubscriptionsNotReady": "não está pronta",
   "settingsSubscriptionsOnPace": "no ritmo",
   "settingsSubscriptionsOnPaceAll": "no ritmo ✓",
+  "settingsSubscriptionsOwnPoolAccounts": {
+    "plural": "count",
+    "one": "{count} conta agrupada",
+    "many": "{count} de contas agrupadas",
+    "other": "{count} contas agrupadas"
+  },
+  "settingsSubscriptionsOwnPoolName": "Todas as contas",
+  "settingsSubscriptionsOwnPoolSignedOut": {
+    "plural": "count",
+    "one": "{count} precisa fazer login de novo",
+    "many": "{count} precisam fazer login de novo",
+    "other": "{count} precisam fazer login de novo"
+  },
   "settingsSubscriptionsPaused": "pausada",
   "settingsSubscriptionsPersonalResourcesDescription": "As novas conversas dos tripulantes usam as instruções e habilidades globais do {computer} onde mora seu imediato, junto com as habilidades dos plugins de agente que você ativou lá. Os outros {computers} que executam trabalho guardam uma cópia, enviada de novo só quando ela muda. As regras da tripulação regem a entrega; seu arquivo orienta o estilo e o julgamento.",
   "settingsSubscriptionsPersonalResourcesTitle": "Instruções e habilidades globais",

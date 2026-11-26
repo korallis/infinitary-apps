@@ -357,6 +357,8 @@ export class Router {
         Date.now(),
         bound,
         options.placed,
+        // The pools are this computer's own logins: another computer ranks by its own readings.
+        pool ? undefined : this.options.quota.latest()?.pools,
       ) ?? rawCatalog;
     const pooled = (options.pool?.available ?? this.options.availableModels()).filter(
       (model) => !without || model.provider !== without,

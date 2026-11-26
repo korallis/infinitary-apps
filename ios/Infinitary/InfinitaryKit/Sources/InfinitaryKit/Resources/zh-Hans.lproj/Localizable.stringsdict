@@ -2131,6 +2131,34 @@
       <string>%1$ld 个任务</string>
     </dict>
   </dict>
+  <key>settingsSubscriptionsOwnPoolAccounts</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>合并了 %1$ld 个账户</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsOwnPoolSignedOut</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 个需要重新登录</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsPoolAccounts</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

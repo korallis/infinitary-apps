@@ -56,6 +56,8 @@ A reading that says what the provider does past the allowance adds one line unde
 An unknown fact, a row that is not a reading and a provider Infinitary reads no credits for say nothing.
 A Codex reading that says the account holds saved resets adds one more line under the meters, such as "1 saved reset · use it on chatgpt.com" (`savedResetsLine`, `docs/quota.md` "Saved resets"); none held, or an unknown count, says nothing.
 A row that reads a CLI proxy's pooled logins adds one line saying how they stand, such as "4 accounts pooled in your proxy app · 1 spent until 21:00" (`poolLine`, `docs/quota.md` "A proxy's pooled logins"); a pool none of whose logins was read yet says it in place of the meters.
+A provider with two or more accounts in use here, Claude or ChatGPT, heads them with one row named "All accounts": the pooled meters, "2 accounts pooled" under the name, and under the meters each count that is spent, not read yet or needs signing in again (`poolRowViews`, `docs/quota.md` "A pool of your own logins").
+That row reads only: it has no status dot, no menu and no Sign in, since each account is acted on from its own row.
 A Claude or Codex row's menu holds "Keep going on credits", the account's switch (`docs/quota.md`, "Keep going on credits"), with "Only after every included allowance" under it; while the provider says its credits are off the item is dim and says so, such as "Extra usage is off on claude.ai".
 Its switch shows whether it is on, and while it is on the credits line ends "keeps going on credits" in place of where to change it, so the line stays one line.
 The item is reached like every menu item, by Tab to the row's menu and the arrows inside it; it is a setting chosen now and then, so it adds no command.

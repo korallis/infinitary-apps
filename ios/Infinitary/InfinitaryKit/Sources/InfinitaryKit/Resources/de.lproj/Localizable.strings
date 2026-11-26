@@ -3892,6 +3892,7 @@
 "settingsSubscriptionsNotReady" = "nicht bereit";
 "settingsSubscriptionsOnPace" = "im Plan";
 "settingsSubscriptionsOnPaceAll" = "im Plan ✓";
+"settingsSubscriptionsOwnPoolName" = "Alle Konten";
 "settingsSubscriptionsPaused" = "pausiert";
 "settingsSubscriptionsPersonalResourcesDescription" = "Neue Unterhaltungen von Crewmitgliedern verwenden die globalen Anweisungen und Skills auf dem %1$@, auf dem dein erster Offizier lebt, samt den Skills der Agenten-Plugins, die du dort eingeschaltet hast. Andere %2$@, die Arbeit ausführen, behalten eine Kopie, die nur nach einer Änderung neu gesendet wird. Die Crew-Regeln bestimmen die Lieferung; deine Datei leitet Stil und Urteil.";
 "settingsSubscriptionsPersonalResourcesTitle" = "Globale Anweisungen und Skills";

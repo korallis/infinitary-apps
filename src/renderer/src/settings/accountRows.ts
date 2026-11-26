@@ -29,6 +29,7 @@ import {
   creditsLine,
   EMPTY_QUOTA_TEXT,
   noReaderText,
+  poolFacts,
   poolLine,
   SUBSCRIPTIONS_WORDS,
   savedResetsLine,
@@ -331,7 +332,19 @@ export function rowView(
       return account.access ? withHold(view, account, now) : view;
     }
   }
-  view.meters = (row?.windows ?? []).map((window) => {
+  view.meters = metersOf(row, now);
+  const verdict = verdictFor(kind, row, now);
+  if (verdict) view.verdict = verdict;
+  const credits = row ? creditsOf(row, account) : undefined;
+  if (credits) view.credits = credits;
+  const savedResets = row ? savedResetsLine(row.provider, row.savedResets) : undefined;
+  if (savedResets) view.savedResets = savedResets;
+  if (row?.pool) view.pool = poolLine(row.pool, now);
+  return withHold(view, account, now);
+}
+
+function metersOf(row: QuotaProviderView | undefined, now: number): RowView["meters"] {
+  return (row?.windows ?? []).map((window) => {
     const signals = windowSignals(window, now);
     return {
       id: window.id,
@@ -342,14 +355,59 @@ export function rowView(
       ...(signals.kind === "measured" ? { clock: signals.timeRemainingPercent } : {}),
     };
   });
-  const verdict = verdictFor(kind, row, now);
-  if (verdict) view.verdict = verdict;
-  const credits = row ? creditsOf(row, account) : undefined;
-  if (credits) view.credits = credits;
-  const savedResets = row ? savedResetsLine(row.provider, row.savedResets) : undefined;
-  if (savedResets) view.savedResets = savedResets;
-  if (row?.pool) view.pool = poolLine(row.pool, now);
-  return withHold(view, account, now);
+}
+
+/**
+ * The header of a provider whose own logins pool (docs/quota.md, "A pool of
+ * your own logins"): the pooled meters, how many logins are pooled, and each
+ * count that stops one serving or leaves it unread.
+ */
+export type PoolRowView = {
+  provider: string;
+  name: string;
+  /** How many logins are pooled. */
+  sub: string;
+  meters: RowView["meters"];
+  /** How the logins that are not serving stand, when any. */
+  standing?: string;
+};
+
+/** One header per pool of the snapshot, by the quota provider it pools. */
+export function poolRowViews(
+  pools: readonly QuotaProviderView[] | undefined,
+  now: number,
+): PoolRowView[] {
+  return (pools ?? []).flatMap((row) => {
+    if (row.pool?.source !== "accounts") return [];
+    const [sub = "", ...rest] = poolFacts(row.pool, now);
+    return [
+      {
+        provider: row.provider,
+        name: m.settingsSubscriptionsOwnPoolName(),
+        sub,
+        meters: metersOf(row, now),
+        ...(rest.length > 0 ? { standing: rest.join(" · ") } : {}),
+      },
+    ];
+  });
+}
+
+/**
+ * The header each account's row follows: its provider's pool, on the first
+ * of `accounts` (in the order they are listed) that is a login of it.
+ */
+export function poolHeads(
+  accounts: readonly AccountView[],
+  pools: readonly QuotaProviderView[] | undefined,
+  now: number,
+): Map<string, PoolRowView> {
+  const heads = new Map<string, PoolRowView>();
+  for (const view of poolRowViews(pools, now)) {
+    const members = pools?.find((row) => row.provider === view.provider)?.pool?.accounts ?? [];
+    const first = accounts.find((account) => members.includes(account.id));
+    if (first) heads.set(first.id, view);
+  }
+  return heads;
 }
 
 /**

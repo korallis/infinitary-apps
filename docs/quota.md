@@ -359,3 +359,32 @@ Infinitary reads such a proxy's own limit readings and shows, routes and pauses 
   The proxy is read on its own one-minute clock and again after each quota refresh (`localReading` on `QuotaService`), never holding a refresh up.
   One projection makes every row read through the proxy, all timed at the reading's own moment (`projectProxyRows`, through `rowOfOutcome`): the Claude row, found by its quota id while Claude Code's access is set up and the last ordinary refresh read the account through it, so a fresh reading of the account's own sign-in is never replaced, and each connection's pool rows.
   It is laid over every refresh until the next reading, and a reading publishes the rows and the catalog only when they change, so an unchanged minute tells no surface; when the last proxy goes, one publish gives the Claude row back to what its access says and takes the connection rows away.
+
+## A pool of your own logins
+
+Several logins of one provider signed in on this computer are one pool: one for Claude and one for ChatGPT, and none for any other provider.
+A pool is a reading of its logins, never an allowance of its own: each login keeps its own limits, and a request still runs on one login.
+
+- **Who is in it.**
+  The enabled accounts of the provider here (`pools` on `QuotaService`, wired in `src/core/quota/homeQuota.ts`); a paused account is not a login of the pool, and a login a CLI proxy answers for is that proxy's pool already ("A proxy's pooled logins").
+  A provider with fewer than two such logins has no pool.
+- **The fold.**
+  `accountPools` (`src/shared/accountPools.ts`) reads each login from its account row and hands them to `poolReading`, the same math a proxy's logins use, each login weighing one.
+  A login whose every-model allowance is used up is spent and counts as zero in every window until the window holding it resets; from that moment it serves again with no new reading.
+  A login whose row is missing, stale or not a reading is unread, and one whose sign-in ended cannot serve: both are counted on the pool and never weigh as zero.
+- **Where it lives.**
+  The snapshot carries the pools beside the account rows, in `pools` (`quotaSnapshotViewSchema`), one row per pooled provider with no account id; `pool.source` is `accounts` and `pool.accounts` names the logins.
+  The account rows stay as they are, so everything that reads one account's row reads what it read before.
+  The pools are folded again on every snapshot and whenever an account is paused or resumed (`QuotaService.restamp`), and a reader that decides something folds them once more at the moment it reads (`accountsPoolAt`), so a reset that has passed counts at once.
+- **Routing.**
+  A model of a pooled provider is read as its pool, not as its best login (`effectiveFromPool` in `src/core/quota/catalog.ts`): what is left is the pool's, and its place in the spend order is the mean of the scores of the logins that still have allowance (`poolRank`), since pooled windows have no one cycle to score.
+  The pool lasts through its resets when one such login does.
+  Crew routing ranks the model by the pool while the login that would serve it still has allowance, and keeps that login as the one that serves and whose reset the reading holds until (`PlacedWorkScores.catalog`); a spent login in use keeps its own reading, so the pool orders the models and the login in use decides whether one can start now.
+  Another computer's models are ranked by that computer's own readings.
+- **Pausing.**
+  The first mate moves off a spent login to another of the provider with allowance and pauses only when none has any (`Flagship.sibling`).
+  A reset gate on a pooled provider clears while the pool has allowance or its allowance is unknown, and holds only when every login is spent and none keeps going on credits (`quotaGateCleared`).
+- **Where it shows.**
+  Settings → Intelligence heads a pooled provider's accounts with one row: the pooled meters, how many accounts are pooled, and each count that is spent, unread or needs signing in again (`poolRowViews` in `src/renderer/src/settings/accountRows.ts`).
+  The phone's Intelligence page shows the same row at the head of that provider's accounts (`intelligencePage`).
+  The first mate's allowance digest names the pool before its logins (`quotaContextLine`).

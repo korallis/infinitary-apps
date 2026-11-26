@@ -1370,6 +1370,19 @@
   "settingsSubscriptionsNotReady": "pas prêt",
   "settingsSubscriptionsOnPace": "dans le rythme",
   "settingsSubscriptionsOnPaceAll": "dans le rythme ✓",
+  "settingsSubscriptionsOwnPoolAccounts": {
+    "plural": "count",
+    "one": "{count} compte regroupé",
+    "many": "{count} de comptes regroupés",
+    "other": "{count} comptes regroupés"
+  },
+  "settingsSubscriptionsOwnPoolName": "Tous les comptes",
+  "settingsSubscriptionsOwnPoolSignedOut": {
+    "plural": "count",
+    "one": "{count} doit se reconnecter",
+    "many": "{count} doivent se reconnecter",
+    "other": "{count} doivent se reconnecter"
+  },
   "settingsSubscriptionsPaused": "en pause",
   "settingsSubscriptionsPersonalResourcesDescription": "Les nouvelles conversations des équipiers utilisent les instructions et compétences globales du {computer} où vit votre second, avec les compétences des plugins d’agent que vous y avez activés. Les autres {computers} qui exécutent du travail en gardent une copie, renvoyée seulement quand elle change. Les règles de l’équipage régissent la livraison ; votre fichier guide le style et le jugement.",
   "settingsSubscriptionsPersonalResourcesTitle": "Instructions et compétences globales",

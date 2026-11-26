@@ -53,6 +53,13 @@ export type QuotaServiceOptions = {
    */
   stamp?: (snapshot: QuotaSnapshotView) => QuotaSnapshotView;
   /**
+   * The pools of the person's own logins over a snapshot's rows
+   * (`QuotaSnapshotView.pools`, docs/quota.md "A pool of your own logins"),
+   * folded again on every snapshot and on `restamp`: none leaves the
+   * snapshot without the field.
+   */
+  pools?: (snapshot: QuotaSnapshotView) => QuotaProviderView[];
+  /**
    * A reading of this computer alone (a CLI proxy's pools), taken on its
    * own clock between refreshes and never holding one up: each run answers
    * how it rewrites the last snapshot's rows, or nothing to leave it be.
@@ -86,8 +93,15 @@ export class QuotaService {
     if (json !== undefined) {
       const parsed = quotaSnapshotViewSchema.safeParse(JSON.parse(json));
       // The switches as they stand now, not as they stood when it was saved.
-      if (parsed.success) this.latestSnapshot = options.stamp?.(parsed.data) ?? parsed.data;
+      if (parsed.success) this.latestSnapshot = this.laid(parsed.data);
     }
+  }
+
+  /** A snapshot with what is derived from its rows laid over it: the switches, then the pools. */
+  private laid(snapshot: QuotaSnapshotView): QuotaSnapshotView {
+    const { pools: _was, ...stamped } = this.options.stamp?.(snapshot) ?? snapshot;
+    const pools = this.options.pools?.(stamped) ?? [];
+    return pools.length > 0 ? { ...stamped, pools } : stamped;
   }
 
   latest(): QuotaSnapshotView | undefined {
@@ -114,13 +128,14 @@ export class QuotaService {
   }
 
   /**
-   * An account's Keep going on credits switch moved: the last snapshot and
-   * its catalog are read again with it, fetching nothing, and pushed again
-   * so routing, the first mate and every surface see it now.
+   * An account's Keep going on credits switch moved, or which logins a pool
+   * folds did: the last snapshot and its catalog are read again with it,
+   * fetching nothing, and pushed again so routing, the first mate and every
+   * surface see it now.
    */
   restamp(): void {
     if (!this.latestSnapshot) return;
-    this.latestSnapshot = this.options.stamp?.(this.latestSnapshot) ?? this.latestSnapshot;
+    this.latestSnapshot = this.laid(this.latestSnapshot);
     const rebuilt = this.options.catalogFor
       ? modelsCatalogViewSchema.safeParse(this.options.catalogFor(this.latestSnapshot))
       : undefined;
@@ -187,7 +202,7 @@ export class QuotaService {
       const latest = this.latestSnapshot;
       if (!rewrite || !latest) return;
       const merged = mergeStaleProviders(rewrite(latest), latest, this.now());
-      const next = this.options.stamp?.(merged) ?? merged;
+      const next = this.laid(merged);
       if (JSON.stringify(next.providers) === JSON.stringify(latest.providers)) return;
       this.latestSnapshot = next;
       this.recatalog();
@@ -255,11 +270,12 @@ export class QuotaService {
         const result = await this.options.refresh(reason);
         const read = this.localRewrite?.(result.snapshot) ?? result.snapshot;
         const merged = mergeStaleProviders(read, this.latestSnapshot, this.now());
-        const snapshot = this.options.stamp?.(merged) ?? merged;
+        const snapshot = this.laid(merged);
         this.latestSnapshot = snapshot;
-        // The refresh's own catalog never saw the local reading's rows.
+        // The refresh's own catalog never saw the local reading's rows, nor
+        // the pools.
         const catalog = modelsCatalogViewSchema.safeParse(
-          this.localRewrite && this.options.catalogFor
+          (this.localRewrite || snapshot.pools) && this.options.catalogFor
             ? this.options.catalogFor(snapshot)
             : result.catalog,
         );

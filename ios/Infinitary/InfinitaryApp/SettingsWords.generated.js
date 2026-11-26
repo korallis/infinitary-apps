@@ -12104,6 +12104,221 @@ ${events}` : prompt;
     }
     return `on pace ✓`;
   }
+  function settingsSubscriptionsOwnPoolAccounts(input) {
+    const count = formatNumber(input.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input.count)) {
+          case "zero":
+            return `حسابات مجمّعة: ${count}`;
+          case "one":
+            return `حسابات مجمّعة: ${count}`;
+          case "two":
+            return `حسابات مجمّعة: ${count}`;
+          case "few":
+            return `حسابات مجمّعة: ${count}`;
+          case "many":
+            return `حسابات مجمّعة: ${count}`;
+          default:
+            return `حسابات مجمّعة: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} Konto gebündelt`;
+          default:
+            return `${count} Konten gebündelt`;
+        }
+      case "es":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} cuenta agrupada`;
+          case "many":
+            return `${count} de cuentas agrupadas`;
+          default:
+            return `${count} cuentas agrupadas`;
+        }
+      case "fr":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} compte regroupé`;
+          case "many":
+            return `${count} de comptes regroupés`;
+          default:
+            return `${count} comptes regroupés`;
+        }
+      case "ja":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 件のアカウントをまとめて使用中`;
+        }
+      case "ko":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `계정 ${count}개가 합쳐져 있음`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} conta agrupada`;
+          case "many":
+            return `${count} de contas agrupadas`;
+          default:
+            return `${count} contas agrupadas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `合并了 ${count} 个账户`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `合併了 ${count} 個帳號`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `[${count} áççöûñţ þööļéð ~~~~~]`;
+          default:
+            return `[${count} áççöûñţš þööļéð ~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `${count}‮ account pooled‬`;
+          default:
+            return `${count}‮ accounts pooled‬`;
+        }
+    }
+    switch (pluralCategory(input.count)) {
+      case "one":
+        return `${count} account pooled`;
+      default:
+        return `${count} accounts pooled`;
+    }
+  }
+  function settingsSubscriptionsOwnPoolName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل الحسابات`;
+      case "de":
+        return `Alle Konten`;
+      case "es":
+        return `Todas las cuentas`;
+      case "fr":
+        return `Tous les comptes`;
+      case "ja":
+        return `すべてのアカウント`;
+      case "ko":
+        return `모든 계정`;
+      case "pt-BR":
+        return `Todas as contas`;
+      case "zh-Hans":
+        return `所有账户`;
+      case "zh-Hant":
+        return `所有帳號`;
+      case "en-XA":
+        return `[Åļļ áççöûñţš ~~~~]`;
+      case "ar-XB":
+        return `‮All accounts‬`;
+    }
+    return `All accounts`;
+  }
+  function settingsSubscriptionsOwnPoolSignedOut(input) {
+    const count = formatNumber(input.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input.count)) {
+          case "zero":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "one":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "two":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "few":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "many":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          default:
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} muss neu angemeldet werden`;
+          default:
+            return `${count} müssen neu angemeldet werden`;
+        }
+      case "es":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} debe volver a iniciar sesión`;
+          case "many":
+            return `${count} deben volver a iniciar sesión`;
+          default:
+            return `${count} deben volver a iniciar sesión`;
+        }
+      case "fr":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} doit se reconnecter`;
+          case "many":
+            return `${count} doivent se reconnecter`;
+          default:
+            return `${count} doivent se reconnecter`;
+        }
+      case "ja":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 件は再度サインインが必要`;
+        }
+      case "ko":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count}개는 다시 로그인해야 함`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} precisa fazer login de novo`;
+          case "many":
+            return `${count} precisam fazer login de novo`;
+          default:
+            return `${count} precisam fazer login de novo`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 个需要重新登录`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 個需要重新登入`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `[${count} ñééðš šîĝñîñĝ îñ áĝáîñ ~~~~~~~~]`;
+          default:
+            return `[${count} ñééð šîĝñîñĝ îñ áĝáîñ ~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `${count}‮ needs signing in again‬`;
+          default:
+            return `${count}‮ need signing in again‬`;
+        }
+    }
+    switch (pluralCategory(input.count)) {
+      case "one":
+        return `${count} needs signing in again`;
+      default:
+        return `${count} need signing in again`;
+    }
+  }
   function settingsSubscriptionsPaused() {
     switch (currentLanguage()) {
       case "ar":
@@ -15095,12 +15310,25 @@ ${events}` : prompt;
     codex: "https://chatgpt.com/settings/usage"
   };
   const QUOTA_POOL_KINDS = ["claude", "chatgpt"];
+  const QUOTA_POOL_SOURCES = ["accounts", "proxy"];
+  const POOL_QUOTA_PROVIDER = {
+    claude: "claude",
+    chatgpt: "codex"
+  };
   const QUOTA_POOL_NAMES = {
     claude: "Claude",
     chatgpt: "ChatGPT"
   };
   const quotaPoolViewSchema = object({
     kind: _enum(QUOTA_POOL_KINDS),
+    /**
+     * Whose logins the pool folds: a CLI proxy's (`proxy`, also what a row
+     * without it means), or the person's own logins of one provider signed in
+     * here (`accounts`, docs/quota.md "A pool of your own logins").
+     */
+    source: _enum(QUOTA_POOL_SOURCES).optional(),
+    /** The accounts an `accounts` pool folds, by id. */
+    accounts: array(string()).optional(),
     logins: number().int().nonnegative(),
     /** Serving logins whose limits were read: they make the pooled windows. */
     read: number().int().nonnegative(),
@@ -15125,10 +15353,7 @@ ${events}` : prompt;
      */
     models: array(string()).optional()
   });
-  const POOL_CREDITS_PROVIDER = {
-    claude: "claude",
-    chatgpt: "codex"
-  };
+  const POOL_CREDITS_PROVIDER = POOL_QUOTA_PROVIDER;
   const quotaProviderViewSchema = object({
     /** Quota provider id: codex, grok, claude, copilot. */
     provider: string(),
@@ -15230,7 +15455,15 @@ ${events}` : prompt;
   const quotaSnapshotViewSchema = object({
     generatedAt: string(),
     fetchedAt: number(),
-    providers: array(quotaProviderViewSchema)
+    providers: array(quotaProviderViewSchema),
+    /**
+     * One row per provider with two or more enabled logins of the person's
+     * own (docs/quota.md, "A pool of your own logins"): its windows are the
+     * pooled share left across those logins, and `pool` says how they stand.
+     * Derived from `providers` each time the snapshot is made, never a
+     * reading of its own; it names no account, and each login keeps its row.
+     */
+    pools: array(quotaProviderViewSchema).optional()
   });
   const catalogModelViewSchema = object({
     /** Quota provider id. */
@@ -19204,8 +19437,11 @@ ${events}` : prompt;
     const value = Number(balance);
     return balance.trim() !== "" && Number.isFinite(value) ? formatNumber(value, { maximumFractionDigits: 2 }) : balance;
   }
-  function poolLine(pool, now) {
-    const facts = [settingsSubscriptionsPoolAccounts({ count: pool.logins })];
+  function poolFacts(pool, now) {
+    const own2 = pool.source === "accounts";
+    const facts = [
+      own2 ? settingsSubscriptionsOwnPoolAccounts({ count: pool.logins }) : settingsSubscriptionsPoolAccounts({ count: pool.logins })
+    ];
     if (pool.unread > 0) facts.push(settingsSubscriptionsPoolUnread({ count: pool.unread }));
     if (pool.spent > 0)
       facts.push(
@@ -19222,10 +19458,15 @@ ${events}` : prompt;
         })
       );
     if (pool.signInEnded > 0)
-      facts.push(settingsSubscriptionsPoolSignedOut({ count: pool.signInEnded }));
+      facts.push(
+        own2 ? settingsSubscriptionsOwnPoolSignedOut({ count: pool.signInEnded }) : settingsSubscriptionsPoolSignedOut({ count: pool.signInEnded })
+      );
     if (pool.switchedOff > 0)
       facts.push(settingsSubscriptionsPoolSwitchedOff({ count: pool.switchedOff }));
-    return facts.join(" · ");
+    return facts;
+  }
+  function poolLine(pool, now) {
+    return poolFacts(pool, now).join(" · ");
   }
   function poolTime(at, now) {
     return at - now < 24 * 60 * 60 * 1e3 ? formatTime(at, { hour: "2-digit", minute: "2-digit" }) : formatDateTime(at, { weekday: "short", hour: "2-digit", minute: "2-digit" });
@@ -19368,7 +19609,18 @@ ${events}` : prompt;
         return account.access ? withHold(view, account, now) : view;
       }
     }
-    view.meters = (row?.windows ?? []).map((window) => {
+    view.meters = metersOf(row, now);
+    const verdict = verdictFor(kind, row, now);
+    if (verdict) view.verdict = verdict;
+    const credits = row ? creditsOf(row, account) : void 0;
+    if (credits) view.credits = credits;
+    const savedResets = row ? savedResetsLine(row.provider, row.savedResets) : void 0;
+    if (savedResets) view.savedResets = savedResets;
+    if (row?.pool) view.pool = poolLine(row.pool, now);
+    return withHold(view, account, now);
+  }
+  function metersOf(row, now) {
+    return (row?.windows ?? []).map((window) => {
       const signals = windowSignals(window, now);
       return {
         id: window.id,
@@ -19379,14 +19631,30 @@ ${events}` : prompt;
         ...signals.kind === "measured" ? { clock: signals.timeRemainingPercent } : {}
       };
     });
-    const verdict = verdictFor(kind, row, now);
-    if (verdict) view.verdict = verdict;
-    const credits = row ? creditsOf(row, account) : void 0;
-    if (credits) view.credits = credits;
-    const savedResets = row ? savedResetsLine(row.provider, row.savedResets) : void 0;
-    if (savedResets) view.savedResets = savedResets;
-    if (row?.pool) view.pool = poolLine(row.pool, now);
-    return withHold(view, account, now);
+  }
+  function poolRowViews(pools, now) {
+    return (pools ?? []).flatMap((row) => {
+      if (row.pool?.source !== "accounts") return [];
+      const [sub = "", ...rest] = poolFacts(row.pool, now);
+      return [
+        {
+          provider: row.provider,
+          name: settingsSubscriptionsOwnPoolName(),
+          sub,
+          meters: metersOf(row, now),
+          ...rest.length > 0 ? { standing: rest.join(" · ") } : {}
+        }
+      ];
+    });
+  }
+  function poolHeads(accounts, pools, now) {
+    const heads = /* @__PURE__ */ new Map();
+    for (const view of poolRowViews(pools, now)) {
+      const members2 = pools?.find((row) => row.provider === view.provider)?.pool?.accounts ?? [];
+      const first = accounts.find((account) => members2.includes(account.id));
+      if (first) heads.set(first.id, view);
+    }
+    return heads;
   }
   function creditsOf(row, account) {
     return row.pool ? creditsLine(POOL_CREDITS_PROVIDER[row.pool.kind], row.credits) : creditsLine(row.provider, row.credits, account.keepGoingOnCredits === true);
@@ -20036,25 +20304,7 @@ ${events}` : prompt;
         ...account.pinned ? [CREW_PREFERRED_MARK] : [],
         ...firstmate ? [SUBSCRIPTIONS_WORDS.firstmateAccountTag] : []
       ],
-      meters: view.meters.map((meter) => {
-        const look = quotaMicroMeterLook({
-          percentRemaining: meter.percent,
-          pace: meter.pace,
-          clockPercent: meter.clock,
-          stale
-        });
-        return {
-          id: meter.id,
-          label: meter.label,
-          text: look.text,
-          fill: look.fill,
-          bar: look.bar,
-          figure: look.figure,
-          ...look.clock !== void 0 ? { clock: look.clock } : {},
-          stale,
-          ...meter.resetText ? { reset: meter.resetText } : {}
-        };
-      }),
+      meters: phoneMeters(view.meters, stale),
       ...view.verdict ? { verdict: view.verdict } : {},
       ...view.stateText ? {
         state: {
@@ -20065,6 +20315,40 @@ ${events}` : prompt;
       ...view.signIn && !saysWhere ? { signIn: PHONE_SETTINGS_WORDS.signIn(place.where, view.signInLabel) } : {}
     };
   }
+  function phoneMeters(meters, stale) {
+    return meters.map((meter) => {
+      const look = quotaMicroMeterLook({
+        percentRemaining: meter.percent,
+        pace: meter.pace,
+        clockPercent: meter.clock,
+        stale
+      });
+      return {
+        id: meter.id,
+        label: meter.label,
+        text: look.text,
+        fill: look.fill,
+        bar: look.bar,
+        figure: look.figure,
+        ...look.clock !== void 0 ? { clock: look.clock } : {},
+        stale,
+        ...meter.resetText ? { reset: meter.resetText } : {}
+      };
+    });
+  }
+  function poolRow(view, provider) {
+    return {
+      id: `pool:${view.provider}`,
+      provider,
+      name: view.name,
+      sub: view.sub,
+      dot: view.meters.length > 0 ? "ok" : "ring",
+      dotLabel: view.sub,
+      marks: [],
+      meters: phoneMeters(view.meters, false),
+      ...view.standing ? { state: { text: view.standing, danger: false } } : {}
+    };
+  }
   function intelligencePage(input) {
     const { accounts, snapshot, providers, devices, home, now } = input;
     const order = new Map(providers.map((provider, index) => [provider.id, index]));
@@ -20072,16 +20356,21 @@ ${events}` : prompt;
     const ordered = [...accounts].sort(
       (a, b) => (order.get(a.providerId) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.providerId) ?? Number.MAX_SAFE_INTEGER) || a.createdAt - b.createdAt
     );
-    const homeRows = ordered.map(
-      (account) => accountRow(
-        account,
-        snapshot,
-        nameIn(providers),
-        { who: home, where: `on ${home}` },
-        input.firstmateAccount === account.id,
-        now
-      )
-    );
+    const pooled = poolHeads(ordered, snapshot?.pools, now);
+    const homeRows = ordered.flatMap((account) => {
+      const pool = pooled.get(account.id);
+      return [
+        ...pool ? [poolRow(pool, nameIn(providers)(account.providerId))] : [],
+        accountRow(
+          account,
+          snapshot,
+          nameIn(providers),
+          { who: home, where: `on ${home}` },
+          input.firstmateAccount === account.id,
+          now
+        )
+      ];
+    });
     const groups = [
       {
         id: "home",

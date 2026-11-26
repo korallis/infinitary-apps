@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "pooled-own-logins",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "Several accounts of one provider count as one pool",
+      "body": "When two or more Claude accounts, or two or more ChatGPT accounts, are in use on this computer, Settings → Intelligence shows one set of meters for all of them together above their rows, with how many are spent, not read yet or need signing in again. The crew orders models by that pool, and work waits for a reset only when every account in it is spent.",
+      "picture": {
+        "dark": "pooled-own-logins-dark.webp",
+        "light": "pooled-own-logins-light.webp",
+        "alt": "The Codex accounts in Settings headed by an All accounts row, showing 87% of the session and 24% of the week left across two pooled accounts."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

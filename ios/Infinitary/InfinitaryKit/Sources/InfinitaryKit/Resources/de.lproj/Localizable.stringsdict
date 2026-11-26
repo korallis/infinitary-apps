@@ -2435,6 +2435,38 @@
       <string>%1$ld Aufgaben</string>
     </dict>
   </dict>
+  <key>settingsSubscriptionsOwnPoolAccounts</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld Konto gebündelt</string>
+      <key>other</key>
+      <string>%1$ld Konten gebündelt</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsOwnPoolSignedOut</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld muss neu angemeldet werden</string>
+      <key>other</key>
+      <string>%1$ld müssen neu angemeldet werden</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsPoolAccounts</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

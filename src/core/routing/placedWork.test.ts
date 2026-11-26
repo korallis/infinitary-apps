@@ -1,3 +1,4 @@
+import { accountPools } from "@shared/accountPools";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import type { QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
 import type { RepoView } from "@shared/repos";
@@ -710,6 +711,56 @@ describe("INF-443 learned placed-work ranking", () => {
     expect(unread).toEqual({ provider: "grok", id: GROK.id, label: GROK.name });
     const [spent] = w.scores.catalog([model], rows, AT, () => "home-grok", w.scores.data(AT));
     expect(spent).toMatchObject({ accountId: "home-grok", effectivePercentRemaining: 0 });
+    w.db.close();
+  });
+
+  // The captain's ask: where a provider's own logins pool, the pool orders
+  // its models and the login in use decides whether one can start now
+  // (docs/quota.md, "A pool of your own logins").
+  it("ranks a model by its provider's pool of logins, served by the bound login", () => {
+    const w = world();
+    const rows = [row("codex", "home-codex", 84), row("codex", "work-codex", 8)];
+    w.scores.observe("home", snapshot(AT, rows));
+    const pools = accountPools(
+      rows,
+      rows.map((each) => ({ accountId: each.accountId ?? "", provider: each.provider })),
+      AT,
+    );
+    const model = { provider: "codex", id: CODEX.id, label: "Codex" };
+    const rank = (boundId: string, pooled: boolean, readings = rows) =>
+      w.scores.catalog(
+        [model],
+        readings,
+        AT,
+        () => boundId,
+        w.scores.data(AT),
+        pooled ? pools : undefined,
+      )[0];
+
+    // Alone, the login in use is near its floor.
+    expect(rank("work-codex", false)).toMatchObject({
+      accountId: "work-codex",
+      effectivePercentRemaining: 8,
+      band: "near_floor",
+    });
+    // Pooled, the model has (84 + 8) / 2 left and leaves the near-floor band;
+    // the login in use still names who serves and until when.
+    const pooled = rank("work-codex", true);
+    expect(pooled).toMatchObject({
+      accountId: "work-codex",
+      effectivePercentRemaining: 46,
+      resetsAtMs: rows[1]!.windows[0]!.resetsAtMs,
+    });
+    expect(pooled?.band).not.toBe("near_floor");
+    // Whichever login is in use, the pool ranks the model the same.
+    expect(rank("home-codex", true)?.effectivePercentRemaining).toBe(46);
+
+    // A spent login in use keeps its own reading: nothing starts on it.
+    const spent = [row("codex", "home-codex", 84), row("codex", "work-codex", 0)];
+    expect(rank("work-codex", true, spent)).toMatchObject({
+      accountId: "work-codex",
+      effectivePercentRemaining: 0,
+    });
     w.db.close();
   });
 });
