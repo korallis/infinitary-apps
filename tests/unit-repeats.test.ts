@@ -1,5 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { PROBE_FILES } from "../scripts/affected-probes.ts";
@@ -22,6 +21,7 @@ import {
   selectLocalUnits,
   selectRepeats,
 } from "../scripts/unit-repeats.ts";
+import { scratchDir } from "./helpers/scratchDirs";
 
 /** INF-2259 and the captain's subsequent INF-2273 override: ordinary local
  * coverage plus two more runs for every edited unit file, including portable
@@ -181,38 +181,30 @@ describe("the program a round starts", () => {
     // package file, naming its program as the installed one does. Its path is
     // written whole, so the reach script does not read this file as a reader
     // of the project's own package.json.
-    const project = mkdtempSync(join(tmpdir(), "round-start-"));
-    try {
-      mkdirSync(join(project, "node_modules/vitest"), { recursive: true });
-      writeFileSync(
-        join(project, "node_modules/vitest/package.json"),
-        JSON.stringify({ name: "vitest", bin: { vitest: "./vitest.mjs" } }),
-      );
-      expect(roundStart(["exec", "vitest", ...listed], "win32", project)).toEqual({
-        command: process.execPath,
-        args: [
-          resolve(import.meta.dirname, "../scripts/listed-program.ts"),
-          join(project, "node_modules", "vitest", "vitest.mjs"),
-        ],
-        listed,
-      });
-    } finally {
-      rmSync(project, { recursive: true, force: true });
-    }
+    const project = scratchDir("round-start-");
+    mkdirSync(join(project, "node_modules/vitest"), { recursive: true });
+    writeFileSync(
+      join(project, "node_modules/vitest/package.json"),
+      JSON.stringify({ name: "vitest", bin: { vitest: "./vitest.mjs" } }),
+    );
+    expect(roundStart(["exec", "vitest", ...listed], "win32", project)).toEqual({
+      command: process.execPath,
+      args: [
+        resolve(import.meta.dirname, "../scripts/listed-program.ts"),
+        join(project, "node_modules", "vitest", "vitest.mjs"),
+      ],
+      listed,
+    });
   });
 
   it("hands the program each listed argument, in order, as its own command line", () => {
-    const folder = mkdtempSync(join(tmpdir(), "round-start-"));
-    try {
-      const list = join(folder, "arguments.json");
-      const program = join(folder, "vitest.mjs");
-      writeFileSync(list, JSON.stringify(vitestArgs));
-      expect(
-        listedCommandLine([process.execPath, "scripts/listed-program.ts", program, list]),
-      ).toEqual([process.execPath, program, ...vitestArgs]);
-    } finally {
-      rmSync(folder, { recursive: true, force: true });
-    }
+    const folder = scratchDir("round-start-");
+    const list = join(folder, "arguments.json");
+    const program = join(folder, "vitest.mjs");
+    writeFileSync(list, JSON.stringify(vitestArgs));
+    expect(
+      listedCommandLine([process.execPath, "scripts/listed-program.ts", program, list]),
+    ).toEqual([process.execPath, program, ...vitestArgs]);
   });
 });
 
