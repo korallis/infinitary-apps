@@ -91,7 +91,7 @@ export function runStop(stop: TaskStop, fallbackCwd: string, timeMs: number): Pr
     const timer = setTimeout(() => {
       try {
         if (ownGroup && child.pid) process.kill(-child.pid, "SIGKILL");
-        else if (windows && child.pid) endWindowsTree(child.pid, () => child.kill("SIGKILL"));
+        else if (windows && child.pid) void endWindowsTree(child.pid, () => child.kill("SIGKILL"));
         else child.kill("SIGKILL");
       } catch {
         // Already gone.

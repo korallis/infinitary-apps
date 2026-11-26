@@ -223,8 +223,24 @@ describe("dependency install at commission (interaction P0, WI-7)", () => {
       const result = await withSearchPath(`${bin};${process.env.PATH}`, () =>
         workspace.installDependencies(cwd),
       );
-      expect(result).toMatchObject({ outcome: "offline" });
       expect(existsSync(join(cwd, "project-pnpm-ran.txt"))).toBe(false);
+      expect(result).toMatchObject({ outcome: "offline" });
+      expect(stub.calls()).toEqual([[realpathSync(cwd), "install --frozen-lockfile --offline"]]);
+    });
+
+    it("starts a batch file by its own path, in a folder named like a variable", async () => {
+      const stub = stubPnpm(scratchDir("infinitary-pnpm-"), 0, 0);
+      // A valid folder name, which cmd.exe would read as its Windows folder.
+      const named = join(scratchDir("infinitary-npm-bin-"), "%SystemRoot%");
+      mkdirSync(named);
+      writeFileSync(join(named, "pnpm.cmd"), `@"${stub.bin}" %*\r\n`);
+      const { workspace } = emptyService();
+      const cwd = lockfileFolder();
+      const result = await withSearchPath(`${named};${process.env.PATH}`, () =>
+        workspace.installDependencies(cwd),
+      );
+      expect(result).toMatchObject({ outcome: "offline" });
+      expect(stub.calls()).toEqual([[realpathSync(cwd), "install --frozen-lockfile --offline"]]);
     });
 
     it("says pnpm could not be started when no folder on the search path holds it", async () => {
@@ -236,29 +252,55 @@ describe("dependency install at commission (interaction P0, WI-7)", () => {
       expect(result).toMatchObject({ outcome: "failed", error: "spawn pnpm ENOENT" });
     });
 
-    it("ends every program an install started when it runs past its time", {
-      timeout: 60_000,
-    }, async () => {
-      const dir = scratchDir("infinitary-pnpm-hang-");
-      const pids = join(dir, "pids.log");
-      const script = join(dir, "hang.cjs");
+    /**
+     * A pnpm stand-in that never ends by itself: a batch file starts a
+     * program, which starts another under it, and both write down their
+     * process numbers and wait. `loud` also prints more than an install may;
+     * `orphan` puts a program that ends at once between the two, so nothing
+     * leads from the first program to the last and Windows cannot find it
+     * to end it.
+     */
+    function unendingPnpm(mode: "quiet" | "loud" | "orphan") {
+      const dir = scratchDir("infinitary-pnpm-unending-");
+      const log = join(dir, "started.log");
+      const script = join(dir, "unending.cjs");
       writeFileSync(
         script,
-        `require("node:fs").appendFileSync(${JSON.stringify(pids)}, process.pid + "\\n");
+        `const { appendFileSync, existsSync, readFileSync } = require("node:fs");
+const { spawn } = require("node:child_process");
+const log = ${JSON.stringify(log)};
+const [mode, role = "top"] = process.argv.slice(2);
+const under = () => (existsSync(log) ? readFileSync(log, "utf8").split("\\n").filter((line) => line.startsWith("under ")).length : 0);
+const start = (next, detached) =>
+  spawn(process.execPath, [__filename, mode, next], { stdio: "inherit", detached, windowsHide: true });
+if (role === "middle") {
+  start("under", true).unref();
+  process.exit(0);
+}
+const before = under();
+appendFileSync(log, role + " " + process.pid + "\\n");
+if (role === "top") {
+  start(mode === "orphan" ? "middle" : "under", false);
+  if (mode === "loud") {
+    const wait = setInterval(() => {
+      if (under() === before) return;
+      clearInterval(wait);
+      process.stdout.write("x".repeat(17 * 1024 * 1024));
+    }, 50);
+  }
+}
 setTimeout(() => {}, 600000);
 `,
       );
-      const bin = join(dir, "pnpm-hang.cmd");
-      writeFileSync(bin, `@node "${script}"\r\n`);
-      const { paths } = emptyService();
-      const workspace = new WorkspaceService(paths, { pnpm: bin, installTimeoutMs: 4_000 });
-      const result = await workspace.installDependencies(lockfileFolder());
-      expect(result).toMatchObject({ outcome: "failed", error: "timed out" });
-      // The offline attempt's program and the online attempt's, both started by the batch file.
-      const started = readFileSync(pids, "utf8").trim().split("\n").map(Number);
-      expect(started).toHaveLength(2);
-      const running = () =>
-        started.filter((pid) => {
+      const bin = join(dir, "pnpm-unending.cmd");
+      writeFileSync(bin, `@node "${script}" ${mode}\r\n`);
+      const started = (role: "top" | "under") =>
+        (existsSync(log) ? readFileSync(log, "utf8").trim().split("\n") : [])
+          .map((line) => line.split(" "))
+          .filter(([name]) => name === role)
+          .map(([, pid]) => Number(pid));
+      const running = (pids: number[]) =>
+        pids.filter((pid) => {
           try {
             process.kill(pid, 0);
             return true;
@@ -266,7 +308,72 @@ setTimeout(() => {}, 600000);
             return false;
           }
         });
-      await vi.waitFor(() => expect(running()).toEqual([]), { timeout: 20_000, interval: 200 });
+      const end = () => {
+        for (const pid of [...started("top"), ...started("under")]) {
+          try {
+            process.kill(pid);
+          } catch {
+            // Already ended, as the test expects.
+          }
+        }
+      };
+      return { bin, started, running, end };
+    }
+
+    it("has ended every program an install started by the time it reports running past its time", {
+      timeout: 60_000,
+    }, async () => {
+      const pnpm = unendingPnpm("quiet");
+      try {
+        const { paths } = emptyService();
+        const workspace = new WorkspaceService(paths, { pnpm: pnpm.bin, installTimeoutMs: 4_000 });
+        const result = await workspace.installDependencies(lockfileFolder());
+        expect(pnpm.running([...pnpm.started("top"), ...pnpm.started("under")])).toEqual([]);
+        expect(result).toMatchObject({ outcome: "failed", error: "timed out" });
+        // The offline attempt and the online one each started both programs.
+        expect(pnpm.started("top")).toHaveLength(2);
+        expect(pnpm.started("under")).toHaveLength(2);
+      } finally {
+        pnpm.end();
+      }
+    });
+
+    it("has ended every program an install started by the time it reports printing too much", {
+      timeout: 60_000,
+    }, async () => {
+      const pnpm = unendingPnpm("loud");
+      try {
+        const { paths } = emptyService();
+        const workspace = new WorkspaceService(paths, { pnpm: pnpm.bin });
+        const result = await workspace.installDependencies(lockfileFolder());
+        expect(pnpm.running([...pnpm.started("top"), ...pnpm.started("under")])).toEqual([]);
+        expect(result).toMatchObject({
+          outcome: "failed",
+          error: "stdout maxBuffer length exceeded",
+        });
+        expect(pnpm.started("top")).toHaveLength(2);
+        expect(pnpm.started("under")).toHaveLength(2);
+      } finally {
+        pnpm.end();
+      }
+    });
+
+    it("fails in bounded time, and starts no second attempt, when a program of the install cannot be ended", {
+      timeout: 60_000,
+    }, async () => {
+      const pnpm = unendingPnpm("orphan");
+      try {
+        const { paths } = emptyService();
+        const workspace = new WorkspaceService(paths, { pnpm: pnpm.bin, installTimeoutMs: 4_000 });
+        const result = await workspace.installDependencies(lockfileFolder());
+        expect(result).toMatchObject({ outcome: "failed", error: "timed out" });
+        expect(pnpm.started("top")).toHaveLength(1);
+        expect(pnpm.running(pnpm.started("top"))).toEqual([]);
+        // The program Windows could not find is why no second attempt may start.
+        expect(pnpm.running(pnpm.started("under"))).toHaveLength(1);
+      } finally {
+        pnpm.end();
+      }
     });
   });
 

@@ -489,6 +489,7 @@
         "!src/core/secrets/elsewhere.test.ts",
         "!src/core/secrets/bring.test.ts",
         "!src/core/utilityQos.test.ts",
+        "!src/core/windowsTree.integration.test.ts",
         "!src/core/workspace/repoRegistry.test.ts",
         "!src/core/workspace/projectContributions.test.ts",
         "!src/core/workspace/git.test.ts",

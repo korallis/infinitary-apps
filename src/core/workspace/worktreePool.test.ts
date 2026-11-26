@@ -1,7 +1,9 @@
 import { execFileSync, execSync } from "node:child_process";
 import {
+  chmodSync,
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -10,7 +12,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type AppPaths, appPathsFor } from "../paths";
@@ -120,9 +122,9 @@ function dirty(cwd: string): void {
 
 /**
  * A dependency tree as a package manager that links leaves it: the package's
- * files in a store inside the tree, and a link to them where the project
- * requires the package from. An absolute link holds the whole path, as every
- * folder link on Windows does; a relative one is what pnpm makes elsewhere.
+ * files in a store inside the tree, and a link to them at `name`, a path in
+ * the tree. An absolute link holds the whole path, as every junction on
+ * Windows does; a relative one is what pnpm makes elsewhere.
  */
 function linkedTree(
   cwd: string,
@@ -137,6 +139,16 @@ function linkedTree(
   mkdirSync(dirname(path), { recursive: true });
   symlinkSync(link === "absolute" ? store : relative(dirname(path), store), path, folderLinkType());
 }
+
+/**
+ * The pool as it behaves on a Windows PC, on whatever computer the test
+ * runs: there the dependency trees are read, and kept only when a rename
+ * cannot break them.
+ */
+const ON_WINDOWS: WorkspaceServiceOptions = { pool: { platform: "win32" } };
+
+/** Windows lets a standard account make a junction, which is absolute, and no other folder link. */
+const RELATIVE_LINKS = process.platform !== "win32";
 
 async function closeTask(workspace: WorkspaceService, ws: TaskWorkspace) {
   const retired = await workspace.retireTaskWorktree(ws);
@@ -178,11 +190,17 @@ describe("warm worktree pool: a closed task's tree is reused, never dirty", () =
     expect(listed).not.toContain("aaaa1111");
   });
 
-  it.each(["dep", "@scope/dep"])(
-    "drops a dependency tree whose %s link holds the closed task's path, and keeps the checked-out files",
+  it.each([
+    "dep",
+    "@scope/dep",
+    // Nothing at the tree's first level is a link: only pnpm's store, and a plain package's own tree.
+    ".pnpm/a@1.0.0/node_modules/b",
+    "plain/node_modules/b",
+  ])(
+    "on Windows, drops a dependency tree whose %s link holds an absolute path, and keeps the checked-out files",
     async (name) => {
       const repo = await project();
-      const { paths, workspace } = service();
+      const { paths, workspace } = service(ON_WINDOWS);
       const first = await workspace.createTaskWorktree("abcd1111", repo);
       linkedTree(first.cwd, name, "absolute");
       await closeTask(workspace, first);
@@ -197,30 +215,47 @@ describe("warm worktree pool: a closed task's tree is reused, never dirty", () =
     },
   );
 
-  // A junction always holds the whole path, and Windows lets a standard account make no other folder link.
-  it.skipIf(process.platform === "win32")(
-    "keeps a dependency tree whose links are relative: they lead inside the working copy wherever it stands",
+  it("on Windows, keeps a dependency tree of plain folders, however deep", async () => {
+    const repo = await project();
+    const { workspace } = service(ON_WINDOWS);
+    const first = await workspace.createTaskWorktree("bbcc1111", repo);
+    const nested = join("node_modules", "dep", "node_modules", "inner");
+    mkdirSync(join(first.cwd, nested), { recursive: true });
+    writeFileSync(join(first.cwd, nested, "index.js"), "module.exports = 42;\n");
+    await closeTask(workspace, first);
+
+    const second = await workspace.createTaskWorktree("bbcc2222", repo);
+    expect(second.acquired?.source).toBe("pool");
+    expect(readFileSync(join(second.cwd, nested, "index.js"), "utf8")).toBe(
+      "module.exports = 42;\n",
+    );
+  });
+
+  it.runIf(RELATIVE_LINKS)(
+    "on Windows, keeps a dependency tree whose links are relative: they lead inside the working copy wherever it stands",
     async () => {
       const repo = await project();
-      const { workspace } = service();
+      const { workspace } = service(ON_WINDOWS);
       const first = await workspace.createTaskWorktree("bcde1111", repo);
       linkedTree(first.cwd, "dep", "relative");
-      linkedTree(first.cwd, "@scope/dep", "relative");
+      linkedTree(first.cwd, ".pnpm/a@1.0.0/node_modules/b", "relative");
       await closeTask(workspace, first);
 
       const second = await workspace.createTaskWorktree("bcde2222", repo);
       expect(second.acquired?.source).toBe("pool");
       const store = join(realpathSync(second.cwd), "node_modules", ".store", "dep");
       expect(realpathSync(join(second.cwd, "node_modules", "dep"))).toBe(store);
-      expect(realpathSync(join(second.cwd, "node_modules", "@scope", "dep"))).toBe(store);
+      expect(
+        realpathSync(join(second.cwd, "node_modules", ".pnpm", "a@1.0.0", "node_modules", "b")),
+      ).toBe(store);
     },
   );
 
-  it("drops every dependency tree when one's links lead out: a package's own tree takes the root's with it", async () => {
+  it("on Windows, drops every dependency tree when one cannot move: a package's own tree takes the root's with it", async () => {
     const repo = await project();
     mkdirSync(join(repo, "packages", "app"), { recursive: true });
     await commitFile(repo, join("packages", "app", "package.json"), '{ "name": "app" }\n');
-    const { workspace } = service();
+    const { workspace } = service(ON_WINDOWS);
     const first = await workspace.createTaskWorktree("cdef1111", repo);
     dirty(first.cwd);
     linkedTree(first.cwd, "dep", "absolute", join("packages", "app", "node_modules"));
@@ -232,25 +267,53 @@ describe("warm worktree pool: a closed task's tree is reused, never dirty", () =
     expect(existsSync(join(second.cwd, "packages", "app", "package.json"))).toBe(true);
   });
 
-  it("fails closed: an idle tree whose dependency links lead out of it is retired, not handed out", async () => {
+  it("on Windows, fails closed: an idle tree holding an absolute link is retired though the link leads inside it now", async () => {
     const repo = await project();
-    const { workspace } = service();
+    const { workspace } = service(ON_WINDOWS);
     await closeTask(workspace, await workspace.createTaskWorktree("defa1111", repo));
     const [slot] = workspace.pooledTrees() as [string];
-    // What a slot parked before the pool read its links holds: a link out of it.
-    const elsewhere = tmp("infinitary-pool-elsewhere-");
-    writeFileSync(join(elsewhere, "theirs.txt"), "not the pool's\n");
-    mkdirSync(join(slot, "node_modules"));
-    writeFileSync(join(slot, "node_modules", ".modules.yaml"), "layoutVersion: 5\n");
-    symlinkSync(elsewhere, join(slot, "node_modules", "dep"), folderLinkType());
+    // The link works where the tree stands; handing the tree out renames it.
+    linkedTree(slot, ".pnpm/a@1.0.0/node_modules/b", "absolute");
 
     const next = await workspace.createTaskWorktree("defa2222", repo);
     expect(next.acquired?.source).toBe("new");
     expect(existsSync(join(next.cwd, "node_modules"))).toBe(false);
     expect(existsSync(slot)).toBe(false);
-    // Deleting the retired tree removes the link, never what it leads to.
+  });
+
+  it("on Windows, retiring a tree whose link leads out of it removes the link, never what it leads to", async () => {
+    const repo = await project();
+    const { workspace } = service(ON_WINDOWS);
+    await closeTask(workspace, await workspace.createTaskWorktree("efab1111", repo));
+    const [slot] = workspace.pooledTrees() as [string];
+    const elsewhere = tmp("infinitary-pool-elsewhere-");
+    writeFileSync(join(elsewhere, "theirs.txt"), "not the pool's\n");
+    mkdirSync(join(slot, "node_modules"));
+    symlinkSync(elsewhere, join(slot, "node_modules", "dep"), folderLinkType());
+
+    const next = await workspace.createTaskWorktree("efab2222", repo);
+    expect(next.acquired?.source).toBe("new");
+    expect(existsSync(slot)).toBe(false);
     await workspace.deletionsSettled();
     expect(readFileSync(join(elsewhere, "theirs.txt"), "utf8")).toBe("not the pool's\n");
+  });
+
+  it("elsewhere, keeps a dependency tree whatever its links hold, at return and when it is handed out", async () => {
+    const repo = await project();
+    const { workspace } = service({ pool: { platform: "linux" } });
+    const first = await workspace.createTaskWorktree("fabc1111", repo);
+    // A package a person linked in from a folder of their own.
+    const theirs = tmp("infinitary-pool-linked-package-");
+    writeFileSync(join(theirs, "index.js"), "module.exports = 'theirs';\n");
+    mkdirSync(join(first.cwd, "node_modules"));
+    symlinkSync(theirs, join(first.cwd, "node_modules", "theirs"), folderLinkType());
+    await closeTask(workspace, first);
+
+    const second = await workspace.createTaskWorktree("fabc2222", repo);
+    expect(second.acquired?.source).toBe("pool");
+    const link = join(second.cwd, "node_modules", "theirs");
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(realpathSync(link)).toBe(realpathSync(theirs));
   });
 
   it("gives each repository its own trees: another project's warm tree is never handed out", async () => {
@@ -359,23 +422,68 @@ describe("a slot is handed out only when it is pristine", () => {
     expect(await isPristineSlot(repo, common)).toBe(false);
   });
 
-  it("takes a dependency tree whose links lead inside the checkout, and refuses one with a link that leads out of it or nowhere", async () => {
+  it("on Windows, refuses a dependency tree holding an absolute link at any depth; elsewhere no tree is read", async () => {
     const repo = await project();
     const common = await commonOf(repo);
     await git(repo, ["checkout", "--quiet", "--detach"]);
-    linkedTree(repo, "dep", "absolute");
-    linkedTree(repo, "@scope/dep", "absolute");
-    expect(await isPristineSlot(repo, common)).toBe(true);
+    mkdirSync(join(repo, "node_modules", "plain"), { recursive: true });
+    writeFileSync(join(repo, "node_modules", "plain", "index.js"), "module.exports = 1;\n");
+    expect(await isPristineSlot(repo, common, "win32")).toBe(true);
 
-    const outside = join(repo, "node_modules", "@scope", "elsewhere");
-    symlinkSync(tmp("infinitary-pool-elsewhere-"), outside, folderLinkType());
-    expect(await isPristineSlot(repo, common)).toBe(false);
-    rmSync(outside);
-    expect(await isPristineSlot(repo, common)).toBe(true);
+    linkedTree(repo, "plain/node_modules/b", "absolute");
+    expect(await isPristineSlot(repo, common, "win32")).toBe(false);
+    expect(await isPristineSlot(repo, common, "linux")).toBe(true);
+    expect(await isPristineSlot(repo, common, "darwin")).toBe(true);
 
-    symlinkSync(join(repo, "gone"), join(repo, "node_modules", "nowhere"), folderLinkType());
-    expect(await isPristineSlot(repo, common)).toBe(false);
+    rmSync(join(repo, "node_modules", "plain", "node_modules", "b"));
+    expect(await isPristineSlot(repo, common, "win32")).toBe(true);
   });
+
+  it.runIf(RELATIVE_LINKS)(
+    "on Windows, takes a relative link that stays inside the checkout, and refuses one that leaves it or leads nowhere",
+    async () => {
+      const repo = await project();
+      const common = await commonOf(repo);
+      await git(repo, ["checkout", "--quiet", "--detach"]);
+      linkedTree(repo, "plain/node_modules/b", "relative");
+      expect(await isPristineSlot(repo, common, "win32")).toBe(true);
+
+      // Out of the checkout and back in by its own name, which a rename changes.
+      const back = join(repo, "node_modules", "back");
+      symlinkSync(join("..", "..", basename(repo), "node_modules", ".store", "dep"), back, "dir");
+      expect(realpathSync(back)).toBe(join(realpathSync(repo), "node_modules", ".store", "dep"));
+      expect(await isPristineSlot(repo, common, "win32")).toBe(false);
+      rmSync(back);
+
+      const out = join(repo, "node_modules", "out");
+      symlinkSync(relative(dirname(out), tmp("infinitary-pool-elsewhere-")), out, "dir");
+      expect(await isPristineSlot(repo, common, "win32")).toBe(false);
+      rmSync(out);
+      expect(await isPristineSlot(repo, common, "win32")).toBe(true);
+
+      symlinkSync(join("..", "gone"), join(repo, "node_modules", "nowhere"), "dir");
+      expect(await isPristineSlot(repo, common, "win32")).toBe(false);
+    },
+  );
+
+  // An administrator reads a folder whatever its mode says.
+  it.runIf(RELATIVE_LINKS && process.getuid?.() !== 0)(
+    "on Windows, refuses a dependency tree holding a folder it cannot read",
+    async () => {
+      const repo = await project();
+      const common = await commonOf(repo);
+      await git(repo, ["checkout", "--quiet", "--detach"]);
+      const closed = join(repo, "node_modules", "plain", "closed");
+      mkdirSync(closed, { recursive: true });
+      expect(await isPristineSlot(repo, common, "win32")).toBe(true);
+      chmodSync(closed, 0o000);
+      try {
+        expect(await isPristineSlot(repo, common, "win32")).toBe(false);
+      } finally {
+        chmodSync(closed, 0o755);
+      }
+    },
+  );
 
   it("refuses a directory inside a checkout, and a checkout of another repository", async () => {
     const repo = await project();

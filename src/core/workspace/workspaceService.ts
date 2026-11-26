@@ -25,7 +25,7 @@ import {
   releaseTaskRemote,
   taskRemoteName,
 } from "./git";
-import { runInstall } from "./installProcess";
+import { type InstallFailure, runInstall } from "./installProcess";
 import { composedName, requireNamedRange } from "./naming";
 import {
   defaultTaskBranch,
@@ -290,8 +290,12 @@ export class WorkspaceService {
     try {
       await this.pnpm(cwd, [...base, "--offline"]);
       return { outcome: "offline", ms: Date.now() - started };
-    } catch {
-      // The shared store lacks something: fetch it.
+    } catch (caught) {
+      // The shared store lacks something: fetch it - unless programs of the
+      // first run could not be ended, which a second run would write beside.
+      if ((caught as InstallFailure).stillRunning) {
+        return { outcome: "failed", ms: Date.now() - started, error: installError(caught) };
+      }
     }
     try {
       await this.pnpm(cwd, base);

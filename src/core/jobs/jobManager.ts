@@ -412,8 +412,9 @@ export function killGroup(
   if (!pid) return;
   if (job.windows) {
     // Windows' own taskkill ends the job and every program under it, by
-    // force, as Pi's bash does; nothing there takes a gentler signal.
-    endWindowsTree(pid, () => job.child.kill(signal));
+    // force, as Pi's bash does; nothing there takes a gentler signal. Where
+    // taskkill fails, the shell itself is still ended.
+    void endWindowsTree(pid, () => job.child.kill(signal));
     return;
   }
   try {

@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readdirSync, realpathSync } from "node:fs";
-import { lstat, mkdir, readdir, realpath } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { lstat, mkdir, readdir, readlink, realpath } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
+import { hostPlatform } from "../platform";
 import { git } from "./git";
 
 /**
@@ -13,15 +14,16 @@ import { git } from "./git";
  * so the next task on the same repository starts from a tree whose
  * dependencies only need an incremental install instead of a full one.
  *
- * The dependency trees are kept only while their package links still lead
- * inside the slot (`leadsInside`). Parking renames the working copy, and a
- * link that holds an absolute path - every folder link on Windows, where
- * pnpm links packages with junctions - then leads to the closed task's
- * folder. pnpm does not repair such a tree: its install answers "Already up
+ * On Windows the dependency trees are kept only when a rename cannot break
+ * them (`survivesMove`). Parking renames the working copy, and so does
+ * handing it out; a link that holds an absolute path - every junction, which
+ * is how pnpm links packages there - then leads to a folder the slot has
+ * left. pnpm does not repair such a tree: its install answers "Already up
  * to date" and leaves every link as it was. One install made every tree of
  * a working copy, and a package's own tree links into the root's, so when
- * one leads out they all go; the checked-out files stay, and the next
- * task's install builds them again.
+ * one cannot move they all go; the checked-out files stay, and the next
+ * task's install builds them again. Elsewhere package managers link with
+ * relative paths, which move with the slot, and no tree is read.
  *
  * Treehouse's safety rules, not its binary:
  * - fail closed: a slot is handed out only when git proves it is a
@@ -45,6 +47,8 @@ export type WorktreePoolOptions = {
   idleTotal?: number;
   /** An idle slot unused this long is retired. */
   maxIdleAgeMs?: number;
+  /** The computer's platform, which decides whether dependency trees are read; tests name one. */
+  platform?: NodeJS.Platform;
 };
 
 /** A slot costs ~370 MB of real disk on the app's own repository (scout measurement). */
@@ -89,7 +93,7 @@ export class WorktreePool {
           await this.retire(slot.dir);
           continue;
         }
-        if (!(await isPristineSlot(slot.dir, common))) {
+        if (!(await isPristineSlot(slot.dir, common, this.platform))) {
           await this.retire(slot.dir);
           continue;
         }
@@ -176,8 +180,8 @@ export class WorktreePool {
 
   /**
    * The slow half of a return: everything but the dependency trees goes,
-   * and so do they when a link of theirs leads out of the slot, then the
-   * slot is proven pristine and renamed idle - or retired.
+   * and on Windows so do they when a rename would break a link of theirs,
+   * then the slot is proven pristine and renamed idle - or retired.
    */
   private async finishReturn(staging: string): Promise<void> {
     try {
@@ -186,12 +190,14 @@ export class WorktreePool {
       // -x: ignored files go too (build output, .env, reports from the last
       // task); -e keeps every node_modules, at any depth, out of the clean.
       await git(staging, ["clean", "-ffdxq", "-e", KEPT_DIR]);
-      const { trees } = await slotContents(staging);
-      if (!(await allLeadInside(staging, trees))) {
-        for (const tree of trees) await this.discard(join(staging, tree));
+      if (this.platform === "win32") {
+        const { trees } = await slotContents(staging);
+        if (!(await survivesMove(staging, trees))) {
+          for (const tree of trees) await this.discard(join(staging, tree));
+        }
       }
       await this.serial(async () => {
-        if (!(await isPristineSlot(staging, common))) {
+        if (!(await isPristineSlot(staging, common, this.platform))) {
           await this.retire(staging);
           return;
         }
@@ -264,6 +270,10 @@ export class WorktreePool {
     return this.options.maxIdleAgeMs ?? MAX_IDLE_AGE_MS;
   }
 
+  private get platform(): NodeJS.Platform {
+    return this.options.platform ?? hostPlatform();
+  }
+
   private serial<T>(step: () => Promise<T>): Promise<T> {
     const run = this.queue.then(step, step);
     this.queue = run.catch(() => {});
@@ -281,15 +291,21 @@ export class WorktreePool {
 /**
  * Whether a slot may be handed out: the root of its own checkout, of the
  * expected repository, detached (no task branch rides along), and holding
- * nothing but dependency trees - no change, no untracked or ignored file -
- * whose package links lead inside it. A slot parked before the pool read
- * those links is refused here, so it is retired, never handed out.
+ * nothing but dependency trees - no change, no untracked or ignored file.
+ * On Windows those trees must also survive the rename that hands the slot
+ * out: one parked before the pool read them is refused here, so it is
+ * retired, never handed out.
  */
-export async function isPristineSlot(dir: string, common: string): Promise<boolean> {
+export async function isPristineSlot(
+  dir: string,
+  common: string,
+  platform: NodeJS.Platform = hostPlatform(),
+): Promise<boolean> {
   try {
     await assertCheckoutOf(dir, common);
     const contents = await slotContents(dir);
-    return contents.detached && !contents.other && (await allLeadInside(dir, contents.trees));
+    if (!contents.detached || contents.other) return false;
+    return platform !== "win32" || (await survivesMove(dir, contents.trees));
   } catch {
     return false;
   }
@@ -330,44 +346,59 @@ function keptDependencyTree(line: string): string | null {
   return basename(path) === KEPT_DIR ? path : null;
 }
 
-/** Whether every one of a slot's dependency trees works where the slot stands now. */
-async function allLeadInside(slot: string, trees: readonly string[]): Promise<boolean> {
-  for (const tree of trees) if (!(await leadsInside(slot, tree))) return false;
-  return true;
+/**
+ * Whether a slot's dependency trees still work once the slot is renamed, as
+ * every slot is again before a task uses it. Every folder of every tree is
+ * read, and no link is followed: a package manager that links at all links
+ * at every depth, and a tree whose own packages are plain folders can still
+ * hold links below them. A tree of plain folders alone moves anywhere. A
+ * folder that cannot be read counts as a tree that cannot move.
+ */
+async function survivesMove(slot: string, trees: readonly string[]): Promise<boolean> {
+  try {
+    const root = await realpath(slot);
+    const folders: string[] = [];
+    for (const tree of trees) {
+      const top = join(slot, tree);
+      if (!(await lstat(top)).isSymbolicLink()) folders.push(top);
+      else if (!(await linkSurvivesMove(slot, root, top))) return false;
+    }
+    for (let dir = folders.pop(); dir !== undefined; dir = folders.pop()) {
+      for (const entry of await readdir(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) folders.push(path);
+        else if (entry.isSymbolicLink() && !(await linkSurvivesMove(slot, root, path)))
+          return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Whether a dependency tree works where the slot stands now: the tree, each
- * link at its top and each link in a `@scope` folder there leads to
- * something inside the slot. Those are a project's own packages, where a
- * package manager that links at all puts its links; the links deeper in
- * the tree come from the same install and lead where these do. One that
- * copies packages into plain folders has none, and its tree survives any
- * rename. A link that leads nowhere counts as leading out.
+ * Whether one link still leads where it does now after the slot is renamed.
+ * An absolute path never does: it names the slot's folder as it is called
+ * now, and every junction holds one. A relative path does while neither the
+ * path as written nor the place it ends leaves the slot; one that leads
+ * nowhere does not.
  */
-async function leadsInside(slot: string, tree: string): Promise<boolean> {
-  const root = await realpath(slot);
-  const inside = async (path: string): Promise<boolean> => {
-    try {
-      const from = relative(root, await realpath(path));
-      return from !== ".." && !from.startsWith(`..${sep}`) && !isAbsolute(from);
-    } catch {
-      return false;
-    }
-  };
-  const top = join(slot, tree);
-  if ((await lstat(top)).isSymbolicLink()) return inside(top);
-  for (const entry of await readdir(top, { withFileTypes: true })) {
-    const path = join(top, entry.name);
-    if (entry.isSymbolicLink()) {
-      if (!(await inside(path))) return false;
-    } else if (entry.isDirectory() && entry.name.startsWith("@")) {
-      for (const scoped of await readdir(path, { withFileTypes: true })) {
-        if (scoped.isSymbolicLink() && !(await inside(join(path, scoped.name)))) return false;
-      }
-    }
-  }
-  return true;
+async function linkSurvivesMove(slot: string, root: string, path: string): Promise<boolean> {
+  const target = await readlink(path);
+  if (isAbsolute(target)) return false;
+  // Normalized, a path's steps up all come first. More of them than the link
+  // is deep leave the slot, even on a path that comes back in by the slot's name.
+  const up = normalize(target)
+    .split(sep)
+    .filter((step) => step === "..").length;
+  const depth = relative(slot, dirname(path)).split(sep).filter(Boolean).length;
+  return up <= depth && isInside(root, await realpath(path));
+}
+
+function isInside(dir: string, path: string): boolean {
+  const from = relative(dir, path);
+  return from !== ".." && !from.startsWith(`..${sep}`) && !isAbsolute(from);
 }
 
 /** The repository's shared git directory, resolved: one pool per repository. */

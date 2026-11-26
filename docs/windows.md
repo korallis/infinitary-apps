@@ -45,18 +45,22 @@ Moving to a newer Git for Windows changes the version, file, address, SHA-256 an
 
 ## A task's working copy
 
-The app installs a project's packages into a task's working copy before its crewmate's first turn (`WorkspaceService.installDependencies`), and on Windows it looks pnpm up itself (`runInstall`, `src/core/workspace/installProcess.ts`).
+For a project that holds a pnpm lockfile, the app installs its packages into a task's working copy before its crewmate's first turn (`WorkspaceService.installDependencies`), and on Windows it looks pnpm up itself (`runInstall`, `src/core/workspace/installProcess.ts`).
 Node starts a program's bare name only as an `.exe`, and the pnpm that npm or Corepack installs is a batch file, `pnpm.cmd`, which reads as not installed.
-The app takes the first search-path folder that holds pnpm under one of the endings Windows runs programs by (`windowsProgram`, `src/core/userBin.ts`), never a file in the working copy, and runs a batch file through `cmd.exe`.
-An install that runs past its time ends with every program under it (`endWindowsTree`, `src/core/windowsTree.ts`): ending `cmd.exe` alone would leave pnpm writing into the working copy.
+The app takes the first search-path folder, named by its whole path, that holds pnpm as a `.com`, `.exe`, `.bat` or `.cmd` file, in the order `PATHEXT` lists those endings (`windowsProgram`, `src/core/userBin.ts`), and never a file in the working copy.
+A batch file runs through Windows' own `cmd.exe` with a person's AutoRun commands off, and `cmd.exe` reads the file's path from a variable of the run's environment, so a folder named like a variable (`%SystemRoot%`) stays as it is written.
+An install that runs past its time, or prints more than the app reads, has every program under it ended before it fails (`endWindowsTree`, `src/core/windowsTree.ts`): ending `cmd.exe` alone would leave pnpm writing into the working copy while the next attempt starts.
+When ten seconds do not end them all, the install fails without its second, online attempt.
 
-A working copy taken from the warm pool arrives there without its packages.
-On Windows pnpm links packages with junctions, and a junction holds its whole path, so once the pool renames a closed task's working copy every link in its `node_modules` leads to the folder that task had.
+On Windows a pnpm project's working copy arrives from the warm pool without its packages.
+There pnpm links packages with junctions, and a junction holds its whole path, so once the pool renames a closed task's working copy every link in its `node_modules` leads to the folder that task had.
 The next install there repairs none of them: pnpm answers that everything is up to date.
-The pool keeps a working copy's dependency trees only while their links lead inside it (`leadsInside`, `src/core/workspace/worktreePool.ts`), so on Windows a pnpm project's trees go when the copy is parked, the checked-out files stay, and the next task's install links every package again from pnpm's store.
-When one tree's links lead out, every tree of that working copy goes: one install made them all, and a package's own tree links into the root's.
-A tree of plain folders, as npm leaves one, has no such link and stays, and so does a pnpm tree on a Mac or a Linux computer, where its links are relative.
-A spare working copy parked by an earlier version of the app, whose links lead out of it, is never handed to a task: it is deleted and the task gets a new one.
+So on Windows the pool reads every folder of a parked working copy's dependency trees, following no link, and keeps the trees only when a rename cannot break them (`survivesMove`, `src/core/workspace/worktreePool.ts`): no link holds an absolute path, and each relative one stays inside the working copy.
+A pnpm project's trees therefore go when the copy is parked, the checked-out files stay, and the next task's install links every package again from pnpm's store.
+When one tree cannot move, every tree of that working copy goes: one install made them all, and a package's own tree links into the root's.
+A tree that holds only plain folders and files stays.
+A spare working copy parked by an earlier version of the app, which still holds such links, is never handed to a task: it is deleted and the task gets a new one.
+On a Mac or a Linux computer the pool reads no dependency tree and keeps them all: pnpm's links there are relative and move with the working copy.
 
 ## Joining another computer
 

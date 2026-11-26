@@ -1,7 +1,7 @@
 import { execFile, spawn } from "node:child_process";
 import { accessSync, constants, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join, posix, win32 } from "node:path";
+import { delimiter, extname, isAbsolute, join, posix, resolve, win32 } from "node:path";
 import { hostPlatformProfile } from "./platform";
 
 /**
@@ -58,16 +58,27 @@ export function onSearchPath(name: string, env: NodeJS.ProcessEnv, platform: str
     .some((dir) => programFiles(dir, name, env, platform).some(isExecutable));
 }
 
+/** The endings this app can start on Windows: a program, or a batch file through cmd.exe. */
+const WINDOWS_STARTABLE = new Set([".com", ".exe", ".bat", ".cmd"]);
+
 /**
- * The file Windows itself starts for program `name`: in the first
+ * The file this app starts on Windows for program `name`: in the first
  * search-path folder that holds one, the first of the endings Windows runs
- * a program by. Never the bare name, which `programFiles` lists first: a
- * file without an ending is the shim a Git Bash runs, and Windows cannot
- * start it.
+ * a program by that the app can start. Never the bare name, which
+ * `programFiles` lists first: a file without an ending is the shim a Git
+ * Bash runs, and Windows cannot start it. An ending a person added to
+ * PATHEXT for a script host of their own is passed over, so the batch file
+ * beside it is found. A folder the search path names by a relative path is
+ * passed over too: it would be read from the app's folder here and from the
+ * project's folder when the program runs.
  */
 export function windowsProgram(name: string, env: NodeJS.ProcessEnv): string | undefined {
-  for (const dir of (env.PATH ?? "").split(win32.delimiter).filter(Boolean)) {
-    const file = programFiles(dir, name, env, "win32").slice(1).find(isExecutable);
+  for (const entry of (env.PATH ?? "").split(win32.delimiter)) {
+    if (!isAbsolute(entry)) continue;
+    const file = programFiles(resolve(entry), name, env, "win32")
+      .slice(1)
+      .filter((candidate) => WINDOWS_STARTABLE.has(extname(candidate)))
+      .find(isExecutable);
     if (file) return file;
   }
   return undefined;

@@ -57,7 +57,7 @@ A done/dropped close always retires the task's worktree and branch (captain: "cl
 Git ancestry decides only whether a save is needed, never whether the tree goes, because a squash-merged change reads as unlanded forever.
 The one exception is a save that fails, which keeps the tree exactly as it was and says so in the feed.
 Retiring a worktree never happens on the settle path: `removeTaskWorktree` moves the tree aside by rename (into the warm pool, or the trash) and returns, and deleting its files runs in the background and at boot (`sweepPool`, `sweepTrash`).
-A pooled working copy keeps its installed packages only while every package link in them leads inside that copy; otherwise the packages go and the next task's install puts them back ([Windows](../docs/windows.md), "A task's working copy").
+On Windows a pooled working copy keeps its installed packages only when renaming the copy cannot break a link among them, which a pnpm project's never pass; the packages then go and the next task's install puts them back ([Windows](../docs/windows.md), "A task's working copy").
 Boot hygiene applies the same rule to closed rows still holding a tree and to record-less directories under `userData/worktrees`, and deletes each leftover task branch no live task explains, marked as a task's or named `fm/task-*`, its work saved on the kept ref first.
 A task on a computer that runs work keeps its working copy there; its close saves the same commit there and brings it home as a bundle before deleting the copy ([running work for another Mac](../docs/helper.md), "Its working copies").
 
