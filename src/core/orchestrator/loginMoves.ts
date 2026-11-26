@@ -66,18 +66,25 @@ export class LoginMoves {
     private readonly host: LoginMovesHost,
   ) {
     // The moves the last launch left unmade: each task still on the login it was to leave.
-    for (const [taskId, move] of Object.entries(options.loginMoveRecord?.read() ?? {})) {
+    const saved = Object.entries(options.loginMoveRecord?.read() ?? {});
+    for (const [taskId, move] of saved) {
       const record = options.tasks.get(taskId);
       if (record?.status === "active" && record.accountId === move.from)
         this.bound.set(taskId, move);
     }
+    // A move that no longer applies leaves the record too, so nothing revives it later.
+    if (this.bound.size !== saved.length) this.save();
+  }
+
+  private save(): void {
+    this.options.loginMoveRecord?.write(Object.fromEntries(this.bound));
   }
 
   /** The task's move is named, or `undefined` once it is made or given up; saved either way. */
   private bind(taskId: string, move: { from: string; to: string } | undefined): void {
     if (move) this.bound.set(taskId, move);
     else if (!this.bound.delete(taskId)) return;
-    this.options.loginMoveRecord?.write(Object.fromEntries(this.bound));
+    this.save();
   }
 
   /** This computer's started tasks whose conversation is on the login. */
@@ -97,11 +104,16 @@ export class LoginMoves {
    */
   async moveOff(from: string, to: string): Promise<void> {
     const taskIds = this.tasksOn(from);
+    let named = false;
     for (const taskId of taskIds) {
       // The same move named again keeps its binding, so a pick already out for it stands.
       const bound = this.bound.get(taskId);
-      if (bound?.from !== from || bound.to !== to) this.bind(taskId, { from, to });
+      if (bound?.from === from && bound.to === to) continue;
+      this.bound.set(taskId, { from, to });
+      named = true;
     }
+    // Saved in one write, before anything else follows the click: every task or none.
+    if (named) this.save();
     await Promise.all(taskIds.map((taskId) => this.begin(taskId).done));
   }
 

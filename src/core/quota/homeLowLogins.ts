@@ -4,6 +4,7 @@ import { PROVIDER_CATALOG } from "@shared/providers";
 import { type QuotaSnapshotView, resetWhen } from "@shared/quota";
 import type { WhenLoginLow } from "@shared/whenLoginLow";
 import { LOGIN_LOW_WAIT, loginLowAsked, loginLowCardId } from "../orchestrator/loginCards";
+import { moveLoginActionId } from "../orchestrator/loginMove";
 import type { LoginMoves } from "../orchestrator/loginMoves";
 import { quotaRowProviderOf } from "./auth";
 import { limitingResetOf } from "./catalog";
@@ -16,7 +17,11 @@ import { type LoginReading, LowLogins, type LowLoginsOptions } from "./lowLogins
  * own pick and is not watched from here.
  */
 export function startLowLogins(options: {
-  settings: { getWhenLoginLow(): WhenLoginLow };
+  settings: {
+    getWhenLoginLow(): WhenLoginLow;
+    getLoginAnswersOver(): Record<string, string>;
+    setLoginAnswersOver(over: Record<string, string>): void;
+  };
   vault: {
     list(providerId?: string): { id: string; label: string; enabled: boolean }[];
     pinnedAccount(providerId: string): string | undefined;
@@ -40,7 +45,7 @@ export function startLowLogins(options: {
   };
   broadcastEvent: (event: FmEvent) => void;
 }): LowLogins {
-  const { vault, quota, supervisor } = options;
+  const { vault, quota, supervisor, settings } = options;
   const note = (fact: Said) =>
     options.broadcastEvent({ type: "firstmate_note", ...saidLine(fact) });
   const nameOf = (providerId: string) =>
@@ -59,6 +64,8 @@ export function startLowLogins(options: {
       );
     return runOutOf(accountId)?.resetsAt ?? (row ? limitingResetOf(row, Date.now()) : undefined);
   };
+  const askedOn = (providerId: string) =>
+    loginLowAsked(supervisor.cards.stored(loginLowCardId(providerId))?.body ?? "");
   const lowLogins = new LowLogins({
     whenLow: () => options.settings.getWhenLoginLow(),
     providers: () =>
@@ -78,20 +85,31 @@ export function startLowLogins(options: {
       return reset !== undefined ? resetWhen(reset, Date.now()) : undefined;
     },
     refillsAt,
-    waitedOn: (providerId) => {
+    answered: (providerId) => {
       const id = loginLowCardId(providerId);
-      if (supervisor.cards.chosenAction(id) !== LOGIN_LOW_WAIT) return undefined;
-      const asked = loginLowAsked(supervisor.cards.stored(id)?.body ?? "");
-      // Past the refill the card named, a login low again is a new run-out.
-      return asked && (asked.refillsAt === undefined || Date.now() < asked.refillsAt)
-        ? asked.accountId
-        : undefined;
+      const chosen = supervisor.cards.chosenAction(id);
+      const asked = askedOn(providerId);
+      if (chosen === undefined || !asked) return undefined;
+      if (settings.getLoginAnswersOver()[providerId] === (asked.askId ?? "")) return undefined;
+      const answer = {
+        from: asked.accountId,
+        ...(asked.refillsAt !== undefined ? { refillsAt: asked.refillsAt } : {}),
+      };
+      if (chosen === LOGIN_LOW_WAIT) return answer;
+      // A Move button's id names both logins (`moveLoginActionId`).
+      const to = vault
+        .list(providerId)
+        .find((account) => chosen === moveLoginActionId(asked.accountId, account.id));
+      return to ? { ...answer, to: to.id } : undefined;
     },
     tasksOn: (accountId) => supervisor.loginMoves.tasksOn(accountId),
     moveOff: (from, to) => supervisor.loginMoves.moveOff(from, to),
     forget: (from) => supervisor.loginMoves.forget(from),
-    waitChosen: (providerId) =>
-      supervisor.cards.chosenAction(loginLowCardId(providerId)) === LOGIN_LOW_WAIT,
+    endAnswer: (providerId) =>
+      settings.setLoginAnswersOver({
+        ...settings.getLoginAnswersOver(),
+        [providerId]: askedOn(providerId)?.askId ?? "",
+      }),
     cards: supervisor.cards.hostCards,
     note,
   });

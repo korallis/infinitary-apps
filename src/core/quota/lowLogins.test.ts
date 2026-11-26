@@ -2,6 +2,7 @@ import type { Card } from "@shared/cards";
 import { englishOf, type Said, wordSaidMarks } from "@shared/i18n/said";
 import type { WhenLoginLow } from "@shared/whenLoginLow";
 import { describe, expect, it } from "vitest";
+import { loginLowAsked } from "../orchestrator/loginCards";
 import { type LoginReading, LowLogins } from "./lowLogins";
 
 // The approved plan for several logins of one provider, piece 3: "Moment"
@@ -51,7 +52,14 @@ function watchOver(start: {
     forget: (from) => {
       forgotten.add(from);
     },
-    waitChosen: () => state.waitChosen,
+    // The captain's Wait on the card last raised, until the watch ends it.
+    answered: () => {
+      const asked = state.waitChosen ? loginLowAsked(raised.at(-1)?.body ?? "") : undefined;
+      return asked ? { from: asked.accountId } : undefined;
+    },
+    endAnswer: () => {
+      state.waitChosen = false;
+    },
     cards: {
       raiseHostCard: (card) => {
         state.waitChosen = false;

@@ -16,6 +16,8 @@ import {
 import type { FakeSessionOptions } from "../../../tests/helpers/fakeSession";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { crewmateHandoverDir } from "../paths";
+import { startLowLogins } from "../quota/homeLowLogins";
+import type { LoginReading } from "../quota/lowLogins";
 import { type AccountPool, AccountSelector } from "../routing/accountRouter";
 import type { Router } from "../routing/router";
 import { CostLimitStore } from "../storage/costLimitStore";
@@ -147,22 +149,23 @@ function seedRunning(
   h: ReturnType<typeof setup>,
   model: { provider: string; id: string },
   sessionFile: string,
+  id = "t-move",
 ) {
   seedTask(h.tasks, {
-    id: "t-move",
+    id,
     title: "Fix the login form",
     prompt: "old work",
     repoId: null,
     repoDir: "/tmp/repo",
-    worktreeDir: "/tmp/wt",
-    branch: "fm/task-t-move",
+    worktreeDir: `/tmp/wt-${id}`,
+    branch: `fm/task-${id}`,
     sessionFile,
     accountId: "acct_personal",
     model,
     status: "idle",
     createdAt: Date.now(),
   });
-  h.tasks.recordBrief("t-move", ["Goal: fix the login form."]);
+  h.tasks.recordBrief(id, ["Goal: fix the login form."]);
 }
 
 /** How many times the center was told something sent reached a crewmate. */
@@ -1120,6 +1123,9 @@ describe("a task still to move when the app is relaunched", () => {
       ...h.relaunchWith,
     });
     expect(relaunched.loginMoves.bindsTask("t-move")).toBe(true);
+    expect(new SettingsStore(h.db).getLoginMoves()).toEqual({
+      "t-move": { from: "acct_personal", to: "acct_spare" },
+    });
     h.costs.clearHold("t-move");
     await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
       "mid-turn",
@@ -1130,6 +1136,7 @@ describe("a task still to move when the app is relaunched", () => {
     expect(h.tasks.get("t-move")?.accountId).toBe("acct_spare");
     expect(boot.promptCalls[0]).toContain("Check the footer too.");
     expect(relaunched.loginMoves.bindsTask("t-move")).toBe(false);
+    expect(new SettingsStore(h.db).getLoginMoves()).toEqual({});
     await relaunched.disposeAll();
 
     // Made, the move is no longer saved: a later launch binds the task to nothing.
@@ -1181,6 +1188,134 @@ describe("a task still to move when the app is relaunched", () => {
       ...h.relaunchWith,
     });
     expect(relaunched.loginMoves.bindsTask("t-move")).toBe(false);
+    // It leaves the saved record too, so the task coming back to Personal later revives nothing.
+    expect(new SettingsStore(h.db).getLoginMoves()).toEqual({});
+    await relaunched.disposeAll();
+  });
+});
+
+// The approved plan, "Ask": the click moves work to the login the card
+// named, and each task on the low login takes its next delivery there. The
+// card's own button is pressed here, over the real card store, the real
+// saved settings and the home's watch.
+describe("the low-login card's Move click, cut off as the app quits", () => {
+  const MODEL = { provider: "openai-codex", id: "gpt-6.1-terra" };
+  const TASKS = ["t-move", "t-other"];
+  const reading = (accountId: string, label: string, percent: number): LoginReading => ({
+    accountId,
+    label,
+    enabled: true,
+    connected: true,
+    effectivePercentRemaining: percent,
+  });
+
+  /** The home's watch over a supervisor, with the vault's pin and each login's reading. */
+  function watching(
+    h: ReturnType<typeof threeLogins>,
+    supervisor: ReturnType<typeof reboot>,
+    vault: { pin: string; quitsAtPin: boolean; savedAtPin?: unknown },
+    readings: () => LoginReading[],
+  ) {
+    const settings = new SettingsStore(h.db);
+    return startLowLogins({
+      settings: {
+        getWhenLoginLow: () => "ask",
+        getLoginAnswersOver: () => settings.getLoginAnswersOver(),
+        setLoginAnswersOver: (over) => settings.setLoginAnswersOver(over),
+      },
+      vault: {
+        list: (providerId) =>
+          providerId === "openai-codex"
+            ? readings().map((login) => ({
+                id: login.accountId,
+                label: login.label,
+                enabled: true,
+              }))
+            : [],
+        pinnedAccount: () => vault.pin,
+        setPin: (_providerId, accountId) => {
+          // What the saved record names for the tasks as the pin is about to move.
+          vault.savedAtPin = settings.getLoginMoves();
+          if (vault.quitsAtPin) throw new Error("the app quit");
+          vault.pin = accountId ?? vault.pin;
+        },
+        onCutOffChange: () => {},
+        cutOff: () => undefined,
+      },
+      routing: { accounts: { logins: readings }, attachLoginInUse: () => {} },
+      quota: { latest: () => undefined },
+      supervisor,
+      broadcastEvent: () => {},
+    });
+  }
+
+  it("moves every task on the low login to the login the click named, at its next delivery after the relaunch, though another login has more room by then", async () => {
+    const h = threeLogins("openai-codex", fakeCrewmate({}), fakeCrewmate({}), false);
+    for (const id of TASKS) {
+      seedRunning(h, MODEL, `/tmp/${id}.jsonl`, id);
+      // Its cost limit keeps each task's move from being made before the quit.
+      h.costs.placeHold({ taskId: id, limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    }
+    const vault: { pin: string; quitsAtPin: boolean; savedAtPin?: unknown } = {
+      pin: "acct_personal",
+      quitsAtPin: true,
+    };
+    const named = { from: "acct_personal", to: "acct_spare" };
+    const bothNamed = { "t-move": named, "t-other": named };
+    const first = watching(h, h.supervisor, vault, () => [
+      reading("acct_personal", "Personal", 4),
+      reading("acct_work", "Work", 40),
+      reading("acct_spare", "Spare", 60),
+    ]);
+    first.read();
+    const cardId = loginLowCardId("openai-codex");
+    expect(h.supervisor.cards.stored(cardId)?.actions?.[0]?.label).toBe("Move to Spare");
+
+    // The click; the app quits as the pin is about to be saved.
+    expect(() =>
+      h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_spare"),
+    ).toThrow("the app quit");
+    expect(vault.savedAtPin).toEqual(bothNamed);
+    expect(vault.pin).toBe("acct_personal");
+    await h.supervisor.disposeAll();
+
+    // The next launch: Work has the most room now, and the click named Spare.
+    const boots: FakeCrewmate[] = [];
+    const specs: { binding?: unknown }[] = [];
+    const relaunched = reboot(
+      h,
+      async (spec: { binding?: unknown }) => {
+        specs.push(spec);
+        const boot = fakeCrewmate({});
+        boots.push(boot);
+        return boot;
+      },
+      { router: h.router as unknown as Router, ...h.relaunchWith },
+    );
+    vault.quitsAtPin = false;
+    const second = watching(h, relaunched, vault, () => [
+      reading("acct_personal", "Personal", 4),
+      reading("acct_work", "Work", 95),
+      reading("acct_spare", "Spare", 60),
+    ]);
+    second.read();
+    second.read();
+    await tick();
+    expect(vault.pin).toBe("acct_spare");
+    expect(vault.savedAtPin).toEqual(bothNamed);
+    // The captain is not asked to choose again.
+    expect(relaunched.cards.stored(cardId)?.status).not.toBe("open");
+
+    for (const id of TASKS) h.costs.clearHold(id);
+    for (const id of TASKS) await relaunched.steer.steerCrewmate(id, "Check the footer too.");
+    await vi.waitFor(() =>
+      expect(boots.filter((boot) => boot.promptCalls.length > 0)).toHaveLength(2),
+    );
+    expect(
+      specs.map((spec) => (spec.binding as { accountId?: string } | undefined)?.accountId),
+    ).toEqual(["acct_spare", "acct_spare"]);
+    expect(TASKS.map((id) => h.tasks.get(id)?.accountId)).toEqual(["acct_spare", "acct_spare"]);
+    expect(new SettingsStore(h.db).getLoginMoves()).toEqual({});
     await relaunched.disposeAll();
   });
 });

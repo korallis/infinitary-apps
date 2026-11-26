@@ -29,6 +29,8 @@ export type LoginLowCard = {
   refills?: string;
   /** That time in milliseconds, which ends a Wait answer read back after a relaunch. */
   refillsAt?: number;
+  /** This raising of the card, which tells its answer from the answer to an earlier raising. */
+  askId?: string;
   /** The login with the most room: where the click moves work. */
   other: { accountId: string; label: string };
   /** New work already runs across the logins: the click moves only running work. */
@@ -82,26 +84,34 @@ export function loginLowCard(
 const LOGIN_LOW_MARK = "data-login-low";
 
 /** The login the card asks about and its refill time, kept in the saved card for `loginLowAsked`. */
-function loginLowMark(input: Pick<LoginLowCard, "accountId" | "refillsAt">): string {
+function loginLowMark(input: Pick<LoginLowCard, "accountId" | "refillsAt" | "askId">): string {
   const asked = encodeURIComponent(
-    JSON.stringify({ accountId: input.accountId, refillsAt: input.refillsAt }),
+    JSON.stringify({
+      accountId: input.accountId,
+      refillsAt: input.refillsAt,
+      askId: input.askId,
+    }),
   );
   return `<template ${LOGIN_LOW_MARK}="${asked}"></template>`;
 }
 
 /** What a saved low-login card asked about, when its body says. */
-export function loginLowAsked(body: string): { accountId: string; refillsAt?: number } | undefined {
+export function loginLowAsked(
+  body: string,
+): { accountId: string; refillsAt?: number; askId?: string } | undefined {
   const raw = new RegExp(`${LOGIN_LOW_MARK}="([^"]*)"`).exec(body)?.[1];
   if (raw === undefined) return undefined;
   try {
     const asked = JSON.parse(decodeURIComponent(raw)) as {
       accountId?: unknown;
       refillsAt?: unknown;
+      askId?: unknown;
     };
     if (typeof asked.accountId !== "string") return undefined;
     return {
       accountId: asked.accountId,
       ...(typeof asked.refillsAt === "number" ? { refillsAt: asked.refillsAt } : {}),
+      ...(typeof asked.askId === "string" ? { askId: asked.askId } : {}),
     };
   } catch {
     return undefined;

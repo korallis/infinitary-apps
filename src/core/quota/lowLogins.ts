@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Card } from "@shared/cards";
 import { type Said, said } from "@shared/i18n/said";
 import { CREW_NEAR_FLOOR_PERCENT } from "@shared/quotaSignals";
@@ -86,16 +87,19 @@ export type LowLoginsOptions = {
     raiseHostCard: (card: Omit<Card, "author" | "priority" | "status" | "createdAt">) => unknown;
     withdrawHostCard: (id: string, reason: string) => void;
   };
-  /** Whether the captain answered the provider's card with Wait for the refill. */
-  waitChosen: (providerId: string) => boolean;
   /**
-   * The login the provider's saved card asked about when the captain last
-   * answered it Wait for the refill, while the refill that card named is
-   * still to come: what a launch reads its answer back from.
+   * The captain's answer on the provider's saved card that still stands:
+   * the login the card asked about, the login a Move click named (absent
+   * for Wait for the refill), and the refill time the card named. Undefined
+   * once `endAnswer` ended it or the card went up again; saved, so a launch
+   * reads it as the last one left it.
    */
-  waitedOn?: (providerId: string) => string | undefined;
+  answered: (providerId: string) => { from: string; to?: string; refillsAt?: number } | undefined;
+  /** The answer is over: its move is made or refused, or its run-out ended. Saved. */
+  endAnswer: (providerId: string) => void;
   /** When a login's allowance refills, in milliseconds, when known. */
   refillsAt?: (providerId: string, accountId: string) => number | undefined;
+  now?: () => number;
   /** One feed line. */
   note: (fact: Said) => void;
 };
@@ -113,21 +117,18 @@ export type LowLoginsOptions = {
  *   only about the tasks running on the low login.
  * - `move`: the pin moves with one feed line and the tasks follow, no card.
  *
- * The card up now (`offers`) is kept apart from the captain's Wait answer
- * (`waited`): the card is revised as the login it asks about, the login it
- * offers or their readings change, taken down when nothing can be offered
- * and put up again when something can, while a Wait answer holds until
- * that login has room again. The card up is remembered only while the app
- * runs; a Wait answer is read back from the saved card after a relaunch
- * (`waitedOn`), once the login it covered is read as still low.
+ * The card up now (`offers`) is kept apart from the captain's answer on it
+ * (`answered`): the card is revised as the login it asks about, the login
+ * it offers or their readings change, taken down when nothing can be
+ * offered and put up again when something can. A Wait answer holds until
+ * that login is read with room again or the refill its card named has
+ * passed; a Move answer holds until its move is recorded. The card up is
+ * remembered only while the app runs; the answer is saved, so a launch
+ * keeps a Wait and finishes a Move the last one was cut off in.
  */
 export class LowLogins {
   /** Each provider's card that is up: the login it asks about, the one it offers, and its words. */
   private readonly offers = new Map<string, { from: string; to: string; words: string }>();
-  /** The login each provider's captain chose to wait on, until it is no longer low. */
-  private readonly waited = new Map<string, string>();
-  /** The providers whose saved Wait answer this launch has read back or found over. */
-  private readonly restored = new Set<string>();
 
   constructor(private readonly options: LowLoginsOptions) {}
 
@@ -151,31 +152,42 @@ export class LowLogins {
   move(accountId: string): void {
     const offered = [...this.offers].find(([, offer]) => offer.to === accountId);
     const provider = this.options.providers().find((entry) => entry.id === offered?.[0]);
-    if (!offered || !provider) {
-      this.read();
-      return;
+    if (offered && provider) {
+      this.offers.delete(provider.id);
+      if (this.accept(provider, offered[1].from, accountId)) return;
     }
-    const { from } = offered[1];
-    this.offers.delete(provider.id);
+    this.read();
+  }
+
+  /**
+   * Makes the move a click named, true when work moved. The tasks' moves
+   * are recorded before the pin, and the answer ends last: a quit part way
+   * leaves an answer the next launch finishes (`readProvider`), which
+   * records the same moves again and never picks another login.
+   */
+  private accept(provider: { id: string; name: string }, from: string, accountId: string): boolean {
     const choice = this.options.whenLow();
     const logins = this.options.logins(provider.id).filter((login) => login.enabled);
     const low = logins.find((login) => login.accountId === from);
     const to = logins.find((login) => login.accountId === accountId);
+    // Not read yet, as at launch: the answer waits for the reading.
+    if (low && unread(low)) return false;
     const asks = choice === "ask" || choice === "spread";
     // Under `ask` the card asked about the login in use: one the captain has since replaced is not it.
     const inUse = choice !== "ask" || this.options.pinOf(provider.id) === from;
-    if (!asks || !inUse || !low || !runsLow(low) || !to || !hasRoom(to)) {
-      this.read();
-      return;
+    const moves = asks && inUse && low && runsLow(low) && to && hasRoom(to);
+    if (moves) {
+      void this.options.moveOff(from, accountId);
+      // Under `spread` new work is not bound to the pin, so the pin moves only when it is the low login.
+      if (choice !== "spread" || this.options.pinOf(provider.id) === from) {
+        this.options.setPin(provider.id, accountId);
+        this.options.note(
+          said("feedLoginMoved", { provider: provider.name, from: low.label, to: to.label }),
+        );
+      }
     }
-    // Under `spread` new work is not bound to the pin, so the pin moves only when it is the low login.
-    if (choice !== "spread" || this.options.pinOf(provider.id) === from) {
-      this.options.setPin(provider.id, accountId);
-      this.options.note(
-        said("feedLoginMoved", { provider: provider.name, from: low.label, to: to.label }),
-      );
-    }
-    void this.options.moveOff(from, accountId);
+    this.options.endAnswer(provider.id);
+    return Boolean(moves);
   }
 
   private readProvider(provider: { id: string; name: string }, choice: WhenLoginLow): void {
@@ -183,35 +195,37 @@ export class LowLogins {
     const logins = every.filter((login) => login.enabled);
     const lowOnes = logins.filter(runsLow);
     const isLow = (accountId: string) => lowOnes.some((login) => login.accountId === accountId);
-    const offer = this.offers.get(provider.id);
-    if (offer && this.options.waitChosen(provider.id)) {
-      this.offers.delete(provider.id);
-      this.waited.set(provider.id, offer.from);
-    }
-    this.restoreWait(provider.id, every);
-    const waited = this.waited.get(provider.id);
-    if (waited && !isLow(waited)) this.waited.delete(provider.id);
+    const answer = this.options.answered(provider.id);
+    if (answer) this.offers.delete(provider.id);
+    // A Move click the last launch was cut off in is finished as it was named.
+    if (answer?.to !== undefined) this.accept(provider, answer.from, answer.to);
+    const waited =
+      answer && answer.to === undefined ? this.stillWaited(provider.id, answer, every) : undefined;
     // Tasks leave a login only while it is low and work may move. A login
     // not read yet, as at launch, is not known to have room again.
     for (const login of every)
       if (choice === "wait" || (!isLow(login.accountId) && !unread(login)))
         this.options.forget(login.accountId);
     if (choice === "move") this.moveUnasked(provider, logins, lowOnes);
-    else this.ask(provider, logins, lowOnes, choice);
+    else this.ask(provider, logins, lowOnes, choice, waited);
   }
 
   /**
-   * A launch's first reading of the login a saved Wait answer covered: still
-   * low, the answer holds for this run-out; with room again, it is over.
+   * The login a Wait answer still covers. The answer ends, for good, once
+   * that login is read with room again, the refill its card named has
+   * passed, or the login is gone; a login not read yet keeps it.
    */
-  private restoreWait(providerId: string, logins: readonly LoginReading[]): void {
-    if (this.restored.has(providerId)) return;
-    const accountId = this.options.waitedOn?.(providerId);
-    const login = logins.find((entry) => entry.accountId === accountId);
-    if (login && unread(login)) return;
-    this.restored.add(providerId);
-    if (login && runsLow(login) && !this.offers.has(providerId))
-      this.waited.set(providerId, login.accountId);
+  private stillWaited(
+    providerId: string,
+    answer: { from: string; refillsAt?: number },
+    logins: readonly LoginReading[],
+  ): string | undefined {
+    const login = logins.find((entry) => entry.accountId === answer.from);
+    const refilled =
+      answer.refillsAt !== undefined && (this.options.now?.() ?? Date.now()) >= answer.refillsAt;
+    if (login && (unread(login) || (runsLow(login) && !refilled))) return answer.from;
+    this.options.endAnswer(providerId);
+    return undefined;
   }
 
   /** `move`: a low pin moves to the login with the most room, and each low login's tasks follow. */
@@ -225,6 +239,9 @@ export class LowLogins {
     for (const low of lowOnes) {
       const other = roomiestOther(logins, low.accountId);
       if (!other) continue;
+      // The tasks' moves are recorded before the pin, so a quit between leaves none unnamed.
+      if (this.options.tasksOn(low.accountId).length > 0)
+        void this.options.moveOff(low.accountId, other.accountId);
       if (low.accountId === this.options.pinOf(provider.id)) {
         this.options.setPin(provider.id, other.accountId);
         this.options.note(
@@ -235,8 +252,6 @@ export class LowLogins {
           }),
         );
       }
-      if (this.options.tasksOn(low.accountId).length > 0)
-        void this.options.moveOff(low.accountId, other.accountId);
     }
   }
 
@@ -246,6 +261,7 @@ export class LowLogins {
     logins: readonly LoginReading[],
     lowOnes: readonly LoginReading[],
     choice: WhenLoginLow,
+    waited: string | undefined,
   ): void {
     const pin = this.options.pinOf(provider.id);
     const subject =
@@ -262,11 +278,11 @@ export class LowLogins {
       this.withdraw(provider.id, "no longer asked");
       return;
     }
-    if (this.waited.get(provider.id) === subject.accountId) return;
+    if (waited === subject.accountId) return;
     const percent = subject.effectivePercentRemaining ?? 0;
     const refills = this.options.refillsOf(provider.id, subject.accountId);
     const refillsAt = this.options.refillsAt?.(provider.id, subject.accountId);
-    const card = loginLowCard({
+    const asks = {
       providerId: provider.id,
       providerName: provider.name,
       accountId: subject.accountId,
@@ -277,13 +293,15 @@ export class LowLogins {
       ...(refillsAt !== undefined ? { refillsAt } : {}),
       other: { accountId: other.accountId, label: other.label },
       ...(choice === "spread" ? { spread: true } : {}),
-    });
+    };
+    const card = loginLowCard(asks);
     const words = JSON.stringify([card.title, card.body, card.actions]);
     const offer = this.offers.get(provider.id);
     if (offer?.from === subject.accountId && offer.to === other.accountId && offer.words === words)
       return;
     this.offers.set(provider.id, { from: subject.accountId, to: other.accountId, words });
-    this.options.cards.raiseHostCard(card);
+    // Each raising is its own question, so the answer to an earlier one is never read as this one's.
+    this.options.cards.raiseHostCard(loginLowCard({ ...asks, askId: randomUUID() }));
   }
 
   private withdraw(providerId: string, reason: string): void {

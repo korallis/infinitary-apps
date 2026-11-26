@@ -273,11 +273,15 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   Move (`move-login` host op, `crew:<accountId>`) makes that login the one in use, writes one feed line, and binds the started tasks on the low login to that login and no other.
   The button's id names the login work leaves and the login it goes to (`moveLoginActionId`), on this card and on the first mate's two: a card revised to offer another login declares another button, so a click on the button as it stood before is refused as a choice no longer offered.
   The click is checked against the logins as they are now (`LowLogins.move`): it moves work only while the choice still asks, the login the card asked about is still low and, under `ask`, still the login in use, and the named login still has room; otherwise nothing moves and the logins are read again.
+  The move is made in an order a quit cannot split (`LowLogins.accept`): every task's move is saved in one write, then the login in use changes, then the answer is recorded as over.
+  The card store saves the click before any of that, so a launch that finds the card answered Move and the answer not over finishes the same move to the same login, however much room another login has by then, and asks nothing again; when the logins no longer bear the click out, nothing moves and the card asks about what is true now.
   Choosing another login in the accounts list (`inf:accounts:pin`) has the card and the first mate's offers read again at once.
   Wait for the refill leaves everything where it is, and the card comes back only at that login's next run-out.
-  The answer outlives a relaunch: the saved card names the login it asked about and its refill time (`loginLowAsked`), and the watch reads it back once that login is read as still low before that time (`LowLogins.restoreWait`); read with room, or past that time, it is a new run-out.
+  The answer is read from the saved card, which names the login it asked about, its refill time and that raising of the card (`loginLowAsked`), so it holds the same way while the app runs and after a relaunch (`LowLogins.stillWaited`).
+  It ends once that login is read with room again, once the refill time the card named has passed, or once the login is gone; a login no reading has read yet keeps it.
+  An ended answer is saved by the raising it answered (the `login-low-answers-over` settings row, written by the home's watch alone), so a later launch does not take it up again and the next run-out puts the card up.
   The card up is kept apart from that answer: it is revised in place when the low login, the login it offers or what it says of them changes, taken down when the login has room again, when no other login has room or when the choice becomes `wait`, and put up again when there is something to offer once more.
-  The home keeps the card it has up and a Wait answer in memory, so a restart may ask once more.
+  The home keeps the card it has up in memory, so a launch puts an unanswered card up again for a login still low.
 - **`move`.**
   The same without the card: the pin moves to the login with the most room with one feed line naming both logins, and each task on the low login is bound to that login and writes its own line as it moves.
 - **`spread`.**
@@ -305,7 +309,7 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   A hold that comes up while the restarted conversation opens starts no turn either: the hold is read again before the first turn, by the context restart and by the lane sweep that reopens a task, and the restart's reason is then a turn of its own after the hold: its row on the lane is marked `due` (`CrewSessions.restartIsDue`, read by `CrewFacts.deliverableRows`), so a relaunch while the hold stands carries the task on the same way, with no message sent.
   Rows the sweep claimed go back unspent and untried, so the center's spark for a sent message flies once, when the reopened task takes it, and the restart's own turn draws none (`docs/crew-orbits.md`).
   An opening that fails spends the rows' try and backs them off, and leaves them untried too: the spark flies on the opening that succeeds.
-  Each task still to move is saved with the login it leaves and the one named for it (the `login-moves` settings row, written by `LoginMoves` alone), so a relaunch before the task moves still takes its next delivery on the named login; the row loses the task once its record names that login or the move is given up.
+  Each task still to move is saved with the login it leaves and the one named for it (the `login-moves` settings row, written by `LoginMoves` alone), so a relaunch before the task moves still takes its next delivery on the named login; the row loses the task once its record names that login or the move is given up, and a launch takes out each saved move whose task is no longer active on the login it was to leave.
   A login no reading has read yet, as just after a launch, is not taken to have room again, so its tasks stay bound.
   A cut-off on the login it leaves does not hold its lane meanwhile (`CrewFacts.laneHold`), and every other hold still does; the binding ends when its old login has room again or the choice becomes `wait`.
   Only tasks whose crewmate runs on this computer move.
