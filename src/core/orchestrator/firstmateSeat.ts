@@ -661,7 +661,10 @@ export class FirstmateSeat {
    * The ladder for a seat whose account cannot serve (docs/architecture.md
    * §16 "A paused seat"), the same for every class and every backend (the
    * owner's Q5 a). Rung 1: a sibling of the same provider - same model,
-   * the system working - is a feed line, not a card. Otherwise the seat
+   * the system working - is a feed line, not a card; for a spent allowance
+   * that step follows the choice for a low login (docs/quota.md), taken
+   * with a feed line only under `move`, offered on the pause card under
+   * `ask` and `spread`, and skipped under `wait`. Otherwise the seat
    * pauses: rung 2 asks by card to move to another provider with headroom,
    * rung 3 says it waits. Nothing moves or retries until the captain
    * clicks, and the durable inbox keeps every word meanwhile.
@@ -819,6 +822,7 @@ export class FirstmateSeat {
     if (!sibling) return;
     hostCards.raiseHostCard(
       firstmateOnCreditsCard({
+        accountId,
         login: this.options.flagship?.labelOf(accountId) ?? accountId,
         other: { accountId: sibling.id, label: sibling.label },
       }),

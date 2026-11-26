@@ -175,7 +175,10 @@ export class CrewFacts {
     const cause = this.core.moves.modelWaitCause(taskId);
     if (cause) return { kind: "model", cause };
     const accountId = this.core.tasks.get(taskId)?.accountId ?? record?.accountId;
+    // A task with a confirmed move to another login is not held by the
+    // login it leaves: its next delivery makes the move (`LoginMoves.takes`).
     if (
+      !this.core.loginMoves.bindsTask(taskId) &&
       this.core.ladder.cutOffHolds({
         id: taskId,
         accountId: accountId ?? null,

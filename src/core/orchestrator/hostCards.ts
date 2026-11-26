@@ -270,7 +270,13 @@ function firstmatePauseActions(input: FirstmatePauseCard): CardAction[] {
     const login = input.login;
     return [
       ...(login
-        ? [moveLoginAction({ who: "firstmate", accountId: login.accountId }, login.label, true)]
+        ? [
+            moveLoginAction(
+              { who: "firstmate", from: input.accountId, accountId: login.accountId },
+              login.label,
+              true,
+            ),
+          ]
         : []),
       ...(credits ? [keepGoingAction(input.accountId, !login)] : []),
       ...(input.savedResets ? [redeemSavedResetAction(input.accountId, false)] : []),

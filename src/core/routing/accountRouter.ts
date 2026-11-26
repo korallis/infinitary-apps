@@ -38,6 +38,8 @@ export type AccountPool = {
   connectedSync(accountId: string): boolean | undefined;
   /** Why a connected account serves nothing right now, if it does not. */
   withheldReason(accountId: string): string | undefined;
+  /** The typed cut-off standing on the account, when the pool keeps one. */
+  cutOff?(accountId: string): { class: string } | undefined;
   markSelected(accountId: string): void;
 };
 
@@ -248,6 +250,8 @@ export class AccountSelector {
   ) {
     // A move to a named login reads that login alone, whatever the pin.
     if (crew?.only) {
+      // A run-out the provider typed since the move was named leaves no room there.
+      if (this.options.pool.cutOff?.(crew.only)?.class === "no_headroom") return undefined;
       const named = this.candidatesFor(piProviderId, crew.model, placed, crew.only).filter(
         (row) => row.accountId === crew.only,
       );

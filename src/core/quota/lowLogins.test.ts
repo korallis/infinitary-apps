@@ -104,6 +104,8 @@ describe("the login in use running low, under ask", () => {
       ["Move to Spare", { kind: "host", op: "move-login", arg: "crew:spare" }, undefined],
       ["Wait for the refill", undefined, true],
     ]);
+    // The button's id names both logins, so a card revised to another login declares another button.
+    expect(card?.actions?.[0]?.id).toBe("move-login-personal-spare");
     // Nothing moves until the click.
     expect(t.pins).toEqual([]);
     expect(t.left).toEqual([]);
@@ -248,6 +250,23 @@ describe("the login in use running low, under ask", () => {
     refilled.state.logins = [login("personal", "Personal", 100), login("spare", "Spare", 70)];
     refilled.watch.move("spare");
     expect([refilled.pins, refilled.left]).toEqual([[], []]);
+  });
+
+  it("moves nothing on a click once the captain made another login the one in use", () => {
+    const t = watchOver({
+      choice: "ask",
+      pin: "personal",
+      logins: personalLow(),
+      tasksOn: { personal: ["task-1"] },
+    });
+    t.watch.read();
+    // The captain picked Work in the accounts list; the card about Personal was still up.
+    t.state.pin = "work";
+    t.watch.move("spare");
+    expect([t.pins, t.left, t.lines]).toEqual([[], [], []]);
+    expect(t.state.pin).toBe("work");
+    // The click closed the card, and Personal is no longer the login in use: nothing is asked again.
+    expect(t.raised).toHaveLength(1);
   });
 
   it("says the allowance is used up for a spent login", () => {

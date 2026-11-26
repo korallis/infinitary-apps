@@ -20,7 +20,8 @@ export const LOGIN_LOW_WAIT = "wait-for-refill";
 export type LoginLowCard = {
   providerId: string;
   providerName: string;
-  /** The login running low, as its row names it. */
+  /** The login running low: its account, and the name its row gives it. */
+  accountId: string;
   login: string;
   /** Its percent left; absent once its allowance is spent. */
   percentLeft?: number;
@@ -66,7 +67,11 @@ export function loginLowCard(
     meta: CREW_WORK_META,
     body: `${sentences.map((fact) => saidMark(fact)).join(" ")}${cardWordsMark([title, move, wait])}`,
     actions: [
-      moveLoginAction({ who: "crew", accountId: input.other.accountId }, input.other.label, true),
+      moveLoginAction(
+        { who: "crew", from: input.accountId, accountId: input.other.accountId },
+        input.other.label,
+        true,
+      ),
       { id: LOGIN_LOW_WAIT, label: englishOf(wait), variant: "secondary", declines: true },
     ],
   };
@@ -80,6 +85,7 @@ export const FIRSTMATE_ON_CREDITS_CARD_ID = "card-fm-on-credits";
  * `move`, asked instead. It keeps answering either way.
  */
 export function firstmateOnCreditsCard(input: {
+  accountId: string;
   login: string;
   other: { accountId: string; label: string };
 }): Omit<Card, "author" | "priority" | "status" | "createdAt"> {
@@ -95,7 +101,7 @@ export function firstmateOnCreditsCard(input: {
     )}${cardWordsMark([title, move, stay])}`,
     actions: [
       moveLoginAction(
-        { who: "firstmate", accountId: input.other.accountId },
+        { who: "firstmate", from: input.accountId, accountId: input.other.accountId },
         input.other.label,
         true,
       ),

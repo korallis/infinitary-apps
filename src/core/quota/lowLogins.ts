@@ -146,7 +146,9 @@ export class LowLogins {
     const low = logins.find((login) => login.accountId === from);
     const to = logins.find((login) => login.accountId === accountId);
     const asks = choice === "ask" || choice === "spread";
-    if (!asks || !low || !runsLow(low) || !to || !hasRoom(to)) {
+    // Under `ask` the card asked about the login in use: one the captain has since replaced is not it.
+    const inUse = choice !== "ask" || this.options.pinOf(provider.id) === from;
+    if (!asks || !inUse || !low || !runsLow(low) || !to || !hasRoom(to)) {
       this.read();
       return;
     }
@@ -233,6 +235,7 @@ export class LowLogins {
     const card = loginLowCard({
       providerId: provider.id,
       providerName: provider.name,
+      accountId: subject.accountId,
       login: subject.label,
       // A typed run-out is spent whatever the meter last read.
       ...(!subject.runOut && percent > 0 ? { percentLeft: percent } : {}),

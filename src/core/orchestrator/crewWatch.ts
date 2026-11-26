@@ -492,6 +492,9 @@ export class CrewWatch {
     // the next boot instead of losing the message. A held lane waits for
     // its account first.
     if (this.core.facts.laneHeld(taskId)) return;
+    // A task bound to another login reopens there, not where it was (`LoginMoves`).
+    if (this.core.loginMoves.takes(taskId, (open) => this.core.turns.deliverPendingToTask(open)))
+      return;
     const pictures = this.core.facts.rowPictures(taskId, due);
     if (pictures.blocked) return;
     const ids = this.core.turns.deliverRows(taskId, due);

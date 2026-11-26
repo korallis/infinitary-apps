@@ -12,6 +12,7 @@ import { type AccountPool, AccountSelector } from "../routing/accountRouter";
 import { DecisionStore } from "../storage/decisionStore";
 import { seedTask } from "../tasks/seedTask";
 import { crewmateRestartText } from "./crewSession";
+import { loginLowCard, loginLowCardId } from "./loginCards";
 
 fakeCrewTimersEachTest();
 
@@ -39,8 +40,17 @@ function queueingCrewmate(options: FakeSessionOptions): FakeCrewmate {
   };
 }
 
+/** A provider's typed run-out on a login, as the vault keeps it; it refills a day after the fake clock's start. */
+const RAN_OUT = { class: "no_headroom" as const, since: 0, resetsAt: 86_400_000 * 20_000 };
+
 /** Three logins of one provider: Personal, where the task runs, Work and Spare. */
-function threeLogins(provider: string, first: FakeCrewmate, second: FakeCrewmate, claude: boolean) {
+function threeLogins(
+  provider: string,
+  first: FakeCrewmate,
+  second: FakeCrewmate,
+  claude: boolean,
+  cutOffs = new Map<string, typeof RAN_OUT>(),
+) {
   const pool: AccountPool = {
     list: () =>
       [
@@ -52,11 +62,16 @@ function threeLogins(provider: string, first: FakeCrewmate, second: FakeCrewmate
     pinnedAccount: () => "acct_work",
     connectedSync: () => true,
     withheldReason: () => undefined,
+    cutOff: (accountId) => cutOffs.get(accountId),
     markSelected: () => {},
   };
   let accounts: AccountSelector | undefined;
   const h = setup(first, {
     crewmates: [second],
+    serveability: {
+      cutOff: (accountId) => cutOffs.get(accountId),
+      providerName: () => "ChatGPT",
+    },
     ...(claude
       ? {
           alsoServes: ["claude"] as const,
@@ -187,5 +202,98 @@ describe("a task inside a turn when its login's work is moved", () => {
     expect(h.tasks.get("t-move")?.accountId).toBe("acct_work");
     expect(second.promptCalls[0]).toContain("Check the footer too.");
     expect(second.promptCalls[0]).not.toContain("Goal: fix the login form.");
+  });
+
+  it("moves at its turn's end though its old login was cut off meanwhile, and is not held by it", async () => {
+    const cutOffs = new Map<string, typeof RAN_OUT>();
+    const first = queueingCrewmate({});
+    const second = queueingCrewmate({});
+    const h = threeLogins("openai-codex", first, second, false, cutOffs);
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+
+    await h.supervisor.steer.steerCrewmate("t-move", "carry on");
+    await tick();
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    await h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.");
+    await tick();
+    // The provider now refuses Personal: a lane on it would be held until its refill.
+    cutOffs.set("acct_personal", RAN_OUT);
+
+    first.finishPrompt();
+    await vi.waitFor(() => expect(second.promptCalls).toHaveLength(1));
+    expect(boundAccount(h, 1)).toBe("acct_work");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_work");
+    expect(second.promptCalls[0]).toContain("Check the footer too.");
+    expect(first.promptCalls).toHaveLength(1);
+  });
+
+  it("moves at its turn's end with nothing waiting on its lane", async () => {
+    const first = queueingCrewmate({});
+    const second = queueingCrewmate({});
+    const h = threeLogins("openai-codex", first, second, false);
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+
+    await h.supervisor.steer.steerCrewmate("t-move", "carry on");
+    await tick();
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    first.finishPrompt();
+    await vi.waitFor(() => expect(h.tasks.get("t-move")?.accountId).toBe("acct_work"));
+    await vi.waitFor(() => expect(boundAccount(h, 1)).toBe("acct_work"));
+    // It reopened there and was told nothing: there was nothing to tell.
+    expect(second.promptCalls).toHaveLength(0);
+  });
+
+  it("stays where it is when the named login was cut off after the click", async () => {
+    const cutOffs = new Map<string, typeof RAN_OUT>();
+    const first = queueingCrewmate({});
+    const second = queueingCrewmate({});
+    const h = threeLogins("openai-codex", first, second, false, cutOffs);
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+
+    await h.supervisor.steer.steerCrewmate("t-move", "carry on");
+    await tick();
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    await h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.");
+    await tick();
+    // Work's meter still reads room, but its provider has refused it since.
+    cutOffs.set("acct_work", RAN_OUT);
+
+    first.finishPrompt();
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(2));
+    expect(first.promptCalls[1]).toContain("Check the footer too.");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_personal");
+    expect(h.sessionSpecs).toHaveLength(1);
+    expect(second.promptCalls).toHaveLength(0);
+  });
+});
+
+describe("the low-login card's Move button, as the host admits its click", () => {
+  it("refuses the button as it stood before the card named another login, and takes the one it shows", async () => {
+    const h = threeLogins("openai-codex", queueingCrewmate({}), queueingCrewmate({}), false);
+    const clicked: string[] = [];
+    h.supervisor.loginMoves.onClick = (accountId) => clicked.push(accountId);
+    const offering = (other: { accountId: string; label: string }) =>
+      loginLowCard({
+        providerId: "openai-codex",
+        providerName: "ChatGPT",
+        accountId: "acct_personal",
+        login: "Personal",
+        percentLeft: 8,
+        other,
+      });
+    const cardId = loginLowCardId("openai-codex");
+    h.supervisor.cards.hostCards.raiseHostCard(offering({ accountId: "acct_work", label: "Work" }));
+    // Work ran low too: the card is revised to offer Spare.
+    h.supervisor.cards.hostCards.raiseHostCard(
+      offering({ accountId: "acct_spare", label: "Spare" }),
+    );
+    // The captain's window still showed Move to Work.
+    expect(() =>
+      h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_work"),
+    ).toThrow("This choice is not offered on this card.");
+    expect(clicked).toEqual([]);
+    h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_spare");
+    await tick();
+    expect(clicked).toEqual(["acct_spare"]);
   });
 });

@@ -9,7 +9,13 @@ fakeClockEachTest();
 // the choice for a low login. Under `ask` that move becomes a card, under
 // `wait` the step is skipped, and only `move` takes it without a click.
 // The card follows the choice and the readings between turns, and its click
-// moves the seat only while they still bear the offer out.
+// moves the seat only while they still bear the offer out. "Ask": the button
+// names the login it moves to, so a click moves to that login or to none.
+
+/** The Move button's id from Personal to Work #2 (`moveLoginActionId`). */
+const TO_WORK = "move-login-acct_a-acct_b";
+const isMove = (action: { effect?: { kind: string; op?: string } }) =>
+  action.effect?.kind === "host" && action.effect.op === "move-login";
 
 const twoLogins = () =>
   setupWithFlagship({
@@ -43,15 +49,16 @@ describe("the first mate's login running out, under each choice", () => {
     expect(notes(t.events).some((text) => text.includes("moved to Work #2"))).toBe(false);
     const card = t.cards().find((each) => each.id === "card-fm-no-headroom");
     expect(card?.body).toContain("Work #2 has allowance left. Move your first mate to Work #2");
-    const move = card?.actions?.find((action) => action.id === "move-login");
+    const move = card?.actions?.find(isMove);
     expect(move).toMatchObject({
+      id: TO_WORK,
       label: "Move to Work #2",
       default: true,
       effect: { kind: "host", op: "move-login", arg: "firstmate:acct_b" },
     });
 
     // The click moves the seat, takes the card down and delivers what waited.
-    t.supervisor.cardActions.act("card-fm-no-headroom", "move-login");
+    t.supervisor.cardActions.act("card-fm-no-headroom", TO_WORK);
     await vi.waitFor(() => expect(t.specs).toHaveLength(2));
     await tick();
     expect(t.settings.getFirstmateAccount()).toBe("acct_b");
@@ -69,7 +76,7 @@ describe("the first mate's login running out, under each choice", () => {
     expect(t.settings.getFirstmateAccount()).toBe("acct_a");
     const card = t.cards().find((each) => each.id === "card-fm-no-headroom");
     expect(card).toBeDefined();
-    expect(card?.actions?.some((action) => action.id === "move-login")).toBe(false);
+    expect(card?.actions?.some(isMove)).toBe(false);
     expect(card?.body).not.toContain("Work #2");
   });
 
@@ -91,7 +98,7 @@ describe("the first mate's login running out, under each choice", () => {
       t
         .cards()
         .find((each) => each.id === "card-fm-no-headroom")
-        ?.actions?.some((action) => action.id === "move-login"),
+        ?.actions?.some(isMove),
     ).toBe(true);
   });
 });
@@ -101,7 +108,7 @@ describe("the first mate's offer of another login, between turns", () => {
     t
       .cards()
       .find((each) => each.id === "card-fm-no-headroom")
-      ?.actions?.find((action) => action.id === "move-login");
+      ?.actions?.find(isMove);
 
   it("drops the offer when the choice becomes wait, and offers it again under ask", async () => {
     const t = twoLogins();
@@ -153,18 +160,44 @@ describe("the first mate's offer of another login, between turns", () => {
     await spendPersonal(t);
     // Work #2 ran out after the card went up and before the click.
     t.setHeadroom("acct_b", 0);
-    t.supervisor.cardActions.act("card-fm-no-headroom", "move-login");
+    t.supervisor.cardActions.act("card-fm-no-headroom", TO_WORK);
     await tick();
     expect(t.specs).toHaveLength(1);
     expect(t.settings.getFirstmateAccount()).toBe("acct_a");
     expect(notes(t.events)).not.toContain("Your first mate moved to Work #2.");
   });
 
+  it("refuses a click on the button as it stood before the card named another login", async () => {
+    const t = setupWithFlagship({
+      accounts: [
+        { id: "acct_a", providerId: "openai-codex", label: "Personal", enabled: true },
+        { id: "acct_b", providerId: "openai-codex", label: "Work #2", enabled: true },
+        { id: "acct_c", providerId: "openai-codex", label: "Spare", enabled: true },
+      ],
+    });
+    t.setHeadroom("acct_c", 0);
+    await spendPersonal(t);
+    expect(moveOn(t)?.id).toBe(TO_WORK);
+    // Work #2 runs out and Spare refills: the card now names Spare.
+    t.setHeadroom("acct_b", 0);
+    t.setHeadroom("acct_c", 70);
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(moveOn(t)).toMatchObject({ id: "move-login-acct_a-acct_c", label: "Move to Spare" });
+    // The captain's window still showed Move to Work #2.
+    expect(() => t.supervisor.cardActions.act("card-fm-no-headroom", TO_WORK)).toThrow(
+      "This choice is not offered on this card.",
+    );
+    await tick();
+    expect(t.settings.getFirstmateAccount()).toBe("acct_a");
+    expect(t.specs).toHaveLength(1);
+  });
+
   it("moves nothing on a click after the choice became wait", async () => {
     const t = twoLogins();
     await spendPersonal(t);
     t.settings.setWhenLoginLow("wait");
-    t.supervisor.cardActions.act("card-fm-no-headroom", "move-login");
+    t.supervisor.cardActions.act("card-fm-no-headroom", TO_WORK);
     await tick();
     expect(t.specs).toHaveLength(1);
     expect(t.settings.getFirstmateAccount()).toBe("acct_a");
@@ -231,7 +264,7 @@ describe("the first mate on a login's credits while another login has allowance 
     const t = onCredits();
     await spendPersonal(t);
     t.setHeadroom("acct_b", 0);
-    t.supervisor.cardActions.act("card-fm-on-credits", "move-login");
+    t.supervisor.cardActions.act("card-fm-on-credits", TO_WORK);
     await tick();
     expect(t.settings.getFirstmateAccount()).toBe("acct_a");
     expect(notes(t.events)).not.toContain("Your first mate moved to Work #2.");
