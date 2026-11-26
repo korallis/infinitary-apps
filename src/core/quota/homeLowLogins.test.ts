@@ -433,6 +433,75 @@ describe("the home's watch after a relaunch, when the app quit while it made the
     expect(t.order).toEqual(["tasks personal to spare", "pin spare"]);
     expect(t.saved.over).toBeDefined();
   });
+
+  it("keeps the answer when the login in use cannot be saved, and saves it at the next reading", () => {
+    const t = home(offeringSpare());
+    t.watch.read();
+    t.saved.chosen = moveLoginActionId("personal", "spare");
+    // As the vault: a pin that is not saved is not the pin (`AccountVault.setPin`).
+    t.state.quitsAtPin = true;
+    expect(() => t.loginMoves.onClick?.("spare")).toThrow("the app quit");
+    expect(t.state.pin).toBe("personal");
+    expect(t.saved.over).toBeUndefined();
+
+    t.state.quitsAtPin = false;
+    t.watch.read();
+    expect(t.order).toEqual(["tasks personal to spare", "tasks personal to spare", "pin spare"]);
+    expect(t.saved.over).toBeDefined();
+  });
+});
+
+// The approved plan, "Ask": the click moves work to the login the card
+// named. Until the launch after a quit has read the login the click left,
+// the saved answer is what keeps its tasks for that login.
+describe("the home's watch after a relaunch, while the login a Move click left is not read yet", () => {
+  it("asks nothing in that answer's place under spread, though another login with work reads low, and makes the move once the login is read", () => {
+    const first = [
+      login("personal", "Personal", 4),
+      login("work", "Work", 40),
+      login("spare", "Spare", 60),
+    ];
+    const before = home(first);
+    before.state.choice = "spread";
+    before.watch.read();
+    const click = moveLoginActionId("personal", "spare");
+    before.saved.chosen = click;
+
+    const logins = [login("personal", "Personal"), login("work", "Work", 5), first[2]];
+    const after = home(logins as LoginReading[], before.saved);
+    after.state.choice = "spread";
+    after.watch.read();
+    expect(after.raised).toEqual([]);
+    expect(after.saved.chosen).toBe(click);
+    expect(after.saved.over).toBeUndefined();
+    expect(after.order).toEqual([]);
+    expect(after.discarded).toEqual([]);
+
+    logins[0] = login("personal", "Personal", 4);
+    after.watch.read();
+    expect(after.order).toEqual(["tasks personal to spare", "pin spare"]);
+    expect(after.saved.over).toBeDefined();
+  });
+
+  it("refuses the click without waiting for the reading once the choice no longer asks", () => {
+    const before = home([
+      login("personal", "Personal", 4),
+      login("work", "Work", 40),
+      login("spare", "Spare", 60),
+    ]);
+    before.watch.read();
+    before.saved.chosen = moveLoginActionId("personal", "spare");
+
+    const after = home(
+      [login("personal", "Personal"), login("work", "Work", 40), login("spare", "Spare", 60)],
+      before.saved,
+    );
+    after.state.choice = "wait";
+    after.watch.read();
+    expect(after.order).toEqual([]);
+    expect(after.discarded).toEqual(["personal to spare"]);
+    expect(after.saved.over).toBeDefined();
+  });
 });
 
 // The approved plan: `wait` raises no card, and `ask` offers a move only

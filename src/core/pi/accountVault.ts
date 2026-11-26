@@ -1510,6 +1510,7 @@ export class AccountVault {
 
   /** Pin one account per provider (the selection override); null clears. */
   setPin(providerId: string, accountId: string | null): void {
+    const before = this.registry.pins[providerId];
     if (accountId === null) {
       delete this.registry.pins[providerId];
     } else {
@@ -1519,7 +1520,14 @@ export class AccountVault {
       }
       this.registry.pins[providerId] = accountId;
     }
-    this.saveRegistry();
+    try {
+      this.saveRegistry();
+    } catch (caught) {
+      // A pin that was not saved is not the pin: a reader sees what a relaunch would.
+      if (before === undefined) delete this.registry.pins[providerId];
+      else this.registry.pins[providerId] = before;
+      throw caught;
+    }
   }
 
   /** Selection bookkeeping: the round-robin cursor among unknown quota. */

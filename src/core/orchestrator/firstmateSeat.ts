@@ -675,6 +675,8 @@ export class FirstmateSeat {
   ): Promise<ModelSession | undefined> {
     const flagship = this.options.flagship;
     if (!flagship) return undefined;
+    // A seat that cannot answer on its login is not answering on its credits.
+    this.askOffCredits(accountId, undefined);
     const label = flagship.labelOf(accountId);
     // A removed account has no siblings of its own: the model's provider does.
     const provider = this.options.settings.getFirstmateModel()?.provider;
@@ -810,17 +812,25 @@ export class FirstmateSeat {
    * asked once on a card, while the seat keeps answering. With no sibling
    * to offer, the card comes down and the next one may ask again.
    */
+  /**
+   * The credits ask that is up, by the move it offers. A card the card
+   * store kept open from the last launch is up too, offering a move this
+   * launch has not checked.
+   */
+  private creditsUp(): string | undefined {
+    return (
+      this.creditsAsked ??
+      (this.options.supervisor.cards.get(FIRSTMATE_ON_CREDITS_CARD_ID) ? "" : undefined)
+    );
+  }
+
   private askOffCredits(
     accountId: string,
     sibling: { id: string; label: string } | undefined,
   ): void {
     const hostCards = this.options.supervisor.cards.hostCards;
     const asking = sibling ? `${accountId}>${sibling.id}` : undefined;
-    // A card the card store kept open from the last launch is up too,
-    // offering a move this launch has not checked.
-    const up =
-      this.creditsAsked ??
-      (this.options.supervisor.cards.get(FIRSTMATE_ON_CREDITS_CARD_ID) ? "" : undefined);
+    const up = this.creditsUp();
     if (asking === up) return;
     if (up !== undefined) hostCards.withdrawHostCard(FIRSTMATE_ON_CREDITS_CARD_ID, "superseded");
     this.creditsAsked = asking;
@@ -1062,7 +1072,11 @@ export class FirstmateSeat {
     const seat = this.seatAccount();
     const pause = seat ? flagship.pause(seat) : undefined;
     if (seat && pause && this.paused?.accountId === seat) this.pauseSeat(seat, pause);
-    else if (seat && !pause && seat === this.boundAccountId) this.offerOffCredits(seat);
+    // An unbound seat is asked nothing new, but a card already up is kept true.
+    else if (seat && !pause && (seat === this.boundAccountId || this.creditsUp() !== undefined))
+      this.offerOffCredits(seat);
+    // A seat that cannot answer on its login is not answering on its credits.
+    if (!seat || pause) this.askOffCredits(seat ?? "", undefined);
     const movedFrom = this.options.settings.getFirstmateMovedFrom();
     if (!movedFrom) return;
     if (!flagship.labelOf(movedFrom.accountId)) {

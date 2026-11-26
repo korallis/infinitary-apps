@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { notes, runtimeKind, setupWithFlagship } from "../../../tests/helpers/firstmateFlagship";
+import {
+  CODEX_MODEL,
+  notes,
+  runtimeKind,
+  setupWithFlagship,
+} from "../../../tests/helpers/firstmateFlagship";
 import { type FakeSession, fakeClockEachTest, tick } from "../../../tests/helpers/firstmateHarness";
 import { firstmateOnCreditsCard } from "./loginCards";
 
@@ -294,5 +299,72 @@ describe("the first mate on a login's credits while another login has allowance 
     t.settings.setWhenLoginLow("wait");
     await spendPersonal(t);
     expect(t.cards().some((each) => each.id === "card-fm-on-credits")).toBe(false);
+  });
+
+  const leftOpen = (t: ReturnType<typeof onCredits>) =>
+    t.supervisor.cards.hostCards.raiseHostCard(
+      firstmateOnCreditsCard({
+        accountId: "acct_a",
+        login: "Personal",
+        other: { accountId: "acct_b", label: "Work #2" },
+      }),
+    );
+
+  it("takes that card down between turns under wait, before the seat has answered anything", async () => {
+    const t = onCredits();
+    leftOpen(t);
+    await tick();
+    expect(t.cards().some((each) => each.id === "card-fm-on-credits")).toBe(true);
+    t.settings.setWhenLoginLow("wait");
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(t.cards().some((each) => each.id === "card-fm-on-credits")).toBe(false);
+    expect(t.specs).toHaveLength(0);
+  });
+
+  it("takes that card down between turns under wait for a seat whose saved login has not answered yet", async () => {
+    const t = onCredits();
+    t.settings.setFirstmateAccount("acct_a");
+    leftOpen(t);
+    t.settings.setWhenLoginLow("wait");
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(t.cards().some((each) => each.id === "card-fm-on-credits")).toBe(false);
+    expect(t.specs).toHaveLength(0);
+  });
+
+  it("takes that card down when the seat pauses, and keeps the pause's own offer of another provider", async () => {
+    const t = setupWithFlagship({
+      accounts: [
+        { id: "acct_a", providerId: "openai-codex", label: "Personal", enabled: true },
+        { id: "acct_b", providerId: "openai-codex", label: "Work #2", enabled: true },
+        { id: "acct_grok", providerId: "xai", label: "Grok", enabled: true },
+      ],
+      availableModels: [CODEX_MODEL, { provider: "xai", id: "grok-4.6" }],
+    });
+    t.settings.setFirstmateModel(CODEX_MODEL);
+    t.settings.setWhenLoginLow("wait");
+    t.setHeadroom("acct_a", 60);
+    t.setHeadroom("acct_b", 40);
+    t.setHeadroom("acct_grok", 70);
+    await t.agent.converse("first");
+    expect(t.agent.boundAccount()).toBe("acct_a");
+    (t.sessions[0] as FakeSession).resolveNextPrompt();
+    await tick();
+    // The card is up with nothing in this launch having asked it.
+    leftOpen(t);
+    t.setHeadroom("acct_a", 0);
+    await t.agent.converse("second");
+    await tick();
+    expect(t.cards().some((each) => each.id === "card-fm-on-credits")).toBe(false);
+    const pause = t.cards().find((each) => each.id === "card-fm-flagship-move");
+    expect(pause?.actions?.map((action) => action.label)).toContain("Move to Grok");
+
+    // Put up again while the seat is paused, the next check between turns takes it down too.
+    leftOpen(t);
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(t.cards().some((each) => each.id === "card-fm-on-credits")).toBe(false);
+    expect(t.cards().some((each) => each.id === "card-fm-flagship-move")).toBe(true);
   });
 });

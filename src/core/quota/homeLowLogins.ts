@@ -46,14 +46,12 @@ export function loginLowAnswer(
   return to ? { ...answer, to: to.id } : undefined;
 }
 
-/** Whether a task's saved move was named by a Move click whose answer still stands unchecked. */
-export function loginMoveUnchecked(
-  saved: SavedAnswers,
-  move: { from: string; to: string },
-): boolean {
+/** Whether a Move click that left this login has an answer that still stands unchecked. */
+export function loginMoveUnchecked(saved: SavedAnswers, from: string): boolean {
   return PROVIDER_CATALOG.some((entry) => {
+    if (!saved.vault.list(entry.id).some((account) => account.id === from)) return false;
     const answer = loginLowAnswer(saved, entry.id);
-    return answer?.from === move.from && answer.to === move.to;
+    return answer?.from === from && answer.to !== undefined;
   });
 }
 
