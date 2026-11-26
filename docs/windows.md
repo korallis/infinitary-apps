@@ -58,6 +58,7 @@ The next install there repairs none of them: pnpm answers that everything is up 
 So on Windows the pool reads every folder of a parked working copy's dependency trees, following no link, and keeps the trees only when a rename cannot break them (`survivesMove`, `src/core/workspace/worktreePool.ts`): no link holds an absolute path, and each relative one stays inside the working copy.
 A pnpm project's trees therefore go when the copy is parked, the checked-out files stay, and the next task's install links every package again from pnpm's store.
 When one tree cannot move, every tree of that working copy goes: one install made them all, and a package's own tree links into the root's.
+The pool finds the trees by reading the working copy's own folders (`dependencyTrees`), never from git's status: once the copy is renamed, a workspace package's tree holds only links that lead nowhere, and git on Windows reads such a folder as empty and leaves it out.
 A tree that holds only plain folders and files stays.
 A spare working copy parked by an earlier version of the app, which still holds such links, is never handed to a task: it is deleted and the task gets a new one.
 On a Mac or a Linux computer the pool reads no dependency tree and keeps them all: pnpm's links there are relative and move with the working copy.

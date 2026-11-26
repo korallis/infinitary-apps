@@ -22,7 +22,9 @@ import { git } from "./git";
  * to date" and leaves every link as it was. One install made every tree of
  * a working copy, and a package's own tree links into the root's, so when
  * one cannot move they all go; the checked-out files stay, and the next
- * task's install builds them again. Elsewhere package managers link with
+ * task's install builds them again. The trees are found by reading the
+ * slot's own folders (`dependencyTrees`), never from git, which passes over
+ * a tree whose links all lead nowhere. Elsewhere package managers link with
  * relative paths, which move with the slot, and no tree is read.
  *
  * Treehouse's safety rules, not its binary:
@@ -191,9 +193,11 @@ export class WorktreePool {
       // task); -e keeps every node_modules, at any depth, out of the clean.
       await git(staging, ["clean", "-ffdxq", "-e", KEPT_DIR]);
       if (this.platform === "win32") {
-        const { trees } = await slotContents(staging);
+        const trees = await dependencyTrees(staging);
         if (!(await survivesMove(staging, trees))) {
-          for (const tree of trees) await this.discard(join(staging, tree));
+          for (const tree of trees) await this.discard(tree);
+          // A tree the project keeps in git went with the rest; this brings it back.
+          await git(staging, ["reset", "--hard", "--quiet"]);
         }
       }
       await this.serial(async () => {
@@ -305,7 +309,7 @@ export async function isPristineSlot(
     await assertCheckoutOf(dir, common);
     const contents = await slotContents(dir);
     if (!contents.detached || contents.other) return false;
-    return platform !== "win32" || (await survivesMove(dir, contents.trees));
+    return platform !== "win32" || (await survivesMove(dir, await dependencyTrees(dir)));
   } catch {
     return false;
   }
@@ -314,14 +318,11 @@ export async function isPristineSlot(
 /**
  * What a slot holds, from one status: the branch header says whether HEAD
  * is detached, as a parked slot must be, and the entries are everything in
- * the tree - its dependency trees, by their paths from the slot, and
- * whether there is anything else. Untracked and ignored files are asked for
- * explicitly, so a repository that hides them in its config cannot make a
- * dirty slot read as clean.
+ * the tree - whether any of them is something other than a dependency tree.
+ * Untracked and ignored files are asked for explicitly, so a repository
+ * that hides them in its config cannot make a dirty slot read as clean.
  */
-async function slotContents(
-  dir: string,
-): Promise<{ detached: boolean; trees: string[]; other: boolean }> {
+async function slotContents(dir: string): Promise<{ detached: boolean; other: boolean }> {
   const status = await git(dir, [
     "status",
     "--porcelain=v2",
@@ -331,19 +332,35 @@ async function slotContents(
   ]);
   const lines = status.split("\n").filter(Boolean);
   const entries = lines.filter((line) => !line.startsWith("# "));
-  const trees = entries.map(keptDependencyTree).filter((tree) => tree !== null);
   return {
     detached: lines.includes("# branch.head (detached)"),
-    trees,
-    other: trees.length < entries.length,
+    other: !entries.every(isKeptDependencyTree),
   };
 }
 
-/** `! node_modules/` or `! packages/x/node_modules/` - an ignored dependency tree, as its path. */
-function keptDependencyTree(line: string): string | null {
-  if (!line.startsWith("! ")) return null;
-  const path = line.slice(2).replace(/\/$/, "");
-  return basename(path) === KEPT_DIR ? path : null;
+/** `! node_modules/` or `! packages/x/node_modules/` - an ignored dependency tree. */
+function isKeptDependencyTree(line: string): boolean {
+  return line.startsWith("! ") && basename(line.slice(2).replace(/\/$/, "")) === KEPT_DIR;
+}
+
+/**
+ * Every dependency tree a slot holds that is not inside another, found by
+ * reading the slot's own folders and following no link. Git's status is not
+ * the source: it leaves out a folder it reads as empty, and on Windows it
+ * reads a tree as empty when all the tree holds is links that lead nowhere,
+ * which is what a rename makes of a workspace package's own tree.
+ */
+async function dependencyTrees(slot: string): Promise<string[]> {
+  const trees: string[] = [];
+  const folders = [slot];
+  for (let dir = folders.pop(); dir !== undefined; dir = folders.pop()) {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.name === KEPT_DIR) trees.push(path);
+      else if (entry.isDirectory() && entry.name !== ".git") folders.push(path);
+    }
+  }
+  return trees;
 }
 
 /**
@@ -358,8 +375,7 @@ async function survivesMove(slot: string, trees: readonly string[]): Promise<boo
   try {
     const root = await realpath(slot);
     const folders: string[] = [];
-    for (const tree of trees) {
-      const top = join(slot, tree);
+    for (const top of trees) {
       if (!(await lstat(top)).isSymbolicLink()) folders.push(top);
       else if (!(await linkSurvivesMove(slot, root, top))) return false;
     }

@@ -267,6 +267,49 @@ describe("warm worktree pool: a closed task's tree is reused, never dirty", () =
     expect(existsSync(join(second.cwd, "packages", "app", "package.json"))).toBe(true);
   });
 
+  it("on Windows, drops a package's own tree that holds nothing but a link into the root's", async () => {
+    const repo = await project();
+    mkdirSync(join(repo, "packages", "app"), { recursive: true });
+    await commitFile(repo, join("packages", "app", "package.json"), '{ "name": "app" }\n');
+    const { workspace } = service(ON_WINDOWS);
+    const first = await workspace.createTaskWorktree("cdea1111", repo);
+    linkedTree(first.cwd, "dep", "absolute");
+    // As pnpm leaves a workspace package: its tree is one link into the root's
+    // store. Closing the task renames the working copy, the link then leads
+    // nowhere, and git on Windows reads a folder of such links as empty.
+    const own = join("packages", "app", "node_modules");
+    mkdirSync(join(first.cwd, own));
+    symlinkSync(
+      join(first.cwd, "node_modules", ".store", "dep"),
+      join(first.cwd, own, "dep"),
+      folderLinkType(),
+    );
+    await closeTask(workspace, first);
+
+    const second = await workspace.createTaskWorktree("cdea2222", repo);
+    expect(second.acquired?.source).toBe("pool");
+    expect(readdirSync(join(second.cwd, "packages", "app"))).toEqual(["package.json"]);
+    expect(existsSync(join(second.cwd, "node_modules"))).toBe(false);
+  });
+
+  it("on Windows, a dependency tree the project keeps in git stays when the others are dropped", async () => {
+    const repo = await project();
+    const kept = join("fixtures", "node_modules", "kept", "index.js");
+    mkdirSync(dirname(join(repo, kept)), { recursive: true });
+    writeFileSync(join(repo, kept), "module.exports = 'kept';\n");
+    await git(repo, ["add", "--force", kept]);
+    await git(repo, ["commit", "--quiet", "-m", "keep a tree in git"]);
+    const { workspace } = service(ON_WINDOWS);
+    const first = await workspace.createTaskWorktree("cdeb1111", repo);
+    linkedTree(first.cwd, "dep", "absolute");
+    await closeTask(workspace, first);
+
+    const second = await workspace.createTaskWorktree("cdeb2222", repo);
+    expect(second.acquired?.source).toBe("pool");
+    expect(await git(second.cwd, ["status", "--porcelain", "--ignored"])).toBe("");
+    expect(readFileSync(join(second.cwd, kept), "utf8")).toBe("module.exports = 'kept';\n");
+  });
+
   it("on Windows, fails closed: an idle tree holding an absolute link is retired though the link leads inside it now", async () => {
     const repo = await project();
     const { workspace } = service(ON_WINDOWS);
@@ -437,6 +480,21 @@ describe("a slot is handed out only when it is pristine", () => {
 
     rmSync(join(repo, "node_modules", "plain", "node_modules", "b"));
     expect(await isPristineSlot(repo, common, "win32")).toBe(true);
+  });
+
+  it("on Windows, refuses a dependency tree that holds nothing but a link leading nowhere, which git reads as an empty folder there", async () => {
+    const repo = await project();
+    const common = await commonOf(repo);
+    mkdirSync(join(repo, "packages", "app", "node_modules"), { recursive: true });
+    await commitFile(repo, join("packages", "app", "package.json"), '{ "name": "app" }\n');
+    await git(repo, ["checkout", "--quiet", "--detach"]);
+    expect(await isPristineSlot(repo, common, "win32")).toBe(true);
+
+    const gone = tmp("infinitary-pool-gone-");
+    symlinkSync(gone, join(repo, "packages", "app", "node_modules", "dep"), folderLinkType());
+    rmSync(gone, { recursive: true });
+    expect(await isPristineSlot(repo, common, "win32")).toBe(false);
+    expect(await isPristineSlot(repo, common, "linux")).toBe(true);
   });
 
   it.runIf(RELATIVE_LINKS)(
