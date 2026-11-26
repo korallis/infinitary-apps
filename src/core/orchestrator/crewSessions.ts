@@ -399,6 +399,22 @@ export class CrewSessions {
   }
 
   /**
+   * A hold came up while a context or refusal restart's new conversation
+   * opened, so it took no turn: the reason waiting on its lane says so, and
+   * is the turn of its own that follows the hold. The record already names
+   * the new conversation, so nothing else carries this past a relaunch.
+   */
+  restartIsDue(taskId: string): void {
+    const inbox = this.core.options.inbox;
+    for (const row of inbox.allFor(taskId)) {
+      const facts = row.facts;
+      if (facts?.kind !== "conversation-restart" || facts.due) continue;
+      if (facts.restart.changed !== "context" && facts.restart.changed !== "refused") continue;
+      inbox.revise(row.id, { facts: { ...facts, due: true }, ways: row.ways });
+    }
+  }
+
+  /**
    * A renewed conversation's reason still waiting on the lane, claimed for
    * the turn about to start so it rides that turn and a clean end acks it.
    */

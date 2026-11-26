@@ -273,12 +273,6 @@ export type TaskRuntime = {
    * yet: a second context-limit failure is not recovered again.
    */
   contextRecovered?: true;
-  /**
-   * A hold came up while this restarted conversation opened, before its
-   * first turn: its restart reason is that turn, due on its lane by itself
-   * once the hold ends (`CrewFacts.deliverableRows`), until a turn starts.
-   */
-  restartDue?: true;
 };
 
 /** A steer handed into a running turn, by its words' digest and when it was handed over. */

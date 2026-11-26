@@ -251,7 +251,6 @@ export class CrewTurns {
     // was queued after the message it rides.
     const leading = this.core.sessions.claimConversationRestart(task.id, inboxIds);
     const ids = [...leading.map((row) => row.id), ...inboxIds];
-    task.restartDue = undefined;
     this.beginTurn(task, ids);
     // The rows it delivers name the turn, so a conversation on another
     // computer starts it once however often it is asked.
@@ -1303,7 +1302,7 @@ export class CrewTurns {
       else if (!resumed.turn.busy && !resumed.turn.closing) {
         // A hold that came up while it opened: the restart's reason is its
         // first turn, after the hold.
-        if (this.core.facts.laneHeld(task.id)) resumed.restartDue = true;
+        if (this.core.facts.laneHeld(task.id)) this.core.sessions.restartIsDue(task.id);
         else void this.runTurn(resumed, CONTEXT_CONTINUE_TEXT);
       }
     } catch (caught) {
