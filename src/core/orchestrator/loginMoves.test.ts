@@ -1,5 +1,6 @@
 import type { FmEvent } from "@shared/events";
 import type { QuotaSnapshotView } from "@shared/quota";
+import type { WhenLoginLow } from "@shared/whenLoginLow";
 import { describe, expect, it } from "vitest";
 import { type AccountPool, AccountSelector } from "../routing/accountRouter";
 import { openInMemoryDatabase } from "../storage/db";
@@ -41,6 +42,9 @@ function crew(
   start: {
     busy?: boolean;
     machine?: string;
+    /** The provider's login in use when the task moves; Work unless named. */
+    pin?: string;
+    whenLow?: WhenLoginLow;
     /** The models a login's sign-in lists, when it lists any. */
     lists?: Record<string, string[]>;
   } = {},
@@ -58,7 +62,7 @@ function crew(
         { id: "spare", label: "Spare" },
       ].map((login) => ({ ...login, providerId: "openai-codex", enabled: true })),
     // The click already moved the login in use to Work.
-    pinnedAccount: () => "work",
+    pinnedAccount: () => start.pin ?? "work",
     connectedSync: () => true,
     withheldReason: () => undefined,
     markSelected: (accountId) => {
@@ -70,7 +74,7 @@ function crew(
     quota: { latest: () => reading },
     flagshipAccountId: () => null,
     decisions: new DecisionStore(db),
-    loginInUse: { whenLow: () => "ask", pin: () => {} },
+    loginInUse: { whenLow: () => start.whenLow ?? "ask", pin: () => {} },
     accountModels: () =>
       Object.entries(start.lists ?? {}).map(([accountId, models]) => ({
         accountId,
@@ -169,6 +173,22 @@ describe("a started task's move to another login", () => {
     t.turn.busy = false;
     expect(t.moves.takes("task-1", () => {})).toBe(false);
     expect(t.tasks.get("task-1")?.accountId).toBe("personal");
+  });
+
+  it("moves to the named login when the login in use has changed since the click", async () => {
+    const t = crew({ busy: true, pin: "spare" });
+    await t.moves.moveOff("personal", "work");
+    t.turn.busy = false;
+    expect(t.moves.takes("task-1", () => {})).toBe(true);
+    await expect.poll(() => t.tasks.get("task-1")?.accountId).toBe("work");
+    expect(t.steps).toContain("selected work");
+  });
+
+  it("moves to the named login under spread, where a login with more room would win a new pick", async () => {
+    const t = crew({ whenLow: "spread", pin: "personal" });
+    await t.moves.moveOff("personal", "work");
+    expect(t.tasks.get("task-1")?.accountId).toBe("work");
+    expect(t.steps).toContain("selected work");
   });
 
   it("leaves a task where it is when the named login does not serve its model", async () => {
