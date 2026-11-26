@@ -674,6 +674,7 @@ export class InboxStore {
     this.changed();
     if (ids.length === 0) return;
     this.db
+      // i18n-exempt: SQL, never shown to a person
       .prepare(`UPDATE inbox SET last_attempt_at = NULL WHERE id IN (${placeholders(ids)})`)
       .run(...ids);
   }

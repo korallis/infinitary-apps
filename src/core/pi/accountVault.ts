@@ -4,7 +4,6 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  renameSync,
   rmdirSync,
   rmSync,
   writeFileSync,
@@ -70,6 +69,7 @@ import { modelLookup } from "./modelRuntime";
 import { authPathIn, enforceAuthFileMode, PiAccountBackend } from "./piAccountBackend";
 import type { AuthInteractionBridge, ResolvedProviderAuth } from "./piAuth";
 import { piReasoningCapabilities } from "./reasoning";
+import { saveRegistryFile, withReadableCutOff } from "./registryFile";
 
 /**
  * The AccountVault: the one owner of the multi-account store matrix
@@ -1768,16 +1768,7 @@ export class AccountVault {
 
   private saveRegistry(): void {
     this.registryUnread = false;
-    // Staged whole, with its permissions, and put in place in one step: a
-    // save that fails leaves the registry on disk as it was.
-    const staged = `${this.registryPath()}.pending`;
-    try {
-      writeFileSync(staged, `${JSON.stringify(this.registry, null, 2)}\n`, { mode: 0o600 });
-      chmodSync(staged, 0o600);
-      renameSync(staged, this.registryPath());
-    } finally {
-      rmSync(staged, { force: true });
-    }
+    saveRegistryFile(this.registryPath(), this.registry);
   }
 }
 
@@ -1788,28 +1779,3 @@ export class AccountVault {
  * a stricter one that stands.
  */
 const CUT_OFF_RANK: Record<CutOffClass, number> = { no_headroom: 0, signed_out: 1, refused: 2 };
-
-/**
- * A row as read from disk, its cut-off kept only in a shape this build
- * knows. A row from before the field has none, which is no cut-off.
- */
-function withReadableCutOff(account: AccountRecord): AccountRecord {
-  const { cutOff, ...rest } = account;
-  if (cutOff === undefined) return account;
-  const known =
-    cutOff !== null &&
-    typeof cutOff === "object" &&
-    CUT_OFF_CLASSES.includes(cutOff.class) &&
-    typeof cutOff.since === "number" &&
-    (cutOff.resetsAt === undefined || typeof cutOff.resetsAt === "number") &&
-    (cutOff.leftPercent === undefined || typeof cutOff.leftPercent === "number") &&
-    cutOff.stamp !== null &&
-    typeof cutOff.stamp === "object";
-  if (!known) return rest;
-  const stamp: CredentialStamp = {};
-  for (const part of ["login", "written", "client"] as const) {
-    const value = cutOff.stamp[part];
-    if (typeof value === "string") stamp[part] = value;
-  }
-  return { ...rest, cutOff: { ...cutOff, stamp } };
-}
