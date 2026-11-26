@@ -17,9 +17,11 @@ runs:
         # release from before pnpm-workspace.yaml kept better-sqlite3's build
         # off. Such a source starts node-gyp as it installs and must find the
         # headers here; one that keeps the build off compiles nothing and
-        # needs none. Anything but that exact setting counts as still building.
+        # needs none. sqlite-build-off.mjs takes that setting only from the
+        # list pnpm reads it from, and counts a source as still building
+        # wherever the file leaves a doubt.
         if [[ "$RUNNER_OS" == Linux ]] &&
-          ! grep -Eqs "^[[:space:]]+['\"]?better-sqlite3['\"]?:[[:space:]]*false[[:space:]]*(#.*)?\$" pnpm-workspace.yaml; then
+          ! node "$GITHUB_ACTION_PATH/sqlite-build-off.mjs" pnpm-workspace.yaml; then
           node_root="$(bash "$GITHUB_ACTION_PATH/root.sh")"
           printf 'INFINITARY_NODE_HEADERS=%s\n' "$node_root" >> "$GITHUB_ENV"
         fi

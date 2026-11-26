@@ -382,6 +382,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   A workflow that installs the version it runs from (`ci.yml`, `journeys.yml`, `prompt-budget.yml`, `replay.yml` and a batch's confirming rounds, `.github/actions/batch-confirm`) sets nothing up for them.
   A workflow given its source by a ref of its own (`batch-checks.yml`, `verify.yml`, `source-journeys.yml`, `linux-packages.yml`) can be handed a source from before that setting, whose install still builds the module, so its Linux installs keep `.github/actions/node-headers`.
   For a source whose `pnpm-workspace.yaml` keeps the build off that action does nothing; for any other it finds the running Node archive's `include/node` headers and refuses an image missing them, and only the install receives that root as `NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR` (`tests/node-headers-action.test.ts`).
+  The action takes that setting only from the file's top-level `allowBuilds` list (`.github/actions/node-headers/sqlite-build-off.mjs`), and a source whose file leaves a doubt counts as still building.
   Uppercase preserves the setting through pnpm's lifecycle environment filter.
   That setting belongs only to the install, so later Electron rebuilds keep their own headers.
   `verify.yml`'s `linux-checks` lane also proves the module still builds from source (`.github/actions/prove-node-headers`): it finds the same headers itself, forces a better-sqlite3 source build with an empty header cache and an unreachable header server, then writes and reads a database.

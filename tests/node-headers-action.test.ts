@@ -24,6 +24,14 @@ import { scratchDir } from "./helpers/scratchDirs";
  * the step finds the headers beside Node, or fails rather than leave node-gyp
  * to download them.
  *
+ * The step runs before the install, with no YAML reader yet, and tells the two
+ * kinds of source apart from the settings file's lines. Only the top-level
+ * allowBuilds list speaks for the install: a line reading the same under
+ * another key or in a block of text does not, and neither does the list once
+ * it names the module twice or another setting allows every build. A source
+ * the step took for one that builds nothing would start node-gyp with no
+ * headers set up for it.
+ *
  * These run the action's own shell step as a runner does, in a source's
  * folder, with a copy of this Node in a folder that has, or lacks, the headers
  * a Node archive ships.
@@ -51,6 +59,11 @@ describe(".github/actions/node-headers", () => {
   let current: string;
   let stillBuilds: string;
   let noSettings: string;
+  let offInTextElsewhere: string;
+  let offInAnotherList: string;
+  let offButAllowsAll: string;
+  let namedTwice: string;
+  let listIsText: string;
 
   function nodeRoot(name: string, headers: boolean): string {
     const root = join(folder, name);
@@ -82,6 +95,24 @@ describe(".github/actions/node-headers", () => {
     stillBuilds = source("still-builds", before);
     // An earlier release kept its build allowances in package.json.
     noSettings = source("no-settings");
+    const off = "  better-sqlite3: false\n";
+    expect(settings).toContain(`\n${off}`);
+    // The list still allows the build; the same words as the setting that
+    // turns it off stand outside the list.
+    offInTextElsewhere = source("off-in-text-elsewhere", `${before}note: |\n${off}`);
+    offInAnotherList = source("off-in-another-list", `${before}catalog:\n${off}`);
+    // pnpm 11 runs every build under this setting, whatever the list says.
+    offButAllowsAll = source("off-but-allows-all", `dangerouslyAllowAllBuilds: true\n${settings}`);
+    // pnpm also matches a package by name and version, so the list's word on
+    // the module is no longer one line's.
+    namedTwice = source(
+      "named-twice",
+      settings.replace(`\n${off}`, `\n${off}  better-sqlite3@13.0.3: true\n`),
+    );
+    // The same lines as text: the key holds no list for pnpm to read.
+    const opens = "\nallowBuilds:\n";
+    expect(settings).toContain(opens);
+    listIsText = source("list-is-text", settings.replace(opens, `${opens}  |\n`));
   });
 
   afterAll(() => {
@@ -124,7 +155,12 @@ describe(".github/actions/node-headers", () => {
   it.each([
     ["still allows the build", () => stillBuilds],
     ["has no settings file", () => noSettings],
-  ])("gives a source that %s the headers beside Node", (_, checkout) => {
+    ["allows the build beside a block of text that reads as off", () => offInTextElsewhere],
+    ["allows the build beside another list that reads as off", () => offInAnotherList],
+    ["keeps the build off in the list but allows every build", () => offButAllowsAll],
+    ["names the module twice in the list", () => namedTwice],
+    ["writes the list as a block of text that reads as off", () => listIsText],
+  ])("gives the headers beside Node to a source that %s", (_, checkout) => {
     expect(runStep(checkout(), withHeaders)).toEqual({
       error: undefined,
       status: 0,
