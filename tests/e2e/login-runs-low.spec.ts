@@ -26,13 +26,15 @@ import { pressKey } from "./windowKeys";
  * install asks: one card names the low login, its refill and the login with
  * the most room, and nothing moves until its button is pressed. Enter on
  * Move makes the other login the one in use, takes the card down and writes
- * one feed line.
+ * one feed line. Wait for the refill moves nothing and the card stays away
+ * through the next reading; with no other login that has room, no card is
+ * raised at all.
  */
 
 const LOW_LABEL = "Work";
 const LOW_PERCENT = 5;
 
-function readings(now: number): string {
+function readings(now: number, otherPercent = 70): string {
   const HOUR = 3600 * 1000;
   const row = (provider: string, label: string, accountId: string, percent: number) => ({
     provider,
@@ -59,7 +61,7 @@ function readings(now: number): string {
     providers: [
       row("claude", "Claude", CLAUDE_SEAT_ACCOUNT, 80),
       row("codex", "Codex", CODEX_SEAT_ACCOUNT, LOW_PERCENT),
-      row("codex", "Codex", CODEX_SECOND_ACCOUNT, 70),
+      row("codex", "Codex", CODEX_SECOND_ACCOUNT, otherPercent),
     ],
   });
 }
@@ -136,4 +138,64 @@ test("a low login in use asks once on a card, and Enter on Move makes the other 
     await launched?.close();
     await mock?.close();
   }
+});
+
+/** Launches with the Codex login in use at 5% and the other login at `otherPercent`. */
+async function withLowLogin(
+  otherPercent: number,
+  run: (page: Page) => Promise<void>,
+): Promise<void> {
+  let mock: MockProviderServer | undefined;
+  let launched: LaunchedApp | undefined;
+  try {
+    mock = await startMockProvider();
+    launched = await launchClaudeSeat({
+      mockProvider: mock,
+      withCodex: true,
+      secondCodex: true,
+      env: { INFINITARY_QUOTA_FIXTURE_DIR: readings(Date.now(), otherPercent) },
+    });
+    await run(launched.page);
+  } finally {
+    await launched?.close();
+    await mock?.close();
+  }
+}
+
+/** Reads the allowance again and answers once the app holds both Codex readings. */
+async function readAgain(page: Page): Promise<void> {
+  await expect
+    .poll(async () => {
+      const snapshot = await page.evaluate(() => window.infinitary.quota.refresh());
+      return JSON.stringify(snapshot ?? null).includes(CODEX_SECOND_ACCOUNT);
+    })
+    .toBe(true);
+}
+
+test("Wait for the refill moves nothing, and the card stays away at the next reading", async () => {
+  test.setTimeout(3 * 60_000);
+  await withLowLogin(70, async (page) => {
+    const title = m.cardLoginLowTitle({ login: LOW_LABEL });
+    await expect(shownCard(page, title)).toBeVisible({ timeout: 45_000 });
+    await pressKey(
+      shownCard(page, title).getByRole("button", { name: m.cardLoginLowWait(), exact: true }),
+      "Enter",
+    );
+    await expect.poll(() => cardUp(page)).toBe(false);
+    await readAgain(page);
+    expect(await cardUp(page)).toBe(false);
+    expect(await loginInUse(page)).toBe(CODEX_SEAT_ACCOUNT);
+    await expect(
+      feedLine(page, `Codex work moved from ${LOW_LABEL} to ${CODEX_SECOND_LABEL}.`),
+    ).toHaveCount(0);
+  });
+});
+
+test("a low login in use raises no card while no other login has room", async () => {
+  test.setTimeout(3 * 60_000);
+  await withLowLogin(4, async (page) => {
+    await readAgain(page);
+    expect(await cardUp(page)).toBe(false);
+    expect(await loginInUse(page)).toBe(CODEX_SEAT_ACCOUNT);
+  });
 });
