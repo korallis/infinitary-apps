@@ -142,7 +142,11 @@ test("the phone's Settings pages say what the computer holds, in the computer's 
     const { intelligence } = pages;
     expect(intelligence.summary).toBe("3 accounts · 1 needs a sign-in");
     expect(intelligence.groups).toHaveLength(1);
-    const [personal, work, team] = intelligence.groups[0]?.rows ?? [];
+    // Two Codex accounts are in use, so their pooled row heads the list
+    // (docs/quota.md, "A pool of your own logins").
+    const [pool, personal, work, team] = intelligence.groups[0]?.rows ?? [];
+    expect(intelligence.groups[0]?.rows).toHaveLength(4);
+    expect(pool?.id).toBe("pool:codex");
     expect([personal?.id, work?.id, team?.id]).toEqual(Object.values(PHONE_SETTINGS_ACCOUNTS));
     expect(personal).toMatchObject({
       provider: "Codex",
