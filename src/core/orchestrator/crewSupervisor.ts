@@ -469,7 +469,7 @@ export class CrewSupervisor {
       laneHeld: (taskId) => this.facts.laneHeld(taskId),
       disposed: () => this.disposed,
       dueRows: (taskId) => this.facts.deliverableRows(taskId, this.now()).map((row) => row.id),
-      openingFailed: (taskId, caught) => this.watch.openingFailed(taskId, caught),
+      openingFailed: (rowIds, caught) => this.watch.openingFailed(rowIds, caught),
     });
     const runbooks = options.runbooks;
     this.settling = createSettleOwners({

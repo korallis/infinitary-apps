@@ -92,8 +92,8 @@ function crew(
   });
   const turn = { busy: start.busy ?? false };
   const hold = { held: start.held ?? false };
-  /** The task's conversation does not open. */
-  const opening = { fails: false };
+  /** The task's conversation does not open; `due` is the lane's due rows, one more once it has failed. */
+  const opening = { fails: false, due: [7] };
   const runtime = { id: "task-1", turn } as unknown as TaskRuntime;
   const live = new Map<string, TaskRuntime>([["task-1", runtime]]);
   const moves = new LoginMoves(
@@ -107,7 +107,10 @@ function crew(
         live.delete(taskId);
       },
       resumeTask: async (taskId) => {
-        if (opening.fails) throw new Error("could not open");
+        if (opening.fails) {
+          opening.due = [7, 8];
+          throw new Error("could not open");
+        }
         steps.push(`resumed ${taskId} on ${tasks.get(taskId)?.accountId}`);
         return runtime;
       },
@@ -121,9 +124,9 @@ function crew(
       machineOf: () => start.machine ?? "local",
       laneHeld: () => hold.held,
       disposed: () => false,
-      dueRows: () => [],
-      openingFailed: (taskId) => {
-        steps.push(`backed off ${taskId}`);
+      dueRows: () => opening.due,
+      openingFailed: (rowIds) => {
+        steps.push(`backed off ${rowIds.join(" and ")}`);
       },
     },
   );
@@ -242,7 +245,7 @@ describe("a started task's move to another login", () => {
   });
 
   // docs/inbox.md: a refused delivery spends its try and backs off.
-  it("backs the lane off when a sent message's conversation does not open, on the named login and where the task stays", async () => {
+  it("backs off the rows that were due as the opening began when a sent message's conversation does not open, on the named login and where the task stays", async () => {
     const moved = crew({ held: true });
     moved.live.delete("task-1");
     await moved.moves.moveOff("personal", "work");
@@ -250,7 +253,8 @@ describe("a started task's move to another login", () => {
     moved.opening.fails = true;
     await expect(moved.moves.takes("task-1", () => true, true)).resolves.toBe(false);
     expect(moved.tasks.get("task-1")?.accountId).toBe("work");
-    expect(moved.steps).toEqual(["selected work", "backed off task-1"]);
+    // Row 8 became due while the conversation was opening: it took no part.
+    expect(moved.steps).toEqual(["selected work", "backed off 7"]);
 
     // Work's sign-in does not list the task's model: the task stays on Personal.
     const stays = crew({
@@ -263,7 +267,7 @@ describe("a started task's move to another login", () => {
     stays.opening.fails = true;
     await expect(stays.moves.takes("task-1", () => true, true)).resolves.toBe(false);
     expect(stays.tasks.get("task-1")?.accountId).toBe("personal");
-    expect(stays.steps).toEqual(["backed off task-1"]);
+    expect(stays.steps).toEqual(["backed off 7"]);
   });
 
   it("opens a task with no open conversation on the named login for a sent message, and not through its lane's sweep", async () => {

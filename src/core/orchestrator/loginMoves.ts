@@ -30,10 +30,11 @@ export type LoginMovesHost = {
   /** The ids of the lane's rows a delivery would take now (`CrewFacts.deliverableRows`). */
   dueRows(taskId: string): number[];
   /**
-   * A conversation opened for the lane's due rows did not open: they spend
-   * a try and back off as after the lane's own sweep (`CrewWatch.openingFailed`).
+   * A conversation opened for these rows of the lane did not open: they
+   * spend a try and back off as after the lane's own sweep
+   * (`CrewWatch.openingFailed`).
    */
-  openingFailed(taskId: string, caught: unknown): void;
+  openingFailed(rowIds: readonly number[], caught: unknown): void;
 };
 
 /** A task's move: the login it leaves, the one named for it, and the card click that named it. */
@@ -175,16 +176,20 @@ export class LoginMoves {
   /**
    * Delivers the task's lane as a sent message when one of its kept rows
    * is due, its click has been checked and no hold stands. A row stays
-   * kept while it waits undelivered, so another hold, a delivery that was
-   * not admitted or a conversation that did not open, whose rows back off
-   * (`reopen`), leaves it for the lane's sweep once it is due again; a row
-   * of the host's own that is due beside it wakes nothing.
+   * kept until its turn has handled it, so another hold, a delivery that
+   * was not admitted, a conversation that did not open, whose rows back
+   * off (`reopen`), or a turn that failed and gave the row back leaves it
+   * for the lane's sweep once it is due again; a row of the host's own
+   * that is due beside it wakes nothing.
    */
   paySent(taskId: string): void {
     const kept = this.owed.get(taskId);
     if (!kept) return;
-    for (const id of [...kept])
-      if (this.options.inbox.get(id)?.deliveredAt !== null) kept.delete(id);
+    // A row a turn holds may still come back to the lane: only one handled or given up is forgotten.
+    for (const id of [...kept]) {
+      const row = this.options.inbox.get(id);
+      if (!row || row.escalatedAt !== null) kept.delete(id);
+    }
     if (kept.size === 0) {
       this.owed.delete(taskId);
       return;
@@ -204,12 +209,17 @@ export class LoginMoves {
     void paid.finally(() => this.paying.delete(taskId));
   }
 
-  /** Opens the task's conversation; one that does not open backs its lane's due rows off. */
+  /**
+   * Opens the task's conversation; one that does not open backs off the
+   * rows that were due as the opening began, never one that arrived while
+   * it was opening.
+   */
   private async reopen(taskId: string): Promise<TaskRuntime> {
+    const opensFor = this.host.dueRows(taskId);
     try {
       return await this.host.resumeTask(taskId);
     } catch (caught) {
-      this.host.openingFailed(taskId, caught);
+      this.host.openingFailed(opensFor, caught);
       throw caught;
     }
   }
