@@ -122,6 +122,47 @@ export function accountPools(
 }
 
 /**
+ * A refused login's row with the refusal laid over it, as a session's
+ * refusal is laid over a meter (`withRejectedReadings`): the provider said
+ * no after the sensor read, or where it could not read. A current reading
+ * with room in every account-wide window has the one with the least left
+ * read used up until `refusedUntilMs`, and keeps its other windows. A row
+ * that is no current reading is known only through the refusal, so it
+ * carries just that one used-up window. A sign-in that ended is left as it
+ * stands, and so is a reading whose own window already says used up.
+ */
+function withRefusal(
+  row: QuotaProviderView,
+  refusedUntilMs: number,
+  nowMs: number,
+): QuotaProviderView {
+  if (row.status === "auth_required") return row;
+  const { combined, bounding } = classifyProviderWindows(row.provider, row.windows);
+  const read = combined
+    ? bounding.filter((window) => typeof window.percentRemaining === "number")
+    : [];
+  const current = row.status === "ok" && !row.stale;
+  if (current && read.some((window) => (window.percentRemaining as number) <= 0)) return row;
+  const least = read.reduce<QuotaProviderView["windows"][number] | undefined>(
+    (low, window) =>
+      !low || (window.percentRemaining as number) < (low.percentRemaining as number) ? window : low,
+    undefined,
+  );
+  const resetText = formatResetText(refusedUntilMs, nowMs);
+  const usedUp = {
+    id: least?.id ?? "weekly",
+    label: least?.label ?? "weekly",
+    percentRemaining: 0,
+    resetsAtMs: refusedUntilMs,
+    ...(resetText ? { resetText } : {}),
+  };
+  if (current && least)
+    return { ...row, windows: row.windows.map((window) => (window === least ? usedUp : window)) };
+  const { reason: _reason, detail: _detail, retryAfter: _retryAfter, ...rest } = row;
+  return { ...rest, status: "ok", stale: false, windows: [usedUp] };
+}
+
+/**
  * The rows of pooled logins as they stand at `nowMs`, with no new reading
  * (docs/quota.md, "A pool of your own logins"): a used-up window whose own
  * reset has passed is no longer what the login has, so it leaves the row,
@@ -129,8 +170,11 @@ export function accountPools(
  * login serves again once its last such window is gone. Its other windows
  * keep what they read. A login its provider refused until a later time
  * (`refusedUntilMs`) keeps its used-up windows until then: a window's reset
- * frees nothing while the refusal stands. `nextAtMs` is the next time a
- * used-up window leaves a pooled login's row: when the rows change again.
+ * frees nothing while the refusal stands. And the refusal itself is on
+ * that login's row until it ends (`withRefusal`), a row with room left, a
+ * row that could not be read and a login with no row at all included, so
+ * no reader counts a refused login as usable or unknown. `nextAtMs` is the
+ * next time a pooled login's row changes in one of these ways.
  * Rows of a provider with no pool in `pools` are left as read, and the rows
  * given are never changed: they stay the measurement.
  */
@@ -146,21 +190,54 @@ export function settlePoolResets(
       : undefined;
   let changed = false;
   let nextAtMs: number | undefined;
+  const changesAt = (atMs: number) => {
+    if (nextAtMs === undefined || atMs < nextAtMs) nextAtMs = atMs;
+  };
+  const refusedUntilOf = (accountId: string | undefined) => {
+    const untilMs = (accountId && refusedUntilMs?.(accountId)) || 0;
+    return untilMs > nowMs ? untilMs : 0;
+  };
+  // A refused login with no row at all is served one that says so.
+  const unread: QuotaProviderView[] = [];
+  for (const pool of pools) {
+    if (pool.pool?.source !== "accounts") continue;
+    for (const accountId of pool.pool.accounts ?? []) {
+      const untilMs = refusedUntilOf(accountId);
+      if (!untilMs) continue;
+      changesAt(untilMs);
+      const rows = providers.filter((row) => row.provider === pool.provider && !row.pool);
+      if (rows.some((row) => row.accountId === accountId)) continue;
+      const blank: QuotaProviderView = {
+        provider: pool.provider,
+        label: rows[0]?.label ?? pool.label,
+        accountId,
+        status: "not_measured",
+        stale: false,
+        windows: [],
+      };
+      unread.push(withRefusal(blank, untilMs, nowMs));
+    }
+  }
   const settled = providers.map((row) => {
     if (row.pool || !inAccountsPool(accountsPoolOf(pools, row.provider), row.accountId)) return row;
-    const refusedUntil = (row.accountId && refusedUntilMs?.(row.accountId)) || 0;
-    const windows = row.windows.filter((window) => {
+    const refusedUntil = refusedUntilOf(row.accountId);
+    const kept = row.windows.filter((window) => {
       const resetsAtMs = resetOfUsedUp(window);
       if (resetsAtMs === undefined) return true;
       const leavesAtMs = Math.max(resetsAtMs, refusedUntil);
       if (leavesAtMs <= nowMs) return false;
-      if (nextAtMs === undefined || leavesAtMs < nextAtMs) nextAtMs = leavesAtMs;
+      changesAt(leavesAtMs);
       return true;
     });
-    if (windows.length === row.windows.length) return row;
-    changed = true;
-    return { ...row, windows };
+    const standing = kept.length === row.windows.length ? row : { ...row, windows: kept };
+    const served = refusedUntil ? withRefusal(standing, refusedUntil, nowMs) : standing;
+    if (served !== row) changed = true;
+    return served;
   });
+  if (unread.length > 0) {
+    changed = true;
+    settled.push(...unread);
+  }
   return { providers: settled, changed, ...(nextAtMs !== undefined ? { nextAtMs } : {}) };
 }
 

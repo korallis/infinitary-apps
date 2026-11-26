@@ -888,4 +888,63 @@ describe("a spent pool of two logins, across its resets", () => {
     now = T + 3.1 * HOUR;
     expect(standingOn(service, refusedB)).toEqual(serving);
   });
+
+  // The review's finding: the refusal itself holds the login, whatever its
+  // reading says. A reading taken before the refusal shows room; a reading
+  // that failed shows nothing.
+  it.each([
+    {
+      reading: "shows room left",
+      b: [login("b", [50, T + 2 * HOUR], [50, week])],
+      afterAReset: emptyMeter,
+      // Once back, B's half and A's nothing: a quarter in each window.
+      back: { meter: { session: 25, weekly: 25 } },
+    },
+    {
+      reading: "could not be taken",
+      b: [{ ...login("b", [0, 0], [0, 0]), status: "error" as const, stale: true, windows: [] }],
+      // A's session has reset and B is known only by the refusal's window.
+      afterAReset: { weekly: 0 },
+      // Once back, B is not read yet: the pool's allowance is unknown.
+      back: { meter: {} },
+    },
+    {
+      reading: "is missing",
+      b: [],
+      afterAReset: { weekly: 0 },
+      back: { meter: {} },
+    },
+  ])(
+    "holds them while a login's provider refuses it and its reading $reading",
+    async ({ b, afterAReset, back }) => {
+      let now = T;
+      const refusedB = () =>
+        now < T + 3 * HOUR ? { class: "no_headroom" as const, resetsAt: T + 3 * HOUR } : undefined;
+      const service = new QuotaService({
+        refresh: async () => ({
+          snapshot: {
+            generatedAt: new Date(T).toISOString(),
+            fetchedAt: T,
+            providers: [login("a", [0, T + HOUR], [0, week]), ...b],
+          },
+          catalog: { generatedAt: new Date(T).toISOString(), models: [] },
+        }),
+        db: openInMemoryDatabase(),
+        broadcast: () => {},
+        now: () => now,
+        catalogFor: catalogOf,
+        pools,
+        refusedUntil: (accountId) => (accountId === "b" ? refusedB()?.resetsAt : undefined),
+      });
+      await service.refresh("demand");
+      service.stop();
+      const refused = { ...held, poolBackAt: T + 3 * HOUR };
+      expect(standingOn(service, refusedB)).toEqual(refused);
+      now = T + 2.9 * HOUR;
+      expect(standingOn(service, refusedB)).toEqual({ ...refused, meter: afterAReset });
+
+      now = T + 3.1 * HOUR;
+      expect(standingOn(service, refusedB)).toEqual({ ...serving, ...back });
+    },
+  );
 });
