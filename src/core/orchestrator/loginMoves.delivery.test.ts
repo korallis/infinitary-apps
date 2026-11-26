@@ -7,6 +7,7 @@ import {
   type FakeCrewmate,
   fakeCrewmate,
   fakeCrewTimersEachTest,
+  intentOf,
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
@@ -16,6 +17,7 @@ import { crewmateHandoverDir } from "../paths";
 import { type AccountPool, AccountSelector } from "../routing/accountRouter";
 import { CostLimitStore } from "../storage/costLimitStore";
 import { DecisionStore } from "../storage/decisionStore";
+import { STUCK_REFUSAL_LIMIT } from "../storage/inboxStore";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
 import { crewmateRestartText } from "./crewSession";
@@ -60,6 +62,8 @@ function threeLogins(
   cutOffs = new Map<string, typeof RAN_OUT>(),
   /** Each account pick waits for this, as a pick that reads a login's models does. */
   beforePick: () => Promise<void> = async () => {},
+  /** The model a task commissioned here is routed to; it starts on Personal. */
+  routedModel?: { provider: string; id: string },
 ) {
   let costs: CostLimitStore | undefined;
   const pool: AccountPool = {
@@ -93,8 +97,9 @@ function threeLogins(
           bind: async (accountId) => ({ backend: "claude" as const, accountId: accountId ?? "" }),
         }
       : {}),
+    ...(routedModel ? { routedModel } : {}),
     accounts: {
-      selectForSpawn: () => undefined,
+      selectForSpawn: () => (routedModel ? "acct_personal" : undefined),
       pickForSpawn: async (...args) => {
         await beforePick();
         return (accounts as AccountSelector).pickForSpawn(...args);
@@ -567,6 +572,159 @@ describe("a move still picking its account, and what it owes the task when it is
     expect(first.promptCalls).toHaveLength(0);
     // Its row still waits on the lane for the hold to end.
     expect(h.inbox.allFor("t-move")).toHaveLength(1);
+  });
+
+  it("tells the sender of a message to an open, idle task nothing until the move is over, and then that it is kept when a cost limit came up", async () => {
+    const pick = heldPick();
+    const first = fakeCrewmate({});
+    const second = fakeCrewmate({});
+    const h = threeLogins("openai-codex", first, second, false, undefined, pick.beforePick);
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+    // Its conversation is open and idle on Personal.
+    await h.supervisor.steer.steerCrewmate("t-move", "carry on");
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    first.finishPrompt();
+    await tick();
+    const resume = h.supervisor.sessions.resumeTask.bind(h.supervisor.sessions);
+    vi.spyOn(h.supervisor.sessions, "resumeTask").mockImplementation(async (...args) => {
+      const resumed = await resume(...args);
+      // The task passes its cost limit while its conversation opens on Work.
+      h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+      return resumed;
+    });
+
+    const moving = h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    let answer: string | undefined;
+    const steered = Promise.resolve(
+      h.supervisor.steer.steerCrewmate("t-move", "Check the footer too."),
+    ).then((delivery) => {
+      answer = delivery;
+    });
+    await tick();
+    // The move still picks its account: nothing is claimed, and Personal reads nothing more.
+    expect(answer).toBeUndefined();
+    expect(first.promptCalls).toHaveLength(1);
+
+    pick.release();
+    await moving;
+    await steered;
+    expect(answer).toBe("recorded-retrying");
+    expect(boundAccount(h, 1)).toBe("acct_work");
+    expect(first.promptCalls).toHaveLength(1);
+    expect(second.promptCalls).toHaveLength(0);
+    expect(h.inbox.allFor("t-move")).toHaveLength(1);
+  });
+
+  it("goes to the login a second click named while the first click's pick was still out, with the message that waited", async () => {
+    const pick = heldPick();
+    const first = fakeCrewmate({});
+    const h = threeLogins(
+      "openai-codex",
+      first,
+      fakeCrewmate({}),
+      false,
+      undefined,
+      pick.beforePick,
+    );
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+
+    const toWork = h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    const steered = h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.");
+    await tick();
+    // The card is read again and names Spare before Work's pick is back.
+    const toSpare = h.supervisor.loginMoves.moveOff("acct_personal", "acct_spare");
+    pick.release();
+    await Promise.all([toWork, toSpare]);
+
+    await expect(steered).resolves.toBe("mid-turn");
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    // One conversation, on Spare: neither Personal nor Work was opened.
+    expect(h.sessionSpecs).toHaveLength(1);
+    expect(boundAccount(h, 0)).toBe("acct_spare");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_spare");
+    expect(first.promptCalls[0]).toContain("Check the footer too.");
+    expect(h.supervisor.loginMoves.bindsTask("t-move")).toBe(false);
+  });
+});
+
+describe("a task still to move whose conversation is restarted", () => {
+  const MODEL = { provider: "openai-codex", id: "gpt-6.1-terra" };
+  /** The provider's words, the same on every refused request. */
+  const REFUSAL = '{"detail":"Bad Request"}';
+
+  it("opens its new conversation on the named login when its turn reached the context limit with only its brief", async () => {
+    const first = fakeCrewmate({ model: MODEL });
+    const second = fakeCrewmate({
+      model: MODEL,
+      sessionId: "s2",
+      resume: { backend: "pi", sessionFile: "/tmp/s2.jsonl" },
+    });
+    const h = threeLogins("openai-codex", first, second, false, undefined, undefined, MODEL);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Fix the login form",
+      intent: intentOf("fix the login form"),
+    });
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    expect(h.tasks.get(taskId)?.accountId).toBe("acct_personal");
+    // The click names Work while the first turn runs, so the task is still to move.
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    expect(h.tasks.get(taskId)?.accountId).toBe("acct_personal");
+
+    first.emit({
+      type: "turn_failed",
+      taskId,
+      error: "This request exceeds the context window.",
+      contextOverflow: true,
+    });
+    first.emit({ type: "turn_end", taskId });
+    first.finishPrompt();
+    await vi.waitFor(() => expect(second.promptCalls).toHaveLength(1));
+    // Nothing waited on its lane: the restart's own words are its turn, on Work.
+    expect(h.sessionSpecs).toHaveLength(2);
+    expect(boundAccount(h, 1)).toBe("acct_work");
+    expect(h.tasks.get(taskId)?.accountId).toBe("acct_work");
+    expect(second.promptCalls[0]).toContain("context limit");
+    expect(first.promptCalls).toHaveLength(1);
+  });
+
+  it("opens its new conversation on the named login, with the guidance it kept, when the first mate restarts it after refusals", async () => {
+    const first = fakeCrewmate({});
+    const second = fakeCrewmate({});
+    const h = threeLogins("openai-codex", first, second, false);
+    seedRunning(h, MODEL, "/tmp/s1.jsonl");
+    await h.supervisor.steer.steerCrewmate("t-move", "carry on with the handoff");
+    for (let refusal = 1; refusal <= STUCK_REFUSAL_LIMIT; refusal++) {
+      if (refusal > 1) {
+        const due = Math.max(
+          Date.now(),
+          ...h.inbox.allFor("t-move").map((row) => row.nextAttemptAt ?? 0),
+        );
+        vi.setSystemTime(due);
+        await h.supervisor.watch.sweepInbox(due);
+      }
+      await vi.waitFor(() => expect(first.promptCalls).toHaveLength(refusal));
+      first.emit({ type: "turn_failed", taskId: "t-move", error: REFUSAL });
+      first.emit({ type: "turn_end", taskId: "t-move" });
+      first.finishPrompt();
+      await tick();
+    }
+    expect(h.inbox.stuck("t-move")).toBeDefined();
+    // Its cost limit kept the click's move from reopening it, so it is still to move.
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    h.costs.clearHold("t-move");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_personal");
+
+    expect(await h.supervisor.turns.unstick("t-move", "restart")).toMatchObject({ ok: true });
+    await vi.waitFor(() => expect(second.promptCalls).toHaveLength(1));
+    expect(h.sessionSpecs).toHaveLength(2);
+    expect(boundAccount(h, 1)).toBe("acct_work");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_work");
+    expect(second.promptCalls[0]).toContain(
+      "the provider refused your earlier conversation's requests the same way several times in a row",
+    );
+    expect(second.promptCalls[0]).toContain("carry on with the handoff");
+    expect(first.promptCalls).toHaveLength(STUCK_REFUSAL_LIMIT);
   });
 });
 

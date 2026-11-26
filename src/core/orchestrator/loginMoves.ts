@@ -29,6 +29,8 @@ export type LoginMovesHost = {
 type Going = {
   deliver: (task: TaskRuntime) => boolean;
   sent: boolean;
+  /** A restart reopens the task itself: the move names its login and opens nothing. */
+  restarting?: boolean;
   handed: boolean;
   done: Promise<void>;
 };
@@ -125,6 +127,19 @@ export class LoginMoves {
     return going.done.then(() => going.handed);
   }
 
+  /**
+   * A restart is about to open a new conversation for the task: one still
+   * to move is on its named login first, so the restart opens there. It
+   * opens and delivers nothing; the restart does, and a hold of the task's
+   * own does not keep the move back, as it does not keep the restart.
+   */
+  async beforeRestart(taskId: string): Promise<void> {
+    if (!this.bound.has(taskId)) return;
+    const going = this.begin(taskId);
+    going.restarting = true;
+    await going.done;
+  }
+
   private begin(
     taskId: string,
     deliver: (task: TaskRuntime) => boolean = (task) => this.host.deliverPendingToTask(task),
@@ -152,6 +167,7 @@ export class LoginMoves {
     // The task stays where it is, with its lane delivered there.
     const stay = async () => {
       this.bound.delete(taskId);
+      if (going.restarting) return;
       const open = this.host.runtime(taskId);
       if (open) return hand(open);
       if (!going.sent) return;
@@ -167,7 +183,8 @@ export class LoginMoves {
         return await stay();
       // A hold of its own keeps the task bound and unopened; the delivery
       // that follows the hold's end makes the move.
-      if (this.host.runtime(taskId)?.turn.busy || this.host.laneHeld(taskId)) return;
+      if (this.host.runtime(taskId)?.turn.busy) return;
+      if (!going.restarting && this.host.laneHeld(taskId)) return;
       const model = parseOfferingKey(before.model);
       const pick = await accounts.pickForSpawn(taskId, model.provider, {
         model: model.id,
@@ -175,13 +192,18 @@ export class LoginMoves {
       });
       const record = this.options.tasks.get(taskId);
       const runtime = this.host.runtime(taskId);
-      if (runtime?.turn.busy || this.host.disposed() || this.host.laneHeld(taskId)) return;
+      if (runtime?.turn.busy || this.host.disposed()) return;
+      if (!going.restarting && this.host.laneHeld(taskId)) return;
+      // A newer move named its login while this one picked: only the pick
+      // is dropped, and the delivery goes with the task to the newer login.
+      const newest = this.bound.get(taskId);
+      if (newest && newest !== move) return await this.move(taskId, going);
       if (
         pick.accountId !== to ||
         record?.status !== "active" ||
         record.accountId !== from ||
         record.model !== before.model ||
-        this.bound.get(taskId)?.to !== to
+        !newest
       )
         return await stay();
       this.bound.delete(taskId);
@@ -211,6 +233,7 @@ export class LoginMoves {
       });
       // What waited on the login it left is due on the one it goes to.
       this.options.inbox.movedProvider(taskId);
+      if (going.restarting) return;
       if (!runtime && !going.sent) {
         going.handed = true;
         this.host.deliverLane(taskId);
