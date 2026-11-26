@@ -545,6 +545,8 @@ export class CrewSteer {
         if (refused) throw new Error(refused);
       }
       const id = enqueue();
+      // Sent behind files still crossing: it keeps its wake with their line (`handOverEnded`).
+      this.handedRow(taskId, id);
       this.recordSteer(taskId, message, source, "recorded-held", id);
       return "recorded-held";
     }
