@@ -478,11 +478,15 @@ export class Flagship {
     if (!row) return undefined;
     if (row.unread) return { read: false };
     const shareRead = row.windows.some((window) => typeof window.percentRemaining === "number");
-    // Not read now, and last read when a share last was: a row with no
-    // share left in its windows can still know that time, as a login whose
-    // sessions reported one before a refusal that has since ended.
-    if (row.status !== "ok" || row.stale || !shareRead)
-      return { read: false, ...(row.measuredAt !== undefined ? { at: row.measuredAt } : {}) };
+    // Not read now, and last read when a share last was. A row with no
+    // share in its windows names only a time known to be a share's
+    // (`lastShareAt`), as a login whose sessions reported one before a
+    // refusal that has since ended: its `measuredAt` may be an answer's that
+    // carried no share, as on a row saved before such answers were marked.
+    if (row.status !== "ok" || row.stale || !shareRead) {
+      const at = shareRead ? row.measuredAt : row.lastShareAt;
+      return { read: false, ...(at !== undefined ? { at } : {}) };
+    }
     const identity = this.options.vault.identitySync?.(accountId);
     return {
       at: row.measuredAt ?? this.options.quota.latest()?.fetchedAt ?? Date.now(),

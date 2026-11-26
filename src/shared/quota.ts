@@ -346,6 +346,14 @@ export const quotaProviderViewSchema = z.object({
    */
   unread: z.boolean().optional(),
   /**
+   * When a share of the allowance was last read, where that is known apart
+   * from the windows: on a row built from sessions' readings
+   * (`pushedProviderViews`). A row none of whose windows carries a share
+   * was last read then, and at no time without it: its `measuredAt` may be
+   * an answer's that carried no share.
+   */
+  lastShareAt: z.number().optional(),
+  /**
    * Its provider refuses this account until then, whatever its windows say:
    * on the served row of a login of a pool of the person's own logins while
    * the refusal stands (`settlePoolResets`). A window's own reset before

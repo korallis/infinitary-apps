@@ -202,7 +202,7 @@ export function pushedProviderViews(
       label: account.providerLabel,
       accountId: account.accountId,
       accountLabel: account.accountLabel,
-      ...(measuredAt !== undefined ? { measuredAt } : {}),
+      ...(measuredAt !== undefined ? { measuredAt, lastShareAt: measuredAt } : {}),
       // No reading yet is unknown quota, not zero: the account stays
       // eligible and the card says "no data" rather than inventing a meter.
       status: "ok",
@@ -255,9 +255,9 @@ export function pushedOnlyProviderViews(
     // row's time is that of the shares its sessions reported, and a login
     // whose sessions reported none is unread.
     const readings = view.accountId ? windowsFor(view.accountId) : [];
-    const { measuredAt: _projected, ...row } = view;
+    const { measuredAt: _projected, lastShareAt: _projectedShare, ...row } = view;
     const measuredAt = shareReadAt(readings);
-    if (measuredAt !== undefined) return { ...row, measuredAt };
+    if (measuredAt !== undefined) return { ...row, measuredAt, lastShareAt: measuredAt };
     return readings.length > 0 ? { ...row, unread: true } : row;
   });
 }

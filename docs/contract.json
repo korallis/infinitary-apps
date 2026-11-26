@@ -13101,6 +13101,9 @@
                                   "unread": {
                                     "type": "boolean"
                                   },
+                                  "lastShareAt": {
+                                    "type": "number"
+                                  },
                                   "refusedUntilMs": {
                                     "type": "number"
                                   },
@@ -13344,6 +13347,9 @@
                                   },
                                   "unread": {
                                     "type": "boolean"
+                                  },
+                                  "lastShareAt": {
+                                    "type": "number"
                                   },
                                   "refusedUntilMs": {
                                     "type": "number"
@@ -39197,6 +39203,9 @@
                     "unread": {
                       "type": "boolean"
                     },
+                    "lastShareAt": {
+                      "type": "number"
+                    },
                     "refusedUntilMs": {
                       "type": "number"
                     },
@@ -39440,6 +39449,9 @@
                     },
                     "unread": {
                       "type": "boolean"
+                    },
+                    "lastShareAt": {
+                      "type": "number"
                     },
                     "refusedUntilMs": {
                       "type": "number"
@@ -39717,6 +39729,9 @@
                     "unread": {
                       "type": "boolean"
                     },
+                    "lastShareAt": {
+                      "type": "number"
+                    },
                     "refusedUntilMs": {
                       "type": "number"
                     },
@@ -39960,6 +39975,9 @@
                     },
                     "unread": {
                       "type": "boolean"
+                    },
+                    "lastShareAt": {
+                      "type": "number"
                     },
                     "refusedUntilMs": {
                       "type": "number"
@@ -40237,6 +40255,9 @@
                     "unread": {
                       "type": "boolean"
                     },
+                    "lastShareAt": {
+                      "type": "number"
+                    },
                     "refusedUntilMs": {
                       "type": "number"
                     },
@@ -40480,6 +40501,9 @@
                     },
                     "unread": {
                       "type": "boolean"
+                    },
+                    "lastShareAt": {
+                      "type": "number"
                     },
                     "refusedUntilMs": {
                       "type": "number"
@@ -96621,6 +96645,9 @@
                             "unread": {
                               "type": "boolean"
                             },
+                            "lastShareAt": {
+                              "type": "number"
+                            },
                             "refusedUntilMs": {
                               "type": "number"
                             },
@@ -96864,6 +96891,9 @@
                             },
                             "unread": {
                               "type": "boolean"
+                            },
+                            "lastShareAt": {
+                              "type": "number"
                             },
                             "refusedUntilMs": {
                               "type": "number"
@@ -101947,6 +101977,9 @@
                 "unread": {
                   "type": "boolean"
                 },
+                "lastShareAt": {
+                  "type": "number"
+                },
                 "refusedUntilMs": {
                   "type": "number"
                 },
@@ -102190,6 +102223,9 @@
                 },
                 "unread": {
                   "type": "boolean"
+                },
+                "lastShareAt": {
+                  "type": "number"
                 },
                 "refusedUntilMs": {
                   "type": "number"
@@ -112371,6 +112407,9 @@
                                   "unread": {
                                     "type": "boolean"
                                   },
+                                  "lastShareAt": {
+                                    "type": "number"
+                                  },
                                   "refusedUntilMs": {
                                     "type": "number"
                                   },
@@ -112614,6 +112653,9 @@
                                   },
                                   "unread": {
                                     "type": "boolean"
+                                  },
+                                  "lastShareAt": {
+                                    "type": "number"
                                   },
                                   "refusedUntilMs": {
                                     "type": "number"
@@ -114502,6 +114544,9 @@
                                   "unread": {
                                     "type": "boolean"
                                   },
+                                  "lastShareAt": {
+                                    "type": "number"
+                                  },
                                   "refusedUntilMs": {
                                     "type": "number"
                                   },
@@ -114745,6 +114790,9 @@
                                   },
                                   "unread": {
                                     "type": "boolean"
+                                  },
+                                  "lastShareAt": {
+                                    "type": "number"
                                   },
                                   "refusedUntilMs": {
                                     "type": "number"
@@ -119098,6 +119146,9 @@
                           "unread": {
                             "type": "boolean"
                           },
+                          "lastShareAt": {
+                            "type": "number"
+                          },
                           "refusedUntilMs": {
                             "type": "number"
                           },
@@ -119341,6 +119392,9 @@
                           },
                           "unread": {
                             "type": "boolean"
+                          },
+                          "lastShareAt": {
+                            "type": "number"
                           },
                           "refusedUntilMs": {
                             "type": "number"

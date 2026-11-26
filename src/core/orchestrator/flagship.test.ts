@@ -744,6 +744,11 @@ describe("the allowance check a pause card reports", () => {
     );
     expect(dated).toMatchObject({ measuredAt: NOW - 2_000, unread: true });
     expect(checkOf(dated)).toEqual({ read: false });
+    // A row saved before such answers were marked carries the time and no
+    // mark, fresh or carried forward as stale: still no time is named.
+    const { unread: _unread, ...saved } = dated;
+    expect(checkOf(saved)).toEqual({ read: false });
+    expect(checkOf({ ...saved, stale: true })).toEqual({ read: false });
   });
 
   // The review's findings: a refusal that names a reset and no share is no
