@@ -1729,7 +1729,7 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
         reading("acct_work", "Work", spare < 10 ? 40 : 95),
         reading("acct_spare", "Spare", spare),
       ]).read();
-    return { h, relaunched, prompts, accounts, read };
+    return { h, relaunched, boots, prompts, accounts, read };
   }
 
   // docs/inbox.md: the host's own steer waits on a started task's lane in the backlog until a Start.
@@ -1868,6 +1868,98 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
       await relaunched.disposeAll();
     },
   );
+
+  // docs/inbox.md: a refused delivery spends the try of the rows it was made for.
+  it.each([
+    { click: "accepted", spare: 60 },
+    { click: "refused", spare: 3 },
+  ])(
+    "spends no try of a host notice that arrives while a kept sent message's conversation is opening, when that opening fails after the click is $click",
+    async ({ spare }) => {
+      const { h, relaunched, prompts, read } = await relaunchedInBacklog();
+      await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+        "recorded-held",
+      );
+      let fail: (caught: Error) => void = () => {};
+      const open = vi.spyOn(relaunched.sessions, "resumeTask").mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            fail = reject;
+          }),
+      );
+      const now = Date.now();
+      read(spare);
+      await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+      await expect(
+        relaunched.steer.steerInternal("t-move", "Checks passed.", SUPERVISOR_STEER),
+      ).resolves.toBe("recorded-held");
+      fail(new Error("could not open"));
+      await tick();
+      expect(prompts()).toEqual([]);
+      const [sent, notice] = h.inbox.allFor("t-move");
+      expect(sent?.attempts).toBe(1);
+      expect(sent?.nextAttemptAt ?? 0).toBeGreaterThan(now);
+      expect(notice?.attempts).toBe(0);
+      expect(notice?.nextAttemptAt).toBeNull();
+      await relaunched.disposeAll();
+    },
+  );
+
+  it("leaves a row another delivery took while the conversation was opening as that delivery left it, when the opening fails", async () => {
+    const { h, relaunched, read } = await relaunchedInBacklog();
+    await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "recorded-held",
+    );
+    let fail: (caught: Error) => void = () => {};
+    const open = vi.spyOn(relaunched.sessions, "resumeTask").mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          fail = reject;
+        }),
+    );
+    read(3);
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    const taken = h.inbox.allFor("t-move").map((row) => row.id);
+    h.inbox.markDelivered(taken);
+    fail(new Error("could not open"));
+    await tick();
+    expect(taken).toHaveLength(1);
+    const sent = h.inbox.get(taken[0] ?? -1);
+    expect(sent?.deliveredAt).toEqual(expect.any(Number));
+    expect(sent?.attempts).toBe(1);
+    await relaunched.disposeAll();
+  });
+
+  // docs/inbox.md: guidance a failed turn gives back is tried again.
+  it("delivers a kept sent message again when it is due, after the turn that took it failed and a sweep ran while that turn held it", async () => {
+    const { h, relaunched, boots, prompts, read } = await relaunchedInBacklog();
+    await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "recorded-held",
+    );
+    read(60);
+    await vi.waitFor(() => expect(prompts()).toHaveLength(1));
+    expect(prompts()[0]).toContain("Check the footer too.");
+
+    // Another row waits on the lane and the lane is swept while the turn holds the sent row.
+    h.inbox.enqueue("t-move", "A note from the host.");
+    await relaunched.watch.sweepTaskLane("t-move", Date.now());
+    await tick();
+    boots[0]?.emit({ type: "turn_failed", taskId: "t-move", error: '{"detail":"Bad Request"}' });
+    boots[0]?.emit({ type: "turn_end", taskId: "t-move" });
+    boots[0]?.finishPrompt();
+    await tick();
+    expect(prompts()).toHaveLength(1);
+    expect(h.tasks.get("t-move")?.backlogSince != null).toBe(true);
+
+    const next = Math.max(...h.inbox.allFor("t-move").map((row) => row.nextAttemptAt ?? 0));
+    expect(next).toBeGreaterThan(Date.now());
+    vi.setSystemTime(next);
+    await relaunched.watch.sweepTaskLane("t-move", next);
+    await vi.waitFor(() => expect(prompts()).toHaveLength(2));
+    expect(prompts()[1]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+    expect(prompts()[1]).toContain("Check the footer too.");
+    await relaunched.disposeAll();
+  });
 
   it("delivers files whose crossing ended while the click was unchecked to a backlog task with its conversation open, on the named login once the click is accepted", async () => {
     const { h, vault, first, cardId } = await clickCutOff();

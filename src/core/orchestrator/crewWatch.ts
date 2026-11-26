@@ -409,15 +409,19 @@ export class CrewWatch {
   }
 
   /**
-   * A conversation a login move or a kept sent message was opening for the
-   * lane's due rows did not open (`LoginMoves`): as after this sweep's own
-   * failed opening, the rows spend a try and back off one grace, and the
-   * delivery that reaches the task is still their first. Waiting for a
-   * model, or an opening that was not accepted, spends nothing.
+   * A conversation a login move or a kept sent message was opening for
+   * these rows did not open (`LoginMoves`): as after this sweep's own
+   * failed opening, those of them still waiting spend a try and back off
+   * one grace, and the delivery that reaches the task is still their
+   * first. Waiting for a model, or an opening that was not accepted,
+   * spends nothing.
    */
-  openingFailed(taskId: string, caught: unknown): void {
+  openingFailed(rowIds: readonly number[], caught: unknown): void {
     if (caught instanceof ModelWaitError || caught instanceof NotAcceptedError) return;
-    const due = this.core.facts.deliverableRows(taskId, this.core.now());
+    const due = rowIds.flatMap((id) => {
+      const row = this.core.options.inbox.get(id);
+      return row && row.deliveredAt === null && row.escalatedAt === null ? [row] : [];
+    });
     const untried = due.filter((row) => row.lastAttemptAt === null).map((row) => row.id);
     this.core.options.inbox.release(this.core.turns.claimRows(due));
     this.core.options.inbox.neverAttempted(untried);
