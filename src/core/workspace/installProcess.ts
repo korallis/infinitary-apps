@@ -137,7 +137,13 @@ export async function runInstall(
       () => stop(Object.assign(new Error(`Command failed: ${command}`), { killed: true })),
       run.timeoutMs,
     );
-    child.once("error", (error) => settle(error));
+    // Node reports here a program it could not start and, once a run is
+    // stopped, one it could not end. The second is no end of the run: it
+    // still fails as a stopped run does, saying its programs may be running.
+    child.on("error", (error) => {
+      if (!stopped) settle(error);
+      else stopped.stillRunning = true;
+    });
     child.once("close", (code) => {
       closed = true;
       if (stopped) failStopped();

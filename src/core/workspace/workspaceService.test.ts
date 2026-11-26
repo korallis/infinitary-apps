@@ -1,3 +1,4 @@
+import { ChildProcess } from "node:child_process";
 import {
   chmodSync,
   cpSync,
@@ -272,10 +273,12 @@ describe("dependency install at commission (interaction P0, WI-7)", () => {
      * to end it; `apart` prints as `loud` does, and its second program
      * holds none of the install's output and does not end with the first
      * (Node ends a program's own with it unless they are started detached),
-     * so that output closes while it runs on. Whatever is still running is
+     * so that output closes while it runs on; `held` prints as `loud` does,
+     * but not before the test asks (`print`), so the test chooses what
+     * Windows finds when the run is stopped. Whatever is still running is
      * ended when the test finishes, failed or out of time included.
      */
-    function unendingPnpm(mode: "quiet" | "loud" | "orphan" | "apart") {
+    function unendingPnpm(mode: "quiet" | "loud" | "orphan" | "apart" | "held") {
       const dir = scratchDir("infinitary-pnpm-unending-");
       const log = join(dir, "started.log");
       const script = join(dir, "unending.cjs");
@@ -296,10 +299,10 @@ const before = under();
 appendFileSync(log, role + " " + process.pid + "\\n");
 if (role === "top") {
   start(mode === "orphan" ? "middle" : "under", mode === "apart");
-  if (mode === "loud" || mode === "apart") {
+  if (mode === "loud" || mode === "apart" || mode === "held") {
     process.stdout.on("error", () => {});
     const wait = setInterval(() => {
-      if (under() === before) return;
+      if (mode === "held" ? !existsSync(log + ".print") : under() === before) return;
       clearInterval(wait);
       process.stdout.write("x".repeat(17 * 1024 * 1024));
     }, 50);
@@ -333,7 +336,8 @@ setTimeout(() => {}, 600000);
           }
         }
       });
-      return { bin, script, started, running };
+      const print = () => writeFileSync(`${log}.print`, "");
+      return { bin, script, started, running, print };
     }
 
     it("has ended every program an install started by the time it reports running past its time", {
@@ -407,6 +411,52 @@ setTimeout(() => {}, 600000);
       expect(pnpm.running(pnpm.started("top"))).toEqual([]);
       // The program that holds none of the run's output is why it is not over.
       expect(pnpm.running(pnpm.started("under"))).toHaveLength(1);
+    });
+
+    it("starts no second attempt when Node could not end the program at the top of a stopped install either", {
+      timeout: 60_000,
+    }, async () => {
+      const pnpm = unendingPnpm("held");
+      const { paths } = emptyService();
+      const workspace = new WorkspaceService(paths, { pnpm: pnpm.bin });
+      const systemRoot = process.env.SystemRoot;
+      const windowsFolderBack = () => {
+        if (systemRoot === undefined) delete process.env.SystemRoot;
+        else process.env.SystemRoot = systemRoot;
+      };
+      // Node reports a program it could not end, as when Windows refuses,
+      // as an error on that program. From then on Windows' folder is named
+      // rightly again, so a second attempt would start if one were made.
+      const kill = vi.spyOn(ChildProcess.prototype, "kill").mockImplementation(function (
+        this: ChildProcess,
+      ) {
+        windowsFolderBack();
+        this.emit("error", Object.assign(new Error("kill EPERM"), { code: "EPERM" }));
+        return false;
+      });
+      try {
+        const installing = workspace.installDependencies(lockfileFolder());
+        await vi.waitFor(() => expect(pnpm.started("under")).toHaveLength(1), {
+          timeout: 30_000,
+          interval: 50,
+        });
+        // The install's own cmd.exe has started from Windows' folder by now;
+        // taskkill, started at the stop, cannot start from one named wrongly.
+        process.env.SystemRoot = join(scratchDir("infinitary-no-windows-"), "missing");
+        pnpm.print();
+        const result = await installing;
+        expect(kill).toHaveBeenCalledTimes(1);
+        expect(result).toMatchObject({
+          outcome: "failed",
+          error: "stdout maxBuffer length exceeded",
+        });
+        expect(pnpm.started("top")).toHaveLength(1);
+        // Nothing was ended, which is why no second attempt may start.
+        expect(pnpm.running([...pnpm.started("top"), ...pnpm.started("under")])).toHaveLength(2);
+      } finally {
+        kill.mockRestore();
+        windowsFolderBack();
+      }
     });
   });
 
