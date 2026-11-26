@@ -384,6 +384,21 @@ export class CrewSessions {
   }
 
   /**
+   * A context or refusal restart that cannot open yet is kept on its lane,
+   * once, so the next open of the task starts fresh and says why.
+   */
+  keepRestart(taskId: string, restart: CrewmateRestart): void {
+    const record = this.core.options.tasks.get(taskId);
+    if (!record || this.waitingRestart(record) !== undefined) return;
+    this.recordRestart(
+      record.id,
+      record.key || record.id,
+      this.core.facts.machineOf(record.id),
+      restart,
+    );
+  }
+
+  /**
    * A renewed conversation's reason still waiting on the lane, claimed for
    * the turn about to start so it rides that turn and a clean end acks it.
    */
@@ -662,13 +677,7 @@ export class CrewSessions {
     // conversation is accepted leaves the next open starting fresh too
     // (`waitingRestart`); one already there is not queued again.
     const restarting = fresh !== undefined && fresh.changed !== "computer";
-    if (restarting && this.waitingRestart(record) === undefined)
-      this.recordRestart(
-        record.id,
-        record.key || record.id,
-        this.core.facts.machineOf(record.id),
-        fresh,
-      );
+    if (restarting) this.keepRestart(record.id, fresh);
     if (this.retiredProviderOf(taskId)) throw new Error(retiredResumeText(taskId));
     // A resume is an attachment point: re-check the recorded account and
     // move to a sibling (transcript intact) if it died or was removed.

@@ -83,7 +83,11 @@ export class LoginMoves {
    */
   async moveOff(from: string, to: string): Promise<void> {
     const taskIds = this.tasksOn(from);
-    for (const taskId of taskIds) this.bound.set(taskId, { from, to });
+    for (const taskId of taskIds) {
+      // The same move named again keeps its binding, so a pick already out for it stands.
+      const bound = this.bound.get(taskId);
+      if (bound?.from !== from || bound.to !== to) this.bound.set(taskId, { from, to });
+    }
     await Promise.all(taskIds.map((taskId) => this.begin(taskId).done));
   }
 
@@ -130,14 +134,16 @@ export class LoginMoves {
   /**
    * A restart is about to open a new conversation for the task: one still
    * to move is on its named login first, so the restart opens there. It
-   * opens and delivers nothing; the restart does, and a hold of the task's
-   * own does not keep the move back, as it does not keep the restart.
+   * opens and delivers nothing; the restart does. True when a hold of the
+   * task's own kept the move back: the task is still to move, and the
+   * restart waits on its lane for the delivery after that hold.
    */
-  async beforeRestart(taskId: string): Promise<void> {
-    if (!this.bound.has(taskId)) return;
+  async beforeRestart(taskId: string): Promise<boolean> {
+    if (!this.bound.has(taskId)) return false;
     const going = this.begin(taskId);
     going.restarting = true;
     await going.done;
+    return this.bound.has(taskId);
   }
 
   private begin(
@@ -183,8 +189,7 @@ export class LoginMoves {
         return await stay();
       // A hold of its own keeps the task bound and unopened; the delivery
       // that follows the hold's end makes the move.
-      if (this.host.runtime(taskId)?.turn.busy) return;
-      if (!going.restarting && this.host.laneHeld(taskId)) return;
+      if (this.host.runtime(taskId)?.turn.busy || this.host.laneHeld(taskId)) return;
       const model = parseOfferingKey(before.model);
       const pick = await accounts.pickForSpawn(taskId, model.provider, {
         model: model.id,
@@ -192,8 +197,7 @@ export class LoginMoves {
       });
       const record = this.options.tasks.get(taskId);
       const runtime = this.host.runtime(taskId);
-      if (runtime?.turn.busy || this.host.disposed()) return;
-      if (!going.restarting && this.host.laneHeld(taskId)) return;
+      if (runtime?.turn.busy || this.host.disposed() || this.host.laneHeld(taskId)) return;
       // A newer move named its login while this one picked: only the pick
       // is dropped, and the delivery goes with the task to the newer login.
       const newest = this.bound.get(taskId);
