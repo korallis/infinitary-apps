@@ -220,12 +220,20 @@ describe("dependency install at commission (interaction P0, WI-7)", () => {
       const { workspace } = emptyService();
       const cwd = lockfileFolder();
       writeFileSync(join(cwd, "pnpm.cmd"), "@echo ran > project-pnpm-ran.txt\r\n@exit /b 1\r\n");
-      const result = await withSearchPath(`${bin};${process.env.PATH}`, () =>
-        workspace.installDependencies(cwd),
-      );
-      expect(existsSync(join(cwd, "project-pnpm-ran.txt"))).toBe(false);
-      expect(result).toMatchObject({ outcome: "offline" });
-      expect(stub.calls()).toEqual([[realpathSync(cwd), "install --frozen-lockfile --offline"]]);
+      // As Windows ships, cmd.exe looks for a bare name in the current folder
+      // first; a computer that sets this variable has turned that off.
+      const guard = process.env.NoDefaultCurrentDirectoryInExePath;
+      delete process.env.NoDefaultCurrentDirectoryInExePath;
+      try {
+        const result = await withSearchPath(`${bin};${process.env.PATH}`, () =>
+          workspace.installDependencies(cwd),
+        );
+        expect(existsSync(join(cwd, "project-pnpm-ran.txt"))).toBe(false);
+        expect(result).toMatchObject({ outcome: "offline" });
+        expect(stub.calls()).toEqual([[realpathSync(cwd), "install --frozen-lockfile --offline"]]);
+      } finally {
+        if (guard !== undefined) process.env.NoDefaultCurrentDirectoryInExePath = guard;
+      }
     });
 
     it("starts a batch file by its own path, in a folder named like a variable", async () => {
