@@ -61,10 +61,24 @@ export class LoginMoves {
   constructor(
     private readonly options: Pick<
       CrewSupervisorOptions,
-      "tasks" | "inbox" | "accounts" | "broadcastEvent"
+      "tasks" | "inbox" | "accounts" | "broadcastEvent" | "loginMoveRecord"
     >,
     private readonly host: LoginMovesHost,
-  ) {}
+  ) {
+    // The moves the last launch left unmade: each task still on the login it was to leave.
+    for (const [taskId, move] of Object.entries(options.loginMoveRecord?.read() ?? {})) {
+      const record = options.tasks.get(taskId);
+      if (record?.status === "active" && record.accountId === move.from)
+        this.bound.set(taskId, move);
+    }
+  }
+
+  /** The task's move is named, or `undefined` once it is made or given up; saved either way. */
+  private bind(taskId: string, move: { from: string; to: string } | undefined): void {
+    if (move) this.bound.set(taskId, move);
+    else if (!this.bound.delete(taskId)) return;
+    this.options.loginMoveRecord?.write(Object.fromEntries(this.bound));
+  }
 
   /** This computer's started tasks whose conversation is on the login. */
   tasksOn(accountId: string): string[] {
@@ -86,14 +100,15 @@ export class LoginMoves {
     for (const taskId of taskIds) {
       // The same move named again keeps its binding, so a pick already out for it stands.
       const bound = this.bound.get(taskId);
-      if (bound?.from !== from || bound.to !== to) this.bound.set(taskId, { from, to });
+      if (bound?.from !== from || bound.to !== to) this.bind(taskId, { from, to });
     }
     await Promise.all(taskIds.map((taskId) => this.begin(taskId).done));
   }
 
   /** The login has room again, or work now waits: its tasks still to move stay. */
   forget(from: string): void {
-    for (const [taskId, move] of this.bound) if (move.from === from) this.bound.delete(taskId);
+    for (const [taskId, move] of [...this.bound])
+      if (move.from === from) this.bind(taskId, undefined);
   }
 
   /**
@@ -172,7 +187,7 @@ export class LoginMoves {
     };
     // The task stays where it is, with its lane delivered there.
     const stay = async () => {
-      this.bound.delete(taskId);
+      this.bind(taskId, undefined);
       if (going.restarting) return;
       const open = this.host.runtime(taskId);
       if (open) return hand(open);
@@ -210,7 +225,6 @@ export class LoginMoves {
         !newest
       )
         return await stay();
-      this.bound.delete(taskId);
       if (runtime) {
         this.host.releaseSession(runtime);
         this.host.forgetRuntime(taskId);
@@ -224,6 +238,8 @@ export class LoginMoves {
         },
         () => pick.selected(),
       );
+      // Saved as made only once the record names the login: a quit before this leaves it to make.
+      this.bind(taskId, undefined);
       this.options.broadcastEvent({
         type: "firstmate_note",
         ...saidLine(

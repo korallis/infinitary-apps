@@ -2,6 +2,7 @@ import type { Card } from "@shared/cards";
 import type { FmEvent } from "@shared/events";
 import { wordSaidMarks } from "@shared/i18n/said";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LOGIN_LOW_WAIT } from "../orchestrator/loginCards";
 import type { LoginMoves } from "../orchestrator/loginMoves";
 import { startLowLogins } from "./homeLowLogins";
 import type { LoginReading } from "./lowLogins";
@@ -25,13 +26,27 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function home(logins: LoginReading[]) {
-  const cutOffs = new Map<string, { class: string; resetsAt?: number }>();
+/** What the card store keeps across launches: the provider's card and the action that answered it. */
+type SavedCard = { card?: HostCard; chosen?: string };
+
+function home(
+  logins: LoginReading[],
+  saved: SavedCard = {},
+  cutOffs = new Map<string, { class: string; resetsAt?: number }>(),
+) {
   const listeners: (() => void)[] = [];
   const raised: HostCard[] = [];
   const moved: string[] = [];
   const events: FmEvent[] = [];
-  const state = { pin: "personal" as string | undefined, chosen: undefined as string | undefined };
+  const state = {
+    pin: "personal" as string | undefined,
+    get chosen() {
+      return saved.chosen;
+    },
+    set chosen(action: string | undefined) {
+      saved.chosen = action;
+    },
+  };
   const loginMoves = {
     tasksOn: () => ["task-1"],
     moveOff: async (from: string, to: string) => {
@@ -59,12 +74,14 @@ function home(logins: LoginReading[]) {
       cards: {
         hostCards: {
           raiseHostCard: (card) => {
-            state.chosen = undefined;
+            saved.chosen = undefined;
+            saved.card = card;
             raised.push(card);
           },
           withdrawHostCard: () => {},
         },
-        chosenAction: () => state.chosen,
+        chosenAction: () => saved.chosen,
+        stored: () => saved.card,
       },
       loginMoves,
     },
@@ -73,7 +90,7 @@ function home(logins: LoginReading[]) {
   const cutOffChanged = () => {
     for (const listener of listeners) listener();
   };
-  return { watch, cutOffs, cutOffChanged, raised, moved, state, loginMoves };
+  return { watch, cutOffs, cutOffChanged, raised, moved, state, loginMoves, saved };
 }
 
 const login = (accountId: string, label: string, percent?: number): LoginReading => ({
@@ -145,5 +162,75 @@ describe("the home's watch over a login the provider cut off for a spent allowan
     waits.cutOffChanged();
     expect(waits.raised).toHaveLength(1);
     expect(waits.moved).toEqual([]);
+  });
+});
+
+// The approved plan, "Ask": one card per provider per run-out. The captain's
+// Wait for the refill is on the saved card, so a relaunch reads it back.
+describe("the home's watch after a relaunch, when the captain answered Wait for the refill", () => {
+  const lowAndRoomy = () => [login("personal", "Personal", 4), login("work", "Work", 60)];
+
+  it("does not ask again while that login is still low, whichever login has the most room", () => {
+    const before = home(lowAndRoomy());
+    before.watch.read();
+    expect(before.raised).toHaveLength(1);
+    before.saved.chosen = LOGIN_LOW_WAIT;
+
+    const logins = lowAndRoomy();
+    const after = home(logins, before.saved);
+    after.watch.read();
+    logins.push(login("spare", "Spare", 95));
+    after.watch.read();
+    expect(after.raised).toEqual([]);
+    expect(after.moved).toEqual([]);
+  });
+
+  it("does not ask again when the first reading after the relaunch has not read that login yet", () => {
+    const before = home(lowAndRoomy());
+    before.watch.read();
+    before.saved.chosen = LOGIN_LOW_WAIT;
+
+    const logins = [login("personal", "Personal"), login("work", "Work", 60)];
+    const after = home(logins, before.saved);
+    after.watch.read();
+    logins[0] = login("personal", "Personal", 4);
+    after.watch.read();
+    expect(after.raised).toEqual([]);
+  });
+
+  it("asks again at the next run-out, once that login was read with room", () => {
+    const before = home(lowAndRoomy());
+    before.watch.read();
+    before.saved.chosen = LOGIN_LOW_WAIT;
+
+    const logins = [login("personal", "Personal", 100), login("work", "Work", 60)];
+    const after = home(logins, before.saved);
+    after.watch.read();
+    expect(after.raised).toEqual([]);
+    logins[0] = login("personal", "Personal", 9);
+    after.watch.read();
+    expect(after.raised).toHaveLength(1);
+  });
+
+  it("asks again for a login cut off anew after the refill the answered card named", () => {
+    const cutOffs = new Map([["personal", { class: "no_headroom", resetsAt: RESETS }]]);
+    const logins = [login("personal", "Personal"), login("work", "Work", 60)];
+    const before = home(logins, {}, cutOffs);
+    before.watch.read();
+    expect(before.raised).toHaveLength(1);
+    before.saved.chosen = LOGIN_LOW_WAIT;
+
+    // Relaunched before that refill, the same run-out is not asked about again.
+    const same = home(logins, before.saved, cutOffs);
+    same.watch.read();
+    expect(same.raised).toEqual([]);
+
+    // Relaunched after it, with the login cut off until a week later: a new run-out.
+    vi.setSystemTime(RESETS + 60_000);
+    const week = 7 * 24 * 60 * 60 * 1000;
+    const again = new Map([["personal", { class: "no_headroom", resetsAt: RESETS + week }]]);
+    const next = home(logins, before.saved, again);
+    next.watch.read();
+    expect(next.raised).toHaveLength(1);
   });
 });

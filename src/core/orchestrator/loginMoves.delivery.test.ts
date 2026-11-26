@@ -21,9 +21,11 @@ import type { Router } from "../routing/router";
 import { CostLimitStore } from "../storage/costLimitStore";
 import { DecisionStore } from "../storage/decisionStore";
 import { STUCK_REFUSAL_LIMIT } from "../storage/inboxStore";
+import { SettingsStore } from "../storage/settingsStore";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
 import { crewmateRestartText } from "./crewSession";
+import type { AccountAttachment, CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { BACKLOG_STEER_LINE } from "./crewTurns";
 import { loginLowCard, loginLowCardId } from "./loginCards";
 
@@ -84,7 +86,26 @@ function threeLogins(
     markSelected: () => {},
   };
   let accounts: AccountSelector | undefined;
+  const attachment: AccountAttachment = {
+    selectForSpawn: () => (routedModel ? "acct_personal" : undefined),
+    pickForSpawn: async (...args) => {
+      await beforePick();
+      return (accounts as AccountSelector).pickForSpawn(...args);
+    },
+    reselectForResume: (...args) => (accounts as AccountSelector).reselectForResume(...args),
+    labelOf: (accountId) => (accounts as AccountSelector).labelOf(accountId),
+  };
+  // The app's own saved record of the moves still to make.
+  let moveRecord: NonNullable<CrewSupervisorOptions["loginMoveRecord"]> | undefined;
   const h = setup(first, {
+    loginMoveRecord: (db) => {
+      const settings = new SettingsStore(db);
+      moveRecord = {
+        read: () => settings.getLoginMoves(),
+        write: (moves) => settings.setLoginMoves(moves),
+      };
+      return moveRecord;
+    },
     crewmates: [second],
     costLimits: (db) => {
       costs = new CostLimitStore(db);
@@ -101,15 +122,7 @@ function threeLogins(
         }
       : {}),
     ...(routedModel ? { routedModel } : {}),
-    accounts: {
-      selectForSpawn: () => (routedModel ? "acct_personal" : undefined),
-      pickForSpawn: async (...args) => {
-        await beforePick();
-        return (accounts as AccountSelector).pickForSpawn(...args);
-      },
-      reselectForResume: (...args) => (accounts as AccountSelector).reselectForResume(...args),
-      labelOf: (accountId) => (accounts as AccountSelector).labelOf(accountId),
-    },
+    accounts: attachment,
   });
   accounts = new AccountSelector({
     pool,
@@ -118,7 +131,16 @@ function threeLogins(
     decisions: new DecisionStore(h.db),
     loginInUse: { whenLow: () => "ask", pin: () => {} },
   });
-  return { ...h, costs: costs as CostLimitStore };
+  return {
+    ...h,
+    costs: costs as CostLimitStore,
+    /** What the next launch is built with over the same saved state (`reboot`). */
+    relaunchWith: {
+      accounts: attachment,
+      loginMoveRecord: moveRecord as NonNullable<CrewSupervisorOptions["loginMoveRecord"]>,
+      costLimits: { store: costs as CostLimitStore, appLimit: () => DEFAULT_COST_LIMIT },
+    },
+  };
 }
 
 function seedRunning(
@@ -1070,6 +1092,96 @@ describe("a task still to move whose conversation is restarted", () => {
     await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
     expect(first.promptCalls[0]).toContain("Check the footer too.");
     expect(reached(h)).toBe(before + 1);
+  });
+});
+
+describe("a task still to move when the app is relaunched", () => {
+  const MODEL = { provider: "openai-codex", id: "gpt-6.1-terra" };
+
+  it("takes its next delivery on the login the click named, never the one it leaves or the login in use now", async () => {
+    const h = threeLogins("openai-codex", fakeCrewmate({}), fakeCrewmate({}), false);
+    seedRunning(h, MODEL, "/tmp/s1.jsonl");
+    // Its cost limit keeps the click's move to Spare from being made before the quit.
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_spare");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_personal");
+    expect(h.sessionSpecs).toHaveLength(0);
+    await h.supervisor.disposeAll();
+
+    // The next launch: Work is the login in use, and Spare is still the one the click named.
+    const boot = fakeCrewmate({});
+    const specs: { binding?: unknown }[] = [];
+    const opens = async (spec: { binding?: unknown }) => {
+      specs.push(spec);
+      return boot;
+    };
+    const relaunched = reboot(h, opens, {
+      router: h.router as unknown as Router,
+      ...h.relaunchWith,
+    });
+    expect(relaunched.loginMoves.bindsTask("t-move")).toBe(true);
+    h.costs.clearHold("t-move");
+    await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "mid-turn",
+    );
+    await vi.waitFor(() => expect(boot.promptCalls).toHaveLength(1));
+    expect(specs).toHaveLength(1);
+    expect((specs[0]?.binding as { accountId?: string } | undefined)?.accountId).toBe("acct_spare");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_spare");
+    expect(boot.promptCalls[0]).toContain("Check the footer too.");
+    expect(relaunched.loginMoves.bindsTask("t-move")).toBe(false);
+    await relaunched.disposeAll();
+
+    // Made, the move is no longer saved: a later launch binds the task to nothing.
+    const later = reboot(h, async () => fakeCrewmate({}), {
+      router: h.router as unknown as Router,
+      ...h.relaunchWith,
+    });
+    expect(later.loginMoves.bindsTask("t-move")).toBe(false);
+    await later.disposeAll();
+  });
+
+  it("opens it on the named login when the lane's sweep delivers what waited, with nothing sent after the relaunch", async () => {
+    const h = threeLogins("openai-codex", fakeCrewmate({}), fakeCrewmate({}), false);
+    seedRunning(h, MODEL, "/tmp/s1.jsonl");
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    await h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.");
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_spare");
+    await h.supervisor.disposeAll();
+
+    const boot = fakeCrewmate({});
+    const specs: { binding?: unknown }[] = [];
+    const opens = async (spec: { binding?: unknown }) => {
+      specs.push(spec);
+      return boot;
+    };
+    const relaunched = reboot(h, opens, {
+      router: h.router as unknown as Router,
+      ...h.relaunchWith,
+    });
+    h.costs.clearHold("t-move");
+    await relaunched.watch.sweepInbox(Date.now());
+    await vi.waitFor(() => expect(boot.promptCalls).toHaveLength(1));
+    expect(specs).toHaveLength(1);
+    expect((specs[0]?.binding as { accountId?: string } | undefined)?.accountId).toBe("acct_spare");
+    expect(boot.promptCalls[0]).toContain("Check the footer too.");
+    await relaunched.disposeAll();
+  });
+
+  it("forgets a saved move whose task is no longer on the login it was to leave", async () => {
+    const h = threeLogins("openai-codex", fakeCrewmate({}), fakeCrewmate({}), false);
+    seedRunning(h, MODEL, "/tmp/s1.jsonl");
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_spare");
+    await h.supervisor.disposeAll();
+    h.tasks.placement.setAccountId("t-move", "acct_work");
+
+    const relaunched = reboot(h, async () => fakeCrewmate({}), {
+      router: h.router as unknown as Router,
+      ...h.relaunchWith,
+    });
+    expect(relaunched.loginMoves.bindsTask("t-move")).toBe(false);
+    await relaunched.disposeAll();
   });
 });
 

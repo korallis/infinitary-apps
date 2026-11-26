@@ -3,7 +3,7 @@ import { type Said, said, saidLine } from "@shared/i18n/said";
 import { PROVIDER_CATALOG } from "@shared/providers";
 import { type QuotaSnapshotView, resetWhen } from "@shared/quota";
 import type { WhenLoginLow } from "@shared/whenLoginLow";
-import { LOGIN_LOW_WAIT, loginLowCardId } from "../orchestrator/loginCards";
+import { LOGIN_LOW_WAIT, loginLowAsked, loginLowCardId } from "../orchestrator/loginCards";
 import type { LoginMoves } from "../orchestrator/loginMoves";
 import { quotaRowProviderOf } from "./auth";
 import { limitingResetOf } from "./catalog";
@@ -31,7 +31,11 @@ export function startLowLogins(options: {
   };
   quota: { latest(): QuotaSnapshotView | undefined };
   supervisor: {
-    cards: { hostCards: LowLoginsOptions["cards"]; chosenAction(id: string): string | undefined };
+    cards: {
+      hostCards: LowLoginsOptions["cards"];
+      chosenAction(id: string): string | undefined;
+      stored(id: string): { body?: string } | undefined;
+    };
     loginMoves: LoginMoves;
   };
   broadcastEvent: (event: FmEvent) => void;
@@ -45,6 +49,15 @@ export function startLowLogins(options: {
   const runOutOf = (accountId: string) => {
     const cut = vault.cutOff(accountId);
     return cut?.class === "no_headroom" ? { resetsAt: cut.resetsAt } : undefined;
+  };
+  const refillsAt = (providerId: string, accountId: string) => {
+    const row = quota
+      .latest()
+      ?.providers.find(
+        (entry) =>
+          entry.accountId === accountId && entry.provider === quotaRowProviderOf(providerId),
+      );
+    return runOutOf(accountId)?.resetsAt ?? (row ? limitingResetOf(row, Date.now()) : undefined);
   };
   const lowLogins = new LowLogins({
     whenLow: () => options.settings.getWhenLoginLow(),
@@ -61,15 +74,18 @@ export function startLowLogins(options: {
     pinOf: (providerId) => vault.pinnedAccount(providerId),
     setPin: (providerId, accountId) => vault.setPin(providerId, accountId),
     refillsOf: (providerId, accountId) => {
-      const row = quota
-        .latest()
-        ?.providers.find(
-          (entry) =>
-            entry.accountId === accountId && entry.provider === quotaRowProviderOf(providerId),
-        );
-      const reset =
-        runOutOf(accountId)?.resetsAt ?? (row ? limitingResetOf(row, Date.now()) : undefined);
+      const reset = refillsAt(providerId, accountId);
       return reset !== undefined ? resetWhen(reset, Date.now()) : undefined;
+    },
+    refillsAt,
+    waitedOn: (providerId) => {
+      const id = loginLowCardId(providerId);
+      if (supervisor.cards.chosenAction(id) !== LOGIN_LOW_WAIT) return undefined;
+      const asked = loginLowAsked(supervisor.cards.stored(id)?.body ?? "");
+      // Past the refill the card named, a login low again is a new run-out.
+      return asked && (asked.refillsAt === undefined || Date.now() < asked.refillsAt)
+        ? asked.accountId
+        : undefined;
     },
     tasksOn: (accountId) => supervisor.loginMoves.tasksOn(accountId),
     moveOff: (from, to) => supervisor.loginMoves.moveOff(from, to),

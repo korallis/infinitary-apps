@@ -139,6 +139,25 @@ describe("the login in use running low, under ask", () => {
     expect(t.left).toEqual(["personal to spare"]);
   });
 
+  it("keeps a low login's tasks still to move while a reading has not read that login yet, as after a relaunch", () => {
+    const t = watchOver({
+      choice: "ask",
+      pin: "spare",
+      logins: [
+        login("personal", "Personal"),
+        login("work", "Work", 45),
+        login("spare", "Spare", 60),
+      ],
+      tasksOn: { personal: ["task-1"] },
+    });
+    t.watch.read();
+    expect(t.forgotten.has("personal")).toBe(false);
+    // Read with room again, nothing leaves it any more.
+    t.state.logins = [login("personal", "Personal", 100), login("spare", "Spare", 60)];
+    t.watch.read();
+    expect(t.forgotten.has("personal")).toBe(true);
+  });
+
   it("asks at a typed run-out whatever the meter last read, and never offers a login that ran out", () => {
     const t = watchOver({
       choice: "ask",

@@ -231,6 +231,10 @@ export function startHomeCrew({
     crewSpeed: (model) => slots.speed(model),
     modelName: (model) => slots.nameOf(model),
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
+    loginMoveRecord: {
+      read: () => settings.getLoginMoves(),
+      write: (moves) => settings.setLoginMoves(moves),
+    },
     personalVersion: async () => (await homePersonalSet.current()).version,
     runbooks,
     build: host.app.version,
