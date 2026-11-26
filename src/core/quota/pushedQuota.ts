@@ -286,7 +286,8 @@ export function withPushedCredits(
  * migration 51 held `resets_at` in seconds, and none of them has a status.
  *
  * A row the sensor measured keeps its other windows. A row it could not
- * measure is known only through the refusal, so it carries just that. A
+ * measure is known only through the refusal, so it carries just that and
+ * is marked `unread`: the refusal is no reading of the allowance. A
  * sign-out proven by the sensor is left as it stands, and with no current
  * refusal the row is untouched - unknown is still never zero.
  */
@@ -324,6 +325,7 @@ export function withRejectedReadings(
     ...rest,
     status: "ok",
     stale: false,
+    unread: true,
     measuredAt: Math.max(...rejected.map((reading) => reading.at)),
     windows: zero.sort((a, b) => a.id.localeCompare(b.id)),
   };

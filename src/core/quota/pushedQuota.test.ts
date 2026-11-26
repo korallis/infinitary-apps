@@ -167,6 +167,8 @@ describe("withRejectedReadings", () => {
     ]);
     expect(row.windows[0]?.resetsAtMs).toBe(NOW + 3_600_000);
     expect(effectiveFromProvider(row, NOW).effectivePercentRemaining).toBe(0);
+    // The sensor read this row: the refusal over it does not make it unread.
+    expect(row.unread).toBeUndefined();
     // At the reset the vendor's word no longer stands: the sensor's reading does.
     expect(withRejectedReadings(sensed, [rejected], NOW + 3_600_000)).toBe(sensed);
   });
@@ -180,7 +182,14 @@ describe("withRejectedReadings", () => {
       windows: [],
     };
     const row = withRejectedReadings(unmeasured, [rejected], NOW);
-    expect(row).toMatchObject({ status: "ok", stale: false, measuredAt: NOW - 1_000 });
+    // The captain's choice on the review's question: a refusal is no check
+    // of the allowance, so the row says no reading produced it.
+    expect(row).toMatchObject({
+      status: "ok",
+      stale: false,
+      unread: true,
+      measuredAt: NOW - 1_000,
+    });
     expect(row.reason).toBeUndefined();
     expect(row.detail).toBeUndefined();
     expect(row.windows.map((window) => window.id)).toEqual(["five_hour"]);

@@ -130200,6 +130200,13 @@ ${FRAME_KEYBOARD_SCRIPT}
      */
     measuredAt: number().optional(),
     /**
+     * No reading of the allowance produced this row: its windows are a
+     * provider's refusal laid over a reading that could not be taken
+     * (`withRejectedReadings`). The row still says what the account can do
+     * now; it never says the allowance was checked.
+     */
+    unread: boolean().optional(),
+    /**
      * A sanitized machine reason for a non-ok status: a code from our own
      * vocabulary, never provider text, never a header, never a URL.
      */

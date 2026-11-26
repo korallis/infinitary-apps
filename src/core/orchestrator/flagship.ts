@@ -463,6 +463,10 @@ export class Flagship {
    * The account's last allowance reading, for the spent-allowance card:
    * when it was taken, whether this refresh read it (rather than carrying
    * an older one forward), and who the account's client says is signed in.
+   * A row that holds no reading was not read: one known only through its
+   * provider's refusal (`unread`), whose time is the refusal's and no
+   * reading's, and one with no window at all, as a login no session has
+   * reported on yet.
    */
   allowanceCheck(
     accountId: string,
@@ -471,7 +475,8 @@ export class Flagship {
     // whose reading failed or never happened is no reading of it.
     const row = this.snapshotRow(accountId, "measured");
     if (!row) return undefined;
-    if (row.status !== "ok" || row.stale)
+    if (row.unread) return { read: false };
+    if (row.status !== "ok" || row.stale || row.windows.length === 0)
       return { read: false, ...(row.measuredAt !== undefined ? { at: row.measuredAt } : {}) };
     const identity = this.options.vault.identitySync?.(accountId);
     return {

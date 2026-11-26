@@ -13098,6 +13098,9 @@
                                   "measuredAt": {
                                     "type": "number"
                                   },
+                                  "unread": {
+                                    "type": "boolean"
+                                  },
                                   "reason": {
                                     "type": "string"
                                   },
@@ -13335,6 +13338,9 @@
                                   },
                                   "measuredAt": {
                                     "type": "number"
+                                  },
+                                  "unread": {
+                                    "type": "boolean"
                                   },
                                   "reason": {
                                     "type": "string"
@@ -39182,6 +39188,9 @@
                     "measuredAt": {
                       "type": "number"
                     },
+                    "unread": {
+                      "type": "boolean"
+                    },
                     "reason": {
                       "type": "string"
                     },
@@ -39419,6 +39428,9 @@
                     },
                     "measuredAt": {
                       "type": "number"
+                    },
+                    "unread": {
+                      "type": "boolean"
                     },
                     "reason": {
                       "type": "string"
@@ -39690,6 +39702,9 @@
                     "measuredAt": {
                       "type": "number"
                     },
+                    "unread": {
+                      "type": "boolean"
+                    },
                     "reason": {
                       "type": "string"
                     },
@@ -39927,6 +39942,9 @@
                     },
                     "measuredAt": {
                       "type": "number"
+                    },
+                    "unread": {
+                      "type": "boolean"
                     },
                     "reason": {
                       "type": "string"
@@ -40198,6 +40216,9 @@
                     "measuredAt": {
                       "type": "number"
                     },
+                    "unread": {
+                      "type": "boolean"
+                    },
                     "reason": {
                       "type": "string"
                     },
@@ -40435,6 +40456,9 @@
                     },
                     "measuredAt": {
                       "type": "number"
+                    },
+                    "unread": {
+                      "type": "boolean"
                     },
                     "reason": {
                       "type": "string"
@@ -96570,6 +96594,9 @@
                             "measuredAt": {
                               "type": "number"
                             },
+                            "unread": {
+                              "type": "boolean"
+                            },
                             "reason": {
                               "type": "string"
                             },
@@ -96807,6 +96834,9 @@
                             },
                             "measuredAt": {
                               "type": "number"
+                            },
+                            "unread": {
+                              "type": "boolean"
                             },
                             "reason": {
                               "type": "string"
@@ -101884,6 +101914,9 @@
                 "measuredAt": {
                   "type": "number"
                 },
+                "unread": {
+                  "type": "boolean"
+                },
                 "reason": {
                   "type": "string"
                 },
@@ -102121,6 +102154,9 @@
                 },
                 "measuredAt": {
                   "type": "number"
+                },
+                "unread": {
+                  "type": "boolean"
                 },
                 "reason": {
                   "type": "string"
@@ -112296,6 +112332,9 @@
                                   "measuredAt": {
                                     "type": "number"
                                   },
+                                  "unread": {
+                                    "type": "boolean"
+                                  },
                                   "reason": {
                                     "type": "string"
                                   },
@@ -112533,6 +112572,9 @@
                                   },
                                   "measuredAt": {
                                     "type": "number"
+                                  },
+                                  "unread": {
+                                    "type": "boolean"
                                   },
                                   "reason": {
                                     "type": "string"
@@ -114415,6 +114457,9 @@
                                   "measuredAt": {
                                     "type": "number"
                                   },
+                                  "unread": {
+                                    "type": "boolean"
+                                  },
                                   "reason": {
                                     "type": "string"
                                   },
@@ -114652,6 +114697,9 @@
                                   },
                                   "measuredAt": {
                                     "type": "number"
+                                  },
+                                  "unread": {
+                                    "type": "boolean"
                                   },
                                   "reason": {
                                     "type": "string"
@@ -118999,6 +119047,9 @@
                           "measuredAt": {
                             "type": "number"
                           },
+                          "unread": {
+                            "type": "boolean"
+                          },
                           "reason": {
                             "type": "string"
                           },
@@ -119236,6 +119287,9 @@
                           },
                           "measuredAt": {
                             "type": "number"
+                          },
+                          "unread": {
+                            "type": "boolean"
                           },
                           "reason": {
                             "type": "string"

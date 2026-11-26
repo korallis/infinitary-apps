@@ -1,8 +1,9 @@
 import { accountPools } from "@shared/accountPools";
-import type { QuotaSnapshotView } from "@shared/quota";
+import type { QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
 import type { ModelRuntime } from "../pi/types";
 import { buildModelsCatalog, limitingResetOf } from "../quota/catalog";
+import { pushedProviderViews, withRejectedReadings } from "../quota/pushedQuota";
 import { QuotaService } from "../quota/quotaService";
 import { quotaGateCleared } from "../routing/quotaGate";
 import { openInMemoryDatabase } from "../storage/db";
@@ -660,6 +661,77 @@ describe("a seat whose allowance is spent but whose provider has credits", () =>
 // logins"): the provider's wait, a level's wait and the first mate's seat
 // agree, reading by reading, on when a spent pool serves again - with the
 // first login that can serve, not with a login's first window to reset.
+// The captain's choice on the review's question: the pause card says an
+// allowance was checked only when a reading of it was taken, for every login.
+describe("the allowance check a pause card reports", () => {
+  const NOW = Date.parse("2026-11-25T16:40:00Z");
+  const account = {
+    accountId: "acct",
+    accountLabel: "Personal",
+    quotaId: "claude",
+    providerLabel: "Claude",
+  };
+  const rejected = {
+    windowId: "five_hour",
+    status: "rejected" as const,
+    utilization: 1,
+    resetsAt: NOW + 3_600_000,
+    at: NOW - 1_000,
+  };
+  const sensed: QuotaProviderView = {
+    provider: "claude",
+    label: "Claude",
+    accountId: "acct",
+    status: "ok",
+    stale: false,
+    measuredAt: NOW - 60_000,
+    windows: [{ id: "five_hour", label: "session", percentRemaining: 40 }],
+  };
+  const checkOf = (row: QuotaProviderView) =>
+    new Flagship({
+      vault: vaultOf([
+        { id: "acct", providerId: "anthropic-claude", label: "Personal", enabled: true },
+      ]),
+      settings: settingsOf("acct"),
+      quota: {
+        latest: () => ({
+          generatedAt: new Date(NOW).toISOString(),
+          fetchedAt: NOW,
+          providers: [row],
+        }),
+      },
+      baseRuntime,
+    }).allowanceCheck("acct");
+
+  it("is a check when the reading was taken, a refusal over it included", () => {
+    expect(checkOf(sensed)).toEqual({ at: NOW - 60_000, read: true });
+    expect(checkOf(withRejectedReadings(sensed, [rejected], NOW))).toEqual({
+      at: NOW - 60_000,
+      read: true,
+    });
+  });
+
+  it("is no check when the reading failed and only the provider's refusal is known", () => {
+    const failed: QuotaProviderView = {
+      ...sensed,
+      status: "unavailable",
+      reason: "sensor_error",
+      windows: [],
+    };
+    const row = withRejectedReadings(failed, [rejected], NOW);
+    // The row still holds the account: its allowance reads used up.
+    expect(row.windows.map((window) => window.percentRemaining)).toEqual([0]);
+    expect(checkOf(row)).toEqual({ read: false });
+  });
+
+  it("is no check for a login no session has reported on yet", () => {
+    const [row] = pushedProviderViews([account], () => [], NOW);
+    if (!row) throw new Error("the login has no row");
+    expect(row).toMatchObject({ status: "ok", windows: [] });
+    expect(checkOf(row)).toEqual({ read: false });
+  });
+});
+
 describe("a spent pool of two logins, across its resets", () => {
   const T = Date.parse("2026-11-25T16:40:00Z");
   const HOUR = 60 * 60 * 1000;

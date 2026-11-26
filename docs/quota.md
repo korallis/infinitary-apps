@@ -159,6 +159,8 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
   Crew delivery holds a lane while a typed cut-off stands on its account - the fact itself, a spent allowance included - and leaves every other not-serving reason to fail its turn as before (`docs/inbox.md`, "A lane on a withheld account").
 - **A spent allowance withholds nothing.**
   Its predicate is headroom: a pushed `rejected` reading is a zero window until its reset, even for the sensed Claude row (`withRejectedReadings`, laid over each sensed row by `createQuotaFetcher`'s `overlay`; a reading that flips to or from `rejected` refreshes the snapshot at once).
+  A row the sensor could not read, known only through that refusal, is marked `unread`: it holds the account like any used-up row, and the first mate's pause card says its allowance could not be read, never that it was checked (`Flagship.allowanceCheck`).
+  The card says the same of a row with no window at all, such as a login no session has reported on yet.
   The row the sensor measured keeps its other windows; a row it could not measure carries only the refusal; `auth_required` is left standing.
   Only a `rejected` reading's reset is trusted (rows from before migration 51 held seconds).
   The vault still records `no_headroom` with its reset for the lane and seat phases, and holds none with no reset named, since nothing could clear it.
