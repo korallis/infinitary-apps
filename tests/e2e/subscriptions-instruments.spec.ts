@@ -437,6 +437,43 @@ test("each row shows the allowance it has, and offers Sign in only where that is
   });
 });
 
+// The captain's ask: several logins of one provider are one pool, whose
+// meter heads that provider's accounts (docs/quota.md, "A pool of your own
+// logins"). The dataset has two Codex logins in use beside a paused one, a
+// Claude login read beside one whose reading is stale, and three Grok logins.
+test("a provider with two or more logins in use shows their pooled allowance above them", async () => {
+  const { page } = launched;
+  const pool = (provider: string) => page.locator(`[data-pool-row="${provider}"]`);
+  const meters = (provider: string) => pool(provider).getByTestId("quota-micro-meter");
+
+  // Codex: (74 + 100) / 2 and (9 + 38) / 2. The paused login is not pooled.
+  await expect(meters("codex")).toHaveCount(2, { timeout: 15_000 });
+  await expect(meters("codex").nth(0)).toContainText("87%");
+  await expect(meters("codex").nth(1)).toContainText("24%");
+  await expect(pool("codex")).toContainText(m.settingsSubscriptionsOwnPoolAccounts({ count: 2 }));
+
+  // Claude: the stale login is named and never counted as empty, so the
+  // pool reads what the one read login has.
+  await expect(meters("claude")).toHaveCount(3);
+  for (const [index, percent] of ["68%", "41%", "55%"].entries()) {
+    await expect(meters("claude").nth(index)).toContainText(percent);
+  }
+  await expect(pool("claude")).toContainText(m.settingsSubscriptionsOwnPoolAccounts({ count: 2 }));
+  await expect(pool("claude")).toContainText(m.settingsSubscriptionsPoolUnread({ count: 1 }));
+
+  // Only Claude and ChatGPT logins pool: Grok's three keep their own rows alone.
+  await expect(page.locator("[data-pool-row]")).toHaveCount(2);
+  // The pooled row heads its provider's accounts.
+  const rows = page.locator("[data-subscriptions-list] :is([data-pool-row], [data-account-row])");
+  const order = await rows.evaluateAll((all) =>
+    all.map(
+      (each) => each.getAttribute("data-pool-row") ?? each.getAttribute("data-account-row") ?? "",
+    ),
+  );
+  expect(order.indexOf("codex")).toBe(order.indexOf(ID.codexPersonal) - 1);
+  expect(order.indexOf("claude")).toBe(order.indexOf(ID.claudeMax) - 1);
+});
+
 test("the kebab holds the row's actions; rename rides the row", async () => {
   const { page } = launched;
   const work = row(page, ID.codexWork);

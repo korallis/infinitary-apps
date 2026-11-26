@@ -1,13 +1,20 @@
+import { accountsPoolOf } from "@shared/accountPools";
 import type { CatalogModelView, QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
-import { allowanceProviderOf, rowMeasuresModel } from "@shared/quota";
+import { allowanceProviderOf, inAccountsPool, rowMeasuresModel } from "@shared/quota";
 import {
   allowanceSpent,
   classifyProviderWindows,
   compareBandRank,
+  poolRank,
   type SpendBand,
   spendBand,
 } from "@shared/quotaSignals";
-import { effectiveFromProvider, limitingResetOf, scopeAppliesToModel } from "../quota/catalog";
+import {
+  effectiveFromProvider,
+  limitingResetOf,
+  pooledView,
+  scopeAppliesToModel,
+} from "../quota/catalog";
 import type { AppDatabase } from "../storage/db";
 import type { SettingsStore } from "../storage/settingsStore";
 import { prepared } from "../storage/statements";
@@ -417,6 +424,14 @@ export class PlacedWorkScores {
    * has no reading - else, when it names none, the best account by the crew
    * bands. `bound` is handed the work read for
    * this evaluation, so naming the account reads it no second time.
+   *
+   * Where that account is a login of one of `pools` (docs/quota.md, "A pool
+   * of your own logins"), the pool ranks the model - what is left, the band
+   * and the score - while the login has included allowance; the login keeps
+   * naming who serves, its charge and until when its reading holds. A login
+   * that is spent, or serves on credits, keeps its own reading: the login in
+   * use decides whether the model can start, and the pool never reads as
+   * spent while that login has room.
    */
   catalog(
     catalog: CatalogModelView[],
@@ -424,6 +439,7 @@ export class PlacedWorkScores {
     now: number,
     bound: ((model: CatalogModelView, data: PlacedWorkData) => string | undefined) | undefined,
     data: PlacedWorkData,
+    pools?: readonly QuotaProviderView[],
   ): RankedModel[] {
     return catalog.map((model) => {
       const candidates = rows
@@ -452,10 +468,47 @@ export class PlacedWorkScores {
       // which is the provider's whole reading, a spent sibling's included.
       if (!best)
         return boundId ? { provider: model.provider, id: model.id, label: model.label } : model;
-      const resetsAtMs = limitingResetOf(best.row, now, model.id);
+      const resetsAtMs = limitingResetOf(best.row, now, model.id, pools);
       const measuredAt = best.score.charge?.measuredAt ?? best.row.measuredAt;
       // Whether it keeps going on credits is the serving account's reading.
       const { onCredits: _catalog, ...base } = model;
+      // The pool ranks the model only while the login in use has included
+      // allowance of its own: a spent one, and one that serves on credits,
+      // keeps its own reading, band and charge.
+      const pool =
+        allowanceSpent(best.raw) || best.raw.onCredits === true
+          ? undefined
+          : accountsPoolOf(pools, model.provider);
+      if (pool && inAccountsPool(pool, best.row.accountId)) {
+        const members = candidates.filter((c) => inAccountsPool(pool, c.row.accountId));
+        const raw = pooledView(
+          pool,
+          now,
+          model.id,
+          members.map((c) => c.raw),
+        );
+        const placed = poolRank(members.map((c) => ({ ...c.raw, ...c.score })));
+        const {
+          effectivePercentRemaining: _own,
+          paceStatus: _pace,
+          spendPriority: _score,
+          lastsThroughReset: _lasts,
+          ...rest
+        } = base;
+        return {
+          ...rest,
+          ...(raw.effectivePercentRemaining !== undefined
+            ? { effectivePercentRemaining: raw.effectivePercentRemaining }
+            : {}),
+          ...placed,
+          band: spendBand(raw),
+          ...(best.score.charge ? { charge: best.score.charge } : {}),
+          ...(raw.spendPriority !== undefined ? { rawSpendPriority: raw.spendPriority } : {}),
+          ...(best.row.accountId ? { accountId: best.row.accountId } : {}),
+          ...(measuredAt !== undefined ? { measuredAt } : {}),
+          ...(resetsAtMs !== undefined ? { resetsAtMs } : {}),
+        };
+      }
       return {
         ...base,
         ...best.raw,

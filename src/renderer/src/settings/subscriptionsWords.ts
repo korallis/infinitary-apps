@@ -178,13 +178,19 @@ function balanceText(balance: string): string {
 }
 
 /**
- * A pooled row's one line about its proxy's logins (docs/quota.md, "A
- * proxy's pooled logins"): how many are pooled, then each count that stops
- * one serving or leaves it unread. Every sign-in it names is renewed in the
- * proxy app, so the row offers no Sign in of its own.
+ * How a pool's logins stand, a fact at a time (docs/quota.md, "A proxy's
+ * pooled logins" and "A pool of your own logins"): how many are pooled,
+ * then each count that stops one serving or leaves it unread. A proxy's
+ * logins are named as in the proxy app, where each of its sign-ins is
+ * renewed; the person's own are not, and each has its own row to sign in on.
  */
-export function poolLine(pool: QuotaPoolView, now: number): string {
-  const facts = [m.settingsSubscriptionsPoolAccounts({ count: pool.logins })];
+export function poolFacts(pool: QuotaPoolView, now: number): string[] {
+  const own = pool.source === "accounts";
+  const facts = [
+    own
+      ? m.settingsSubscriptionsOwnPoolAccounts({ count: pool.logins })
+      : m.settingsSubscriptionsPoolAccounts({ count: pool.logins }),
+  ];
   if (pool.unread > 0) facts.push(m.settingsSubscriptionsPoolUnread({ count: pool.unread }));
   if (pool.spent > 0)
     facts.push(
@@ -201,10 +207,19 @@ export function poolLine(pool: QuotaPoolView, now: number): string {
       }),
     );
   if (pool.signInEnded > 0)
-    facts.push(m.settingsSubscriptionsPoolSignedOut({ count: pool.signInEnded }));
+    facts.push(
+      own
+        ? m.settingsSubscriptionsOwnPoolSignedOut({ count: pool.signInEnded })
+        : m.settingsSubscriptionsPoolSignedOut({ count: pool.signInEnded }),
+    );
   if (pool.switchedOff > 0)
     facts.push(m.settingsSubscriptionsPoolSwitchedOff({ count: pool.switchedOff }));
-  return facts.join(" · ");
+  return facts;
+}
+
+/** A pooled row's one line about its logins (`poolFacts`). */
+export function poolLine(pool: QuotaPoolView, now: number): string {
+  return poolFacts(pool, now).join(" · ");
 }
 
 /** A moment within the day as its clock time, a later one with its weekday. */

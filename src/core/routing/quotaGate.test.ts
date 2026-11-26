@@ -1,3 +1,5 @@
+import { accountPools } from "@shared/accountPools";
+import type { QuotaProviderView } from "@shared/quota";
 import { describe, expect, it } from "vitest";
 import { openInMemoryDatabase } from "../storage/db";
 import { SettingsStore } from "../storage/settingsStore";
@@ -85,5 +87,59 @@ describe("a wait for a spent allowance", () => {
     expect(quotaGateCleared("codex", reads(false))).toBe(false);
     expect(quotaGateCleared("bucket:high", reads(true))).toBe(true);
     expect(quotaGateCleared("codex", reads(true))).toBe(true);
+  });
+});
+
+// The captain's ask: where a provider's own logins pool, the reset gate
+// holds only when the whole pool is spent (docs/quota.md, "A pool of your
+// own logins").
+describe("a wait for a provider whose own logins pool", () => {
+  const login = (accountId: string, session: number, weekly: number): QuotaProviderView => ({
+    provider: "claude",
+    label: "Claude",
+    accountId,
+    status: "ok",
+    stale: false,
+    windows: [
+      { id: "five_hour", label: "session", percentRemaining: session },
+      { id: "seven_day", label: "weekly", percentRemaining: weekly },
+    ],
+  });
+  const reads = (providers: QuotaProviderView[]) => ({
+    availableModels: () => [],
+    slotsOf: () => [],
+    quota: {
+      latest: () => ({
+        generatedAt: "2026-11-25T16:40:00.000Z",
+        fetchedAt: 0,
+        providers,
+        pools: accountPools(
+          providers,
+          providers.map((row) => ({ accountId: row.accountId ?? "", provider: row.provider })),
+          Date.parse("2026-11-25T16:40:00.000Z"),
+        ),
+      }),
+      latestModels: () => undefined,
+    },
+  });
+
+  it("clears while one login has allowance, and holds once every login is spent", () => {
+    expect(
+      quotaGateCleared("claude", reads([login("personal", 0, 80), login("work", 40, 60)])),
+    ).toBe(true);
+    // Both sessions are used up; each login's week still has allowance, which
+    // serves nothing until a session resets.
+    expect(
+      quotaGateCleared("claude", reads([login("personal", 0, 80), login("work", 0, 60)])),
+    ).toBe(false);
+  });
+
+  it("clears on a spent pool when one login keeps going on credits", () => {
+    const credited: QuotaProviderView = {
+      ...login("personal", 0, 80),
+      keepGoingOnCredits: true,
+      credits: { state: "available" },
+    };
+    expect(quotaGateCleared("claude", reads([credited, login("work", 0, 60)]))).toBe(true);
   });
 });

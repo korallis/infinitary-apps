@@ -1259,6 +1259,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       const views = await services.vault.views();
       const added = views.find((view) => view.id === record.id);
       if (!added) throw new Error("The account was not registered.");
+      // A second login of its provider makes a pool, and a further one joins
+      // it, before its first reading (docs/quota.md, "A pool of your own logins").
+      services.quota.restamp();
       services.slots.reconcile();
       // Its own catalog, in the background: nothing waits on it.
       void services.servedModels.refresh(record.id);

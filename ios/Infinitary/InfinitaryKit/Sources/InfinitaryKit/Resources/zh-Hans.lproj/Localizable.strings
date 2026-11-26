@@ -3892,6 +3892,7 @@
 "settingsSubscriptionsNotReady" = "未就绪";
 "settingsSubscriptionsOnPace" = "正常";
 "settingsSubscriptionsOnPaceAll" = "正常 ✓";
+"settingsSubscriptionsOwnPoolName" = "所有账户";
 "settingsSubscriptionsPaused" = "已暂停";
 "settingsSubscriptionsPersonalResourcesDescription" = "新的船员对话使用你的大副所在 %1$@ 上的全局说明和技能，以及你在那里开启的智能体插件的技能。运行工作的其他 %2$@ 会保留一份副本，只在内容变化时重新发送。船员规则决定交付方式；你的文件引导风格和判断。";
 "settingsSubscriptionsPersonalResourcesTitle" = "全局说明和技能";

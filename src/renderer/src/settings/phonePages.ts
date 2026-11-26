@@ -45,7 +45,16 @@ import {
   RIGOR_WORDS,
 } from "@shared/vocabulary";
 import { quotaMicroMeterLook } from "../design/quota/quotaMeterLook";
-import { accountsSummary, awayNote, clockOf, DEVICE_SIGN_INS_WORDS, rowView } from "./accountRows";
+import {
+  accountsSummary,
+  awayNote,
+  clockOf,
+  DEVICE_SIGN_INS_WORDS,
+  type PoolRowView,
+  poolHeads,
+  type RowView,
+  rowView,
+} from "./accountRows";
 import {
   AUTOMATION_SHEET_WORDS,
   DELIVERY_TONES,
@@ -256,25 +265,7 @@ function accountRow(
       ...(account.pinned ? [CREW_PREFERRED_MARK] : []),
       ...(firstmate ? [SUBSCRIPTIONS_WORDS.firstmateAccountTag] : []),
     ],
-    meters: view.meters.map((meter) => {
-      const look = quotaMicroMeterLook({
-        percentRemaining: meter.percent,
-        pace: meter.pace,
-        clockPercent: meter.clock,
-        stale,
-      });
-      return {
-        id: meter.id,
-        label: meter.label,
-        text: look.text,
-        fill: look.fill,
-        bar: look.bar,
-        figure: look.figure,
-        ...(look.clock !== undefined ? { clock: look.clock } : {}),
-        stale,
-        ...(meter.resetText ? { reset: meter.resetText } : {}),
-      };
-    }),
+    meters: phoneMeters(view.meters, stale),
     ...(view.verdict ? { verdict: view.verdict } : {}),
     ...(view.stateText
       ? {
@@ -287,6 +278,51 @@ function accountRow(
     ...(view.signIn && !saysWhere
       ? { signIn: PHONE_SETTINGS_WORDS.signIn(place.where, view.signInLabel) }
       : {}),
+  };
+}
+
+function phoneMeters(meters: RowView["meters"], stale: boolean): PhoneMeter[] {
+  return meters.map((meter) => {
+    const look = quotaMicroMeterLook({
+      percentRemaining: meter.percent,
+      pace: meter.pace,
+      clockPercent: meter.clock,
+      stale,
+    });
+    return {
+      id: meter.id,
+      label: meter.label,
+      text: look.text,
+      fill: look.fill,
+      bar: look.bar,
+      figure: look.figure,
+      ...(look.clock !== undefined ? { clock: look.clock } : {}),
+      stale,
+      ...(meter.resetText ? { reset: meter.resetText } : {}),
+    };
+  });
+}
+
+/** What the id of a pooled row starts with: such a row is a reading, never an account. */
+const POOL_ROW_PREFIX = "pool:";
+
+/**
+ * A provider's pooled allowance as a row of its own, above that provider's
+ * accounts (docs/quota.md, "A pool of your own logins"): the pooled meters,
+ * how many logins are pooled as its second line, and how the rest stand as
+ * its state.
+ */
+function poolRow(view: PoolRowView, provider: string): PhoneAccountRow {
+  return {
+    id: `${POOL_ROW_PREFIX}${view.provider}`,
+    provider,
+    name: view.name,
+    sub: view.sub,
+    dot: view.meters.length > 0 ? "ok" : "ring",
+    dotLabel: view.sub,
+    marks: [],
+    meters: phoneMeters(view.meters, false),
+    ...(view.standing ? { state: { text: view.standing, danger: false } } : {}),
   };
 }
 
@@ -304,16 +340,21 @@ export function intelligencePage(input: IntelligenceInput): PhoneIntelligence {
       (order.get(a.providerId) ?? Number.MAX_SAFE_INTEGER) -
         (order.get(b.providerId) ?? Number.MAX_SAFE_INTEGER) || a.createdAt - b.createdAt,
   );
-  const homeRows = ordered.map((account) =>
-    accountRow(
-      account,
-      snapshot,
-      nameIn(providers),
-      { who: home, where: `on ${home}` },
-      input.firstmateAccount === account.id,
-      now,
-    ),
-  );
+  const pooled = poolHeads(ordered, snapshot?.pools, now);
+  const homeRows = ordered.flatMap((account) => {
+    const pool = pooled.get(account.id);
+    return [
+      ...(pool ? [poolRow(pool, nameIn(providers)(account.providerId))] : []),
+      accountRow(
+        account,
+        snapshot,
+        nameIn(providers),
+        { who: home, where: `on ${home}` },
+        input.firstmateAccount === account.id,
+        now,
+      ),
+    ];
+  });
   const groups: PhoneAccountGroup[] = [
     {
       id: "home",
@@ -352,7 +393,11 @@ export function intelligencePage(input: IntelligenceInput): PhoneIntelligence {
   ];
   const every = groups.flatMap((group) => group.rows);
   return {
-    summary: accountsSummary(every.map((row) => ({ signIn: row.signIn !== undefined }))),
+    summary: accountsSummary(
+      every
+        .filter((row) => !row.id.startsWith(POOL_ROW_PREFIX))
+        .map((row) => ({ signIn: row.signIn !== undefined })),
+    ),
     ...(snapshot && snapshot.providers.length > 0
       ? { asOf: PHONE_SETTINGS_WORDS.asOf(clockOf(snapshot.fetchedAt)) }
       : {}),

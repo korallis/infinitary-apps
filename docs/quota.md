@@ -159,6 +159,15 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
   Crew delivery holds a lane while a typed cut-off stands on its account - the fact itself, a spent allowance included - and leaves every other not-serving reason to fail its turn as before (`docs/inbox.md`, "A lane on a withheld account").
 - **A spent allowance withholds nothing.**
   Its predicate is headroom: a pushed `rejected` reading is a zero window until its reset, even for the sensed Claude row (`withRejectedReadings`, laid over each sensed row by `createQuotaFetcher`'s `overlay`; a reading that flips to or from `rejected` refreshes the snapshot at once).
+  A row the sensor could not read, known only through that refusal, is marked `unread`: it holds the account like any used-up row, and the first mate's pause card says its allowance could not be read, never that it was checked (`Flagship.allowanceCheck`).
+  So is a row the sensor answered for with no share in any window, and a session-only login's row when its sessions reported a refusal and never a share (`pushedOnlyProviderViews`).
+  The card says the same of a row none of whose windows carries a share, such as a login no session has reported on yet.
+  A proxy's next reading replaces the mark with the rest of the last measurement (`rowOfOutcome`), so a reading taken after a refusal is a check again.
+  The time the card names is a share reading's own: a row built from sessions' readings carries when a session last reported a share as its `measuredAt` (`pushedProviderViews`), never a refusal's time, a passed reset's or the snapshot's, and an answer that carried windows and no share is marked `unread` by the sensor's and a proxy's row builders (`answeredNoShare`), so it is named no time.
+  A row that is not read now and still knows when a share last was, as a further login whose refusal with no share ended before its reset, is said to be last read then, never checked.
+  That time is the row's `lastShareAt`, which only the sessions' row builders set: a row with no share in its windows and no such time names none, whatever its `measuredAt`, so a reset-only answer saved before the mark existed is never named a reading time.
+  The store keeps that time on each window (`pushed_quota.share_at`): a later refusal that names only its reset and a hold that ended both move the reading's `at` and are no readings, so neither erases or moves it, while the same share reported again is a newer reading and moves a further login's row at once.
+  A reading saved before the column is read as taken at its own time when it carries a share.
   The row the sensor measured keeps its other windows; a row it could not measure carries only the refusal; `auth_required` is left standing.
   Only a `rejected` reading's reset is trusted (rows from before migration 51 held seconds).
   The vault still records `no_headroom` with its reset for the lane and seat phases, and holds none with no reset named, since nothing could clear it.
@@ -359,3 +368,50 @@ Infinitary reads such a proxy's own limit readings and shows, routes and pauses 
   The proxy is read on its own one-minute clock and again after each quota refresh (`localReading` on `QuotaService`), never holding a refresh up.
   One projection makes every row read through the proxy, all timed at the reading's own moment (`projectProxyRows`, through `rowOfOutcome`): the Claude row, found by its quota id while Claude Code's access is set up and the last ordinary refresh read the account through it, so a fresh reading of the account's own sign-in is never replaced, and each connection's pool rows.
   It is laid over every refresh until the next reading, and a reading publishes the rows and the catalog only when they change, so an unchanged minute tells no surface; when the last proxy goes, one publish gives the Claude row back to what its access says and takes the connection rows away.
+
+## A pool of your own logins
+
+Several logins of one provider signed in on this computer are one pool: one for Claude and one for ChatGPT, and none for any other provider.
+A pool is a reading of its logins, never an allowance of its own: each login keeps its own limits, and a request still runs on one login.
+
+- **Who is in it.**
+  The enabled accounts of the provider here (`pools` on `QuotaService`, wired in `src/core/quota/homeQuota.ts`); a paused account is not a login of the pool, and a login a CLI proxy answers for is that proxy's pool already ("A proxy's pooled logins").
+  A provider with fewer than two such logins has no pool.
+- **The fold.**
+  `accountPools` (`src/shared/accountPools.ts`) reads each login from its account row and hands them to `poolReading`, the same math a proxy's logins use, each login weighing one.
+  A login with an account-wide window used up is spent and counts as zero in every window until its last such window resets: one that resets earlier leaves it blocked by the other, so the pool is back with the first login that can serve.
+  A login whose row is missing, stale or not a reading is unread, and one whose sign-in ended cannot serve: both are counted on the pool and never weigh as zero.
+- **Where it lives.**
+  The snapshot carries the pools beside the account rows, in `pools` (`quotaSnapshotViewSchema`), one row per pooled provider with no account id; `pool.source` is `accounts` and `pool.accounts` names the logins.
+  A pool adds a row and changes no account's measurement: `QuotaService` keeps every row as its reading left it, and that measurement is what a stale merge, a pushed row, a forgotten login and the saved snapshot work on.
+  What readers are served (`latest`) is that measurement, with one difference for pooled logins, "A reset between readings" below.
+  The pools are folded on every snapshot, as of the time its rows were read, and again whenever the logins change: an account added, removed, paused or resumed (`QuotaService.restamp`), or a login whose reading is forgotten (`forgetAccount`).
+- **A reset between readings.**
+  In the served snapshot, a pooled login's used-up window leaves its row once its own reset has passed (`settlePoolResets`), with no new reading: the login's other windows keep what they read, and it serves again when its last used-up window is gone.
+  A login whose every window was used up and has reset is served with no windows, so it reads as not read yet, never as full, until the next reading.
+  While the provider's own refusal of a login stands (the vault's cut-off, `refusedUntil`), its used-up windows stay on its row until the refusal ends, and the row follows the refusal when it begins, ends or names a different return (`AccountVault.onCutOffChange`): a window's reset frees nothing while the provider still refuses the login.
+  The refusal itself is on that login's served row until it ends, whatever its reading says (`withRefusal`, as `withRejectedReadings` lays a session's refusal over a meter): the refusal is the whole account's, so every window of a current reading that bounds a scope reads used up until the refusal ends (one with room left, one read without a share, and a model's own), and a reading that failed, went stale or is missing is served as one used-up account-wide window.
+  A bound left unread would make that scope's allowance unknown, and unknown may be tried.
+  Each window keeps its own reset, so a pooled login's return is named by its last blocker (`pooledBlockerOf`): of the windows that bound the model, the used-up one that resets last, and no time at all when one of them has no known reset.
+  The served row names the refusal's end itself (`refusedUntilMs`), and the return is that end when it is later than every such reset: a window already used up keeps its own earlier reset, so no window may name the refusal's end.
+  The first mate's pause card and the reset a routing decision records read that for a login of a pool; a login outside one, and a credits notice, read the window with the least left as before.
+  That row is what the login can do, not a reading of it: the first mate's pause card takes whether and when a login's allowance was checked from the measurement (`QuotaService.latestMeasured`, `Flagship.allowanceCheck`).
+  So a reading taken before the refusal, or one that could not be taken, never opens the pooled waits or offers that login to the first mate's seat.
+  The served pool is folded with that refusal, so the return time on the pooled row and its meters is the one the wait holds until; the measurement's own fold never reads it.
+  `QuotaService` does this at that moment, on a timer, and before any read after it, then folds the pool, rebuilds the catalog and pushes the snapshot, so the pooled meter, both reset gates, routing and the first mate's seat change together at the first reset that makes a login usable.
+  The measurement is never rewritten: the saved snapshot holds the rows as read, and a login whose pool ends, because another was paused or removed, is served its measured row again.
+  A login of a provider with no pool is served its row as read.
+- **Routing.**
+  A model of a pooled provider is read as its pool, not as its best login (`pooledView` in `src/core/quota/catalog.ts`): what is left is the pool's, and its place in the spend order is the mean of the scores of the logins that still have allowance (`poolRank`), since pooled windows have no one cycle to score.
+  The pool lasts through its resets when one such login does.
+  A model is spent in its pool exactly when no read login can serve it: a model's own window that one login alone reports never spends the model for a login that has room, and the share left is then the mean of the logins' own.
+  Crew routing ranks the model by the pool while the login that would serve it has included allowance, and keeps that login as the one that serves, whose charge is counted and whose reset the reading holds until (`PlacedWorkScores.catalog`).
+  A login in use that is spent, or that serves on credits, keeps its own reading, band and credits mark, so the pool orders the models and the login in use decides whether one can start now and what it is paid from.
+  Another computer's models are ranked by that computer's own readings.
+- **Pausing.**
+  The first mate moves off a spent login to another of the provider with allowance and pauses only when none has any (`Flagship.sibling`).
+  A reset gate on a pooled provider clears while the pool has allowance or its allowance is unknown, and holds only when every login is spent and none keeps going on credits (`quotaGateCleared`).
+- **Where it shows.**
+  Settings → Intelligence heads a pooled provider's accounts with one row: the pooled meters, how many accounts are pooled, and each count that is spent, unread or needs signing in again (`poolRowViews` in `src/renderer/src/settings/accountRows.ts`).
+  The phone's Intelligence page shows the same row at the head of that provider's accounts (`intelligencePage`).
+  The first mate's allowance digest names the pool before its logins (`quotaContextLine`).

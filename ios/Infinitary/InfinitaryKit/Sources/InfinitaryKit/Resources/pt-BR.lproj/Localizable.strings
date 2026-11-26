@@ -3892,6 +3892,7 @@
 "settingsSubscriptionsNotReady" = "não está pronta";
 "settingsSubscriptionsOnPace" = "no ritmo";
 "settingsSubscriptionsOnPaceAll" = "no ritmo ✓";
+"settingsSubscriptionsOwnPoolName" = "Todas as contas";
 "settingsSubscriptionsPaused" = "pausada";
 "settingsSubscriptionsPersonalResourcesDescription" = "As novas conversas dos tripulantes usam as instruções e habilidades globais do %1$@ onde mora seu imediato, junto com as habilidades dos plugins de agente que você ativou lá. Os outros %2$@ que executam trabalho guardam uma cópia, enviada de novo só quando ela muda. As regras da tripulação regem a entrega; seu arquivo orienta o estilo e o julgamento.";
 "settingsSubscriptionsPersonalResourcesTitle" = "Instruções e habilidades globais";

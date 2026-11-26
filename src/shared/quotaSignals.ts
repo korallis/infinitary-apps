@@ -491,12 +491,14 @@ export type PoolLoginWindow = {
 };
 
 /**
- * One login of a CLI proxy, as the pool weighs it at the moment it was read
- * (docs/quota.md, "A proxy's pooled logins"). `windows` absent is unread.
+ * One login of a pool - a CLI proxy's, or one of the person's own - as the
+ * pool weighs it at the moment it was read (docs/quota.md, "A proxy's
+ * pooled logins" and "A pool of your own logins"). `windows` absent is
+ * unread.
  * - `serving` it answers now,
  * - `spent` its allowance ran out: it weighs zero until `backAtMs`,
  * - `switched_off` the proxy has it switched off,
- * - `sign_in_ended` its sign-in ended in the proxy and it cannot serve.
+ * - `sign_in_ended` its sign-in ended and it cannot serve.
  */
 export type PoolLogin = {
   state: "serving" | "spent" | "switched_off" | "sign_in_ended";
@@ -608,4 +610,30 @@ export function poolReading(
   }
   const credits = serving.find((login) => login.credits?.state === "available")?.credits;
   return { windows, pool, ...(credits ? { credits } : {}) };
+}
+
+/**
+ * A pool's place in the spend order, from its logins' own places: pooled
+ * windows carry no cycle, so the pool has no score of its own. The score is
+ * the mean of the scores of the logins that still have allowance and a
+ * known score; the pool lasts through its resets when one such login does,
+ * and runs out first only when one is known to and none lasts. Unknown
+ * stays unknown.
+ */
+export function poolRank(logins: readonly BandFacts[]): SpendRank {
+  const able = logins.filter((login) => !allowanceSpent(login) && login.onCredits !== true);
+  const scores = able.flatMap((login) =>
+    typeof login.spendPriority === "number" ? [login.spendPriority] : [],
+  );
+  const lasts = able.some((login) => login.lastsThroughReset === true)
+    ? true
+    : able.some((login) => login.lastsThroughReset === false)
+      ? false
+      : undefined;
+  return {
+    ...(scores.length > 0
+      ? { spendPriority: scores.reduce((sum, score) => sum + score, 0) / scores.length }
+      : {}),
+    ...(lasts !== undefined ? { lastsThroughReset: lasts } : {}),
+  };
 }

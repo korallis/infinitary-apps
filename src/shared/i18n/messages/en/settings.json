@@ -1340,6 +1340,17 @@
   "settingsSubscriptionsNotReady": "not ready",
   "settingsSubscriptionsOnPace": "on pace",
   "settingsSubscriptionsOnPaceAll": "on pace ✓",
+  "settingsSubscriptionsOwnPoolAccounts": {
+    "plural": "count",
+    "one": "{count} account pooled",
+    "other": "{count} accounts pooled"
+  },
+  "settingsSubscriptionsOwnPoolName": "All accounts",
+  "settingsSubscriptionsOwnPoolSignedOut": {
+    "plural": "count",
+    "one": "{count} needs signing in again",
+    "other": "{count} need signing in again"
+  },
   "settingsSubscriptionsPaused": "paused",
   "settingsSubscriptionsPersonalResourcesDescription": "New crewmate sessions use the global instructions and skills of the {computer} where your first mate lives, with the skills of the agent plugins you turned on there. Other {computers} that run work keep a copy, sent again only when it changes. Crew rules govern delivery; your file guides style and judgment.",
   "settingsSubscriptionsPersonalResourcesTitle": "Global instructions and skills",

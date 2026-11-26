@@ -31,6 +31,7 @@ import { appPathsFor } from "../paths";
 import { AccountVault } from "../pi/accountVault";
 import type { AuthInteractionBridge } from "../pi/piAuth";
 import { startHomeQuota } from "../quota/homeQuota";
+import { PushedQuotaStore } from "../quota/pushedQuota";
 import { questionSessionSpec } from "../session/questionSession";
 import { SettingsStore } from "../storage/settingsStore";
 import { claudeLoginFolder } from "./accountBackend";
@@ -125,6 +126,7 @@ function boot(home: string) {
     claudeLoginFolder(join(paths.accountsDir, CLAUDE_PROVIDER_ID, accountId));
   return {
     paths,
+    db,
     client,
     storesRead,
     usageAsks,
@@ -645,6 +647,7 @@ describe("further Claude logins", () => {
         settings: run.settings,
         flagship: run.flagship,
         firstmate: { boundAccount: () => seatedOn },
+        quota: run.homeQuota.quota,
         servedModels: { forget: () => {} },
         firstRun: { reconcile: () => {} },
         broadcastEvent: (event: { type: string; text?: string }) => {
@@ -694,6 +697,104 @@ describe("further Claude logins", () => {
     expect(notes[2]).toBe(
       `You removed ${spent.label}, the Claude login your first mate was running on. No other Claude login can run your first mate now.`,
     );
+  });
+
+  // The captain's choice on the review's question: the pause card names the
+  // time a share of the allowance was read, for every login. Through the
+  // real store and publish path, that time survives a refusal of the same
+  // window, an ended hold and a restart, and moves with a newer reading.
+  it("names a further login's allowance check by when a session last reported a share", async () => {
+    const run = boot(home);
+    await run.add();
+    const second = await run.add();
+    await run.homeQuota.quota.refresh("demand");
+    const check = () => run.flagship.allowanceCheck(second.id);
+    const share = {
+      status: "allowed" as const,
+      windowId: "seven_day",
+      utilization: 0.4,
+      resetsAt: START + 100 * HOUR,
+    };
+    expect(check()).toEqual({ read: false });
+
+    vi.setSystemTime(START + 60_000);
+    run.homeQuota.recordClaudeRateLimit(second.id, share);
+    expect(check()).toMatchObject({ at: START + 60_000, read: true });
+
+    // The same share reported again later is a newer reading.
+    vi.setSystemTime(START + 120_000);
+    run.homeQuota.recordClaudeRateLimit(second.id, share);
+    expect(check()).toMatchObject({ at: START + 120_000, read: true });
+
+    // A full refresh later is not a reading of this login.
+    vi.setSystemTime(START + 180_000);
+    await run.homeQuota.quota.refresh("demand");
+    expect(check()).toMatchObject({ at: START + 120_000, read: true });
+
+    // The provider refuses that same window, naming its reset and no share.
+    vi.setSystemTime(START + 240_000);
+    run.homeQuota.recordClaudeRateLimit(second.id, {
+      status: "rejected",
+      windowId: "seven_day",
+      resetsAt: START + 100 * HOUR,
+    });
+    const rowOf = () =>
+      run.homeQuota.quota.latestMeasured()?.providers.find((row) => row.accountId === second.id);
+    expect(rowOf()?.windows).toMatchObject([{ id: "seven_day", percentRemaining: 0 }]);
+    expect(check()).toMatchObject({ at: START + 120_000, read: true });
+
+    // A refusal that carries a share is a reading: here as one saved before
+    // the store kept the share's time apart, which is read at its own time.
+    vi.setSystemTime(START + 270_000);
+    run.homeQuota.pushed.record(second.id, {
+      windowId: "seven_day",
+      status: "rejected",
+      utilization: 1,
+      resetsAt: START + 100 * HOUR,
+      at: START + 270_000,
+    });
+    await run.homeQuota.quota.refresh("demand");
+    expect(check()).toMatchObject({ at: START + 270_000, read: true });
+
+    // The captain tries past the spent allowance: the hold and the refused
+    // reading end together, which is no reading either.
+    run.homeQuota.noteCutOff(second.id, { class: "no_headroom", resetsAt: START + 100 * HOUR });
+    expect(run.vault.cutOff(second.id)?.class).toBe("no_headroom");
+    // The vault tells its listeners in a microtask.
+    await Promise.resolve();
+    vi.setSystemTime(START + 300_000);
+    run.vault.tryPastSpent(second.id);
+    await Promise.resolve();
+    await run.homeQuota.quota.refresh("demand");
+    expect(
+      run.homeQuota.pushed.windowsFor(second.id).map((window) => [window.status, window.at]),
+    ).toEqual([["allowed", START + 300_000]]);
+    expect(check()).toMatchObject({ at: START + 270_000, read: true });
+
+    // A refusal with no share, ended before its reset, leaves no share in
+    // the window: the allowance is not read now, and was last read when the
+    // share was. That is no new check.
+    vi.setSystemTime(START + 360_000);
+    run.homeQuota.recordClaudeRateLimit(second.id, {
+      status: "rejected",
+      windowId: "seven_day",
+      resetsAt: START + 100 * HOUR,
+    });
+    run.homeQuota.noteCutOff(second.id, { class: "no_headroom", resetsAt: START + 100 * HOUR });
+    await Promise.resolve();
+    vi.setSystemTime(START + 420_000);
+    run.vault.tryPastSpent(second.id);
+    await Promise.resolve();
+    await run.homeQuota.quota.refresh("demand");
+    expect(rowOf()?.windows.map((window) => window.percentRemaining)).toEqual([undefined]);
+    expect(check()).toEqual({ at: START + 270_000, read: false });
+    // Still held or not is the windows' word, as before: nothing reads used up.
+    expect(run.flagship.pause(second.id)).toBeUndefined();
+
+    // The kept time is saved with the reading.
+    expect(new PushedQuotaStore(run.db).windowsFor(second.id)).toMatchObject([
+      { windowId: "seven_day", at: START + 420_000, shareAt: START + 270_000 },
+    ]);
   });
 
   // Plan item 6: the first mate's seat accepts both bindings.

@@ -1340,6 +1340,17 @@
   "settingsSubscriptionsNotReady": "nicht bereit",
   "settingsSubscriptionsOnPace": "im Plan",
   "settingsSubscriptionsOnPaceAll": "im Plan ✓",
+  "settingsSubscriptionsOwnPoolAccounts": {
+    "plural": "count",
+    "one": "{count} Konto gebündelt",
+    "other": "{count} Konten gebündelt"
+  },
+  "settingsSubscriptionsOwnPoolName": "Alle Konten",
+  "settingsSubscriptionsOwnPoolSignedOut": {
+    "plural": "count",
+    "one": "{count} muss neu angemeldet werden",
+    "other": "{count} müssen neu angemeldet werden"
+  },
   "settingsSubscriptionsPaused": "pausiert",
   "settingsSubscriptionsPersonalResourcesDescription": "Neue Unterhaltungen von Crewmitgliedern verwenden die globalen Anweisungen und Skills auf dem {computer}, auf dem dein erster Offizier lebt, samt den Skills der Agenten-Plugins, die du dort eingeschaltet hast. Andere {computers}, die Arbeit ausführen, behalten eine Kopie, die nur nach einer Änderung neu gesendet wird. Die Crew-Regeln bestimmen die Lieferung; deine Datei leitet Stil und Urteil.",
   "settingsSubscriptionsPersonalResourcesTitle": "Globale Anweisungen und Skills",

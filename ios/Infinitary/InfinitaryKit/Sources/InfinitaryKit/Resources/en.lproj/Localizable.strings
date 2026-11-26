@@ -3892,6 +3892,7 @@
 "settingsSubscriptionsNotReady" = "not ready";
 "settingsSubscriptionsOnPace" = "on pace";
 "settingsSubscriptionsOnPaceAll" = "on pace ✓";
+"settingsSubscriptionsOwnPoolName" = "All accounts";
 "settingsSubscriptionsPaused" = "paused";
 "settingsSubscriptionsPersonalResourcesDescription" = "New crewmate sessions use the global instructions and skills of the %1$@ where your first mate lives, with the skills of the agent plugins you turned on there. Other %2$@ that run work keep a copy, sent again only when it changes. Crew rules govern delivery; your file guides style and judgment.";
 "settingsSubscriptionsPersonalResourcesTitle" = "Global instructions and skills";

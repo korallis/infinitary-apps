@@ -734,6 +734,25 @@ describe("delegated renewal (routine expiry recovers without a sign-in)", () => 
     expect(row?.windows).toHaveLength(1);
   });
 
+  // The captain's choice on the review of pooled logins: an allowance is
+  // said to be checked only when a share of it was read.
+  it("marks an answer that names a reset and no share as no reading of the allowance", async () => {
+    const auth = {
+      accounts: () => [claudeAccount],
+      resolve: async () => ({ apiKey: "live", usingOAuth: true }),
+    };
+    const resetOnly = await rowOf(auth, async () => ({
+      status: 200,
+      json: { five_hour: { resets_at: "2026-08-14T15:00:00Z" } },
+    }));
+    expect(resetOnly?.windows).toMatchObject([{ id: "five_hour" }]);
+    expect(resetOnly?.windows[0]?.percentRemaining).toBeUndefined();
+    expect(resetOnly).toMatchObject({ status: "ok", measuredAt: NOW, unread: true });
+    const read = await rowOf(auth, async () => ({ status: 200, json: usage }));
+    expect(read?.windows[0]?.percentRemaining).toBe(92);
+    expect(read?.unread).toBeUndefined();
+  });
+
   it("marks nothing on an ordinary reading that never needed renewing", async () => {
     const renew = vi.fn(async () => ({ outcome: "renewed" as const, auth: { usingOAuth: true } }));
     const row = await rowOf(

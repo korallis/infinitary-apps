@@ -13,7 +13,7 @@ import {
   savedResetsNow,
 } from "@shared/quota";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   AuthAside,
   AuthMethodChoice,
@@ -37,7 +37,7 @@ import type { RowMenuItem } from "../design";
 import { Button, Input, QuotaMicroMeter, RowMenu, StatusDot, Switch } from "../design";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { useRestLabel } from "../design/core/restLabel";
-import { clockOf, offersKeepGoing, rowView } from "./accountRows";
+import { clockOf, offersKeepGoing, type PoolRowView, poolHeads, rowView } from "./accountRows";
 import { CostLimitRow } from "./CostLimitRow";
 import { DeviceSignInGroups } from "./DeviceSignIns";
 import { FIRSTMATE_SELECT_STYLE, FirstmateModelRow, SettingRow } from "./GeneralTab";
@@ -357,6 +357,45 @@ export function accountMenu(
   const groups = [present(settings), present(actions), last].filter((group) => group.length > 0);
   return groups.flatMap((group, index) =>
     index === 0 ? group : [{ separator: true } as const, ...group],
+  );
+}
+
+/**
+ * A provider's pooled allowance, above its accounts: the share left across
+ * every login of it signed in here (docs/quota.md, "A pool of your own
+ * logins"). It reads only; each login is acted on from its own row.
+ */
+function PoolRow({ view, providerName }: { view: PoolRowView; providerName: string }) {
+  return (
+    <div className="fm-subs-row" data-pool-row={view.provider}>
+      <span className="fm-subs-dot" />
+      <span className="fm-subs-prov">{providerName}</span>
+      <div className="fm-subs-who">
+        <span className="fm-subs-label">
+          <span className="fm-subs-name">
+            <span className="fm-subs-prov-inline">{providerName} · </span>
+            {view.name}
+          </span>
+        </span>
+        <span className="fm-subs-sub">{view.sub}</span>
+      </div>
+      <div className="fm-subs-flow">
+        {view.meters.map((meter) => (
+          <QuotaMicroMeter
+            key={meter.id}
+            label={meter.label}
+            {...(meter.percent !== undefined ? { percentRemaining: meter.percent } : {})}
+            pace={meter.pace}
+            {...(meter.resetText ? { resetText: meter.resetText } : {})}
+          />
+        ))}
+        {view.standing && (
+          <span className="fm-subs-credits" data-pool="">
+            {view.standing}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1109,6 +1148,7 @@ export function SubscriptionsTab() {
   );
   const quotaRowFor = (account: AccountView): QuotaProviderView | undefined =>
     snapshot?.providers.find((row) => row.accountId === account.id);
+  const pooled = poolHeads(ordered, snapshot?.pools, Date.now());
   const seatProvider =
     seatModel?.provider ?? ordered.find((account) => account.id === flagshipAccountId)?.providerId;
   const firstmateChoices = firstmateAccountChoices(ordered, seatProvider, quotaRowFor, Date.now());
@@ -1249,47 +1289,55 @@ export function SubscriptionsTab() {
           .filter((account) => !isCustomApiProvider(account.providerId))
           .map((account) => {
             const row = quotaRowFor(account);
+            const pool = pooled.get(account.id);
             return (
-              <div key={account.id}>
-                <AccountRow
-                  account={account}
-                  providerName={providerName(account.providerId)}
-                  {...(row ? { quotaRow: row } : {})}
-                  isFlagship={flagshipAccountId === account.id}
-                  hasModels={hasModels(account.providerId)}
-                  renaming={renamingId === account.id}
-                  signingIn={busyAccount === account.id}
-                  refreshing={refreshing}
-                  onStartRename={() => setRenamingId(account.id)}
-                  onRename={(label) => rename(account.id, label)}
-                  onCancelRename={() => setRenamingId(null)}
-                  onTogglePin={() => togglePin(account)}
-                  {...(offersKeepGoing(account) ? { onKeepGoing: () => keepGoing(account) } : {})}
-                  onUseSavedReset={() => applySavedReset(account)}
-                  {...(allowanceProviderOf(account.providerId) === "codex"
-                    ? { onUseSavedResets: () => toggleAutoResets(account) }
-                    : {})}
-                  onSetEnabled={(enabled) => setEnabled(account, enabled)}
-                  onDisconnect={() => disconnect(account)}
-                  onSignIn={() => signIn(account)}
-                  onRetry={refreshQuota}
-                  onShowModels={() => {
-                    setModelsOpen(true);
-                    setModelsFocus(account.id);
-                  }}
-                  onResetSlots={() => {
-                    void slotSave.save(() =>
-                      window.infinitary.models.resetSlots(account.providerId),
-                    );
-                  }}
-                />
-                {editedAccountId === account.id && accountsSave.error ? (
-                  <div className="fm-connect-aside" data-account-error={account.id}>
-                    <SettingError error={accountsSave.error} />
+              <Fragment key={account.id}>
+                {pool && (
+                  <div>
+                    <PoolRow view={pool} providerName={providerName(account.providerId)} />
                   </div>
-                ) : null}
-                {asideFor({ accountId: account.id })}
-              </div>
+                )}
+                <div>
+                  <AccountRow
+                    account={account}
+                    providerName={providerName(account.providerId)}
+                    {...(row ? { quotaRow: row } : {})}
+                    isFlagship={flagshipAccountId === account.id}
+                    hasModels={hasModels(account.providerId)}
+                    renaming={renamingId === account.id}
+                    signingIn={busyAccount === account.id}
+                    refreshing={refreshing}
+                    onStartRename={() => setRenamingId(account.id)}
+                    onRename={(label) => rename(account.id, label)}
+                    onCancelRename={() => setRenamingId(null)}
+                    onTogglePin={() => togglePin(account)}
+                    {...(offersKeepGoing(account) ? { onKeepGoing: () => keepGoing(account) } : {})}
+                    onUseSavedReset={() => applySavedReset(account)}
+                    {...(allowanceProviderOf(account.providerId) === "codex"
+                      ? { onUseSavedResets: () => toggleAutoResets(account) }
+                      : {})}
+                    onSetEnabled={(enabled) => setEnabled(account, enabled)}
+                    onDisconnect={() => disconnect(account)}
+                    onSignIn={() => signIn(account)}
+                    onRetry={refreshQuota}
+                    onShowModels={() => {
+                      setModelsOpen(true);
+                      setModelsFocus(account.id);
+                    }}
+                    onResetSlots={() => {
+                      void slotSave.save(() =>
+                        window.infinitary.models.resetSlots(account.providerId),
+                      );
+                    }}
+                  />
+                  {editedAccountId === account.id && accountsSave.error ? (
+                    <div className="fm-connect-aside" data-account-error={account.id}>
+                      <SettingError error={accountsSave.error} />
+                    </div>
+                  ) : null}
+                  {asideFor({ accountId: account.id })}
+                </div>
+              </Fragment>
             );
           })}
         <div className="fm-subs-add">

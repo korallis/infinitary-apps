@@ -2739,6 +2739,42 @@
       <string>%1$ld tareas</string>
     </dict>
   </dict>
+  <key>settingsSubscriptionsOwnPoolAccounts</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld cuenta agrupada</string>
+      <key>many</key>
+      <string>%1$ld de cuentas agrupadas</string>
+      <key>other</key>
+      <string>%1$ld cuentas agrupadas</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsOwnPoolSignedOut</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld debe volver a iniciar sesión</string>
+      <key>many</key>
+      <string>%1$ld deben volver a iniciar sesión</string>
+      <key>other</key>
+      <string>%1$ld deben volver a iniciar sesión</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsPoolAccounts</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

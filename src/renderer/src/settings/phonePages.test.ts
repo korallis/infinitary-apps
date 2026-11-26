@@ -1,3 +1,4 @@
+import { accountPools } from "@shared/accountPools";
 import type { AccountView } from "@shared/accounts";
 import { automationRuleSchema, automationRunSchema, eventsWords } from "@shared/automation";
 import * as m from "@shared/i18n/messages.generated";
@@ -283,5 +284,103 @@ describe("the phone's row of a connection to a proxy's pools", () => {
     expect(row?.state?.text).toBe(
       "ChatGPT: 2 accounts pooled in your proxy app · 2 not read yet · Credits: 15 left · change it on chatgpt.com · Claude: 3 accounts pooled in your proxy app",
     );
+  });
+});
+
+/**
+ * The captain's ask: the phone page shows a provider's pooled meter where
+ * several of its logins are signed in (docs/quota.md, "A pool of your own
+ * logins"). Fixture: three ChatGPT logins as the home sends them, one of
+ * them a reading it could not refresh, and the pool the home folds from
+ * them, parsed by the published schema.
+ */
+describe("the phone's row of a provider whose own logins pool", () => {
+  const reading = (accountId: string, percent: number, stale = false) => ({
+    provider: "codex",
+    label: "Codex",
+    accountId,
+    status: "ok" as const,
+    stale,
+    windows: [{ id: "weekly", label: "weekly", percentRemaining: percent }],
+  });
+  const rows = [reading("acct_a", 80), reading("acct_b", 20), reading("acct_c", 5, true)];
+  const pageOf = (pooled: boolean) =>
+    intelligencePage({
+      accounts: [
+        account("acct_a", "Personal", { createdAt: 1 }),
+        account("acct_b", "Work", { createdAt: 2 }),
+        account("acct_c", "Team", { createdAt: 3 }),
+      ],
+      snapshot: quotaSnapshotViewSchema.parse({
+        generatedAt: new Date(NOW).toISOString(),
+        fetchedAt: NOW,
+        providers: rows,
+        ...(pooled
+          ? {
+              pools: accountPools(
+                rows,
+                rows.map((row) => ({ accountId: row.accountId, provider: row.provider })),
+                NOW,
+              ),
+            }
+          : {}),
+      }),
+      providers,
+      devices: [],
+      firstmateAccount: null,
+      home: "Studio",
+      now: NOW,
+    }).groups[0]?.rows;
+
+  it("heads the provider's accounts with the pooled meter and how its logins stand", () => {
+    const page = pageOf(true);
+    expect(page?.map((row) => row.id)).toEqual(["pool:codex", "acct_a", "acct_b", "acct_c"]);
+    const pool = page?.[0];
+    expect(pool).toMatchObject({
+      provider: "Codex",
+      name: "All accounts",
+      sub: "3 accounts pooled",
+      state: { text: "1 not read yet", danger: false },
+    });
+    // (80 + 20) / 2: the login that was not read is left out, never counted as empty.
+    expect(pool?.meters.map((meter) => [meter.label, meter.text])).toEqual([["weekly", "50%"]]);
+  });
+
+  it("shows no pooled row while the home sends no pool", () => {
+    expect(pageOf(false)?.map((row) => row.id)).toEqual(["acct_a", "acct_b", "acct_c"]);
+  });
+
+  it("heads the provider's whole group, a paused account included, and counts only accounts", () => {
+    const pooled = [reading("acct_a", 80), reading("acct_b", 20)];
+    const page = intelligencePage({
+      accounts: [
+        // The oldest account of the provider is paused: it is no login of the pool.
+        account("acct_old", "Old team", { createdAt: 1, enabled: false }),
+        account("acct_a", "Personal", { createdAt: 2 }),
+        account("acct_b", "Work", { createdAt: 3 }),
+      ],
+      snapshot: quotaSnapshotViewSchema.parse({
+        generatedAt: new Date(NOW).toISOString(),
+        fetchedAt: NOW,
+        providers: pooled,
+        pools: accountPools(
+          pooled,
+          pooled.map((row) => ({ accountId: row.accountId, provider: row.provider })),
+          NOW,
+        ),
+      }),
+      providers,
+      devices: [],
+      firstmateAccount: null,
+      home: "Studio",
+      now: NOW,
+    });
+    expect(page.groups[0]?.rows.map((row) => row.id)).toEqual([
+      "pool:codex",
+      "acct_old",
+      "acct_a",
+      "acct_b",
+    ]);
+    expect(page.summary).toBe("3 accounts");
   });
 });

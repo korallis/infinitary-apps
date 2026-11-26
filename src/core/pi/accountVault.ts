@@ -889,6 +889,7 @@ export class AccountVault {
       ) {
         account.cutOff = { ...account.cutOff, resetsAt: cutOff.resetsAt };
         this.saveRegistry();
+        this.cutOffChanged(accountId); // The return moved: whoever waits on it waits anew.
       }
       return;
     }

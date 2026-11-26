@@ -93740,6 +93740,221 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `on pace ✓`;
   }
+  function settingsSubscriptionsOwnPoolAccounts(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `حسابات مجمّعة: ${count}`;
+          case "one":
+            return `حسابات مجمّعة: ${count}`;
+          case "two":
+            return `حسابات مجمّعة: ${count}`;
+          case "few":
+            return `حسابات مجمّعة: ${count}`;
+          case "many":
+            return `حسابات مجمّعة: ${count}`;
+          default:
+            return `حسابات مجمّعة: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Konto gebündelt`;
+          default:
+            return `${count} Konten gebündelt`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} cuenta agrupada`;
+          case "many":
+            return `${count} de cuentas agrupadas`;
+          default:
+            return `${count} cuentas agrupadas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} compte regroupé`;
+          case "many":
+            return `${count} de comptes regroupés`;
+          default:
+            return `${count} comptes regroupés`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件のアカウントをまとめて使用中`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `계정 ${count}개가 합쳐져 있음`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} conta agrupada`;
+          case "many":
+            return `${count} de contas agrupadas`;
+          default:
+            return `${count} contas agrupadas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `合并了 ${count} 个账户`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `合併了 ${count} 個帳號`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} áççöûñţ þööļéð ~~~~~]`;
+          default:
+            return `[${count} áççöûñţš þööļéð ~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ account pooled‬`;
+          default:
+            return `${count}‮ accounts pooled‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} account pooled`;
+      default:
+        return `${count} accounts pooled`;
+    }
+  }
+  function settingsSubscriptionsOwnPoolName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل الحسابات`;
+      case "de":
+        return `Alle Konten`;
+      case "es":
+        return `Todas las cuentas`;
+      case "fr":
+        return `Tous les comptes`;
+      case "ja":
+        return `すべてのアカウント`;
+      case "ko":
+        return `모든 계정`;
+      case "pt-BR":
+        return `Todas as contas`;
+      case "zh-Hans":
+        return `所有账户`;
+      case "zh-Hant":
+        return `所有帳號`;
+      case "en-XA":
+        return `[Åļļ áççöûñţš ~~~~]`;
+      case "ar-XB":
+        return `‮All accounts‬`;
+    }
+    return `All accounts`;
+  }
+  function settingsSubscriptionsOwnPoolSignedOut(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "one":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "two":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "few":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          case "many":
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+          default:
+            return `تحتاج إلى تسجيل الدخول من جديد: ${count}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} muss neu angemeldet werden`;
+          default:
+            return `${count} müssen neu angemeldet werden`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} debe volver a iniciar sesión`;
+          case "many":
+            return `${count} deben volver a iniciar sesión`;
+          default:
+            return `${count} deben volver a iniciar sesión`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} doit se reconnecter`;
+          case "many":
+            return `${count} doivent se reconnecter`;
+          default:
+            return `${count} doivent se reconnecter`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件は再度サインインが必要`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count}개는 다시 로그인해야 함`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} precisa fazer login de novo`;
+          case "many":
+            return `${count} precisam fazer login de novo`;
+          default:
+            return `${count} precisam fazer login de novo`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个需要重新登录`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個需要重新登入`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ñééðš šîĝñîñĝ îñ áĝáîñ ~~~~~~~~]`;
+          default:
+            return `[${count} ñééð šîĝñîñĝ îñ áĝáîñ ~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ needs signing in again‬`;
+          default:
+            return `${count}‮ need signing in again‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} needs signing in again`;
+      default:
+        return `${count} need signing in again`;
+    }
+  }
   function settingsSubscriptionsPaused() {
     switch (currentLanguage()) {
       case "ar":
@@ -116236,6 +116451,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsNotReady,
     settingsSubscriptionsOnPace,
     settingsSubscriptionsOnPaceAll,
+    settingsSubscriptionsOwnPoolAccounts,
+    settingsSubscriptionsOwnPoolName,
+    settingsSubscriptionsOwnPoolSignedOut,
     settingsSubscriptionsPaused,
     settingsSubscriptionsPersonalResourcesDescription,
     settingsSubscriptionsPersonalResourcesTitle,
@@ -119854,6 +120072,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsNotReady": [],
     "settingsSubscriptionsOnPace": [],
     "settingsSubscriptionsOnPaceAll": [],
+    "settingsSubscriptionsOwnPoolAccounts": ["count"],
+    "settingsSubscriptionsOwnPoolName": [],
+    "settingsSubscriptionsOwnPoolSignedOut": ["count"],
     "settingsSubscriptionsPaused": [],
     "settingsSubscriptionsPersonalResourcesDescription": ["computer", "computers"],
     "settingsSubscriptionsPersonalResourcesTitle": [],
@@ -129895,8 +130116,17 @@ ${FRAME_KEYBOARD_SCRIPT}
     applicable: number().int().nonnegative().optional()
   });
   const QUOTA_POOL_KINDS = ["claude", "chatgpt"];
+  const QUOTA_POOL_SOURCES = ["accounts", "proxy"];
   const quotaPoolViewSchema = object({
     kind: _enum(QUOTA_POOL_KINDS),
+    /**
+     * Whose logins the pool folds: a CLI proxy's (`proxy`, also what a row
+     * without it means), or the person's own logins of one provider signed in
+     * here (`accounts`, docs/quota.md "A pool of your own logins").
+     */
+    source: _enum(QUOTA_POOL_SOURCES).optional(),
+    /** The accounts an `accounts` pool folds, by id. */
+    accounts: array(string()).optional(),
     logins: number().int().nonnegative(),
     /** Serving logins whose limits were read: they make the pooled windows. */
     read: number().int().nonnegative(),
@@ -129970,6 +130200,30 @@ ${FRAME_KEYBOARD_SCRIPT}
      */
     measuredAt: number().optional(),
     /**
+     * No reading of the allowance produced this row: its windows are a
+     * provider's refusal laid over a reading that could not be taken
+     * (`withRejectedReadings`), or an answer that carried windows and no
+     * share (`answeredNoShare`), whose `measuredAt` is the answer's time and
+     * no reading's. The row still says what the account can do now; it never
+     * says the allowance was checked.
+     */
+    unread: boolean().optional(),
+    /**
+     * When a share of the allowance was last read, where that is known apart
+     * from the windows: on a row built from sessions' readings
+     * (`pushedProviderViews`). A row none of whose windows carries a share
+     * was last read then, and at no time without it: its `measuredAt` may be
+     * an answer's that carried no share.
+     */
+    lastShareAt: number().optional(),
+    /**
+     * Its provider refuses this account until then, whatever its windows say:
+     * on the served row of a login of a pool of the person's own logins while
+     * the refusal stands (`settlePoolResets`). A window's own reset before
+     * that time frees nothing.
+     */
+    refusedUntilMs: number().optional(),
+    /**
      * A sanitized machine reason for a non-ok status: a code from our own
      * vocabulary, never provider text, never a header, never a URL.
      */
@@ -130009,7 +130263,15 @@ ${FRAME_KEYBOARD_SCRIPT}
   const quotaSnapshotViewSchema = object({
     generatedAt: string(),
     fetchedAt: number(),
-    providers: array(quotaProviderViewSchema)
+    providers: array(quotaProviderViewSchema),
+    /**
+     * One row per provider with two or more enabled logins of the person's
+     * own (docs/quota.md, "A pool of your own logins"): its windows are the
+     * pooled share left across those logins, and `pool` says how they stand.
+     * Derived from `providers` each time the snapshot is made, never a
+     * reading of its own; it names no account, and each login keeps its row.
+     */
+    pools: array(quotaProviderViewSchema).optional()
   });
   const catalogModelViewSchema = object({
     /** Quota provider id. */

@@ -12,10 +12,15 @@ import {
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { PluginRecords } from "../plugins/pluginRecords";
 import { fetchPluginSource } from "../plugins/pluginSource";
-import { PushedQuotaStore } from "../quota/pushedQuota";
+import { PushedQuotaStore, shareAtOf } from "../quota/pushedQuota";
 import { TaskService } from "../tasks/taskService";
 import type { AppDatabase } from "./db";
-import { openDatabase, openInMemoryDatabase, PLUGIN_KIND_MIGRATION_VERSION } from "./db";
+import {
+  openDatabase,
+  openInMemoryDatabase,
+  PLUGIN_KIND_MIGRATION_VERSION,
+  PUSHED_SHARE_TIME_MIGRATION_VERSION,
+} from "./db";
 import { SettingsStore } from "./settingsStore";
 import { UsageStore } from "./usageStore";
 import { dropViews } from "./views";
@@ -274,7 +279,7 @@ describe("migration 51 (a pushed reading's status, W1 S3)", () => {
     // Reversible: dropping the column, and the extra-usage columns a later
     // migration adds, restores the v50 shape with every row.
     reopened.exec("ALTER TABLE pushed_quota DROP COLUMN status;");
-    for (const column of PUSHED_OVERAGE_COLUMNS)
+    for (const column of [...PUSHED_OVERAGE_COLUMNS, PUSHED_SHARE_COLUMN])
       reopened.exec(`ALTER TABLE pushed_quota DROP COLUMN ${column};`);
     expect(columnNames(reopened, "pushed_quota")).toEqual(columnsAt50);
     expect(reopened.prepare("SELECT COUNT(*) AS n FROM pushed_quota").get()).toEqual({ n: 1 });
@@ -283,6 +288,7 @@ describe("migration 51 (a pushed reading's status, W1 S3)", () => {
 });
 
 const PUSHED_OVERAGE_COLUMNS = ["overage_status", "overage_reason", "using_overage"] as const;
+const PUSHED_SHARE_COLUMN = "share_at";
 
 describe("migration 136 (a pushed reading's extra usage, INF-4104 piece 1)", () => {
   it("adds the nullable columns, keeps every earlier reading silent on extra usage, records new ones, and reverses", () => {
@@ -326,8 +332,51 @@ describe("migration 136 (a pushed reading's extra usage, INF-4104 piece 1)", () 
         at: 3_000,
       },
     ]);
-    for (const column of PUSHED_OVERAGE_COLUMNS)
+    for (const column of [...PUSHED_OVERAGE_COLUMNS, PUSHED_SHARE_COLUMN])
       reopened.exec(`ALTER TABLE pushed_quota DROP COLUMN ${column};`);
+    expect(columnNames(reopened, "pushed_quota")).toEqual(columnsBefore);
+    expect(reopened.prepare("SELECT COUNT(*) AS n FROM pushed_quota").get()).toEqual({ n: 1 });
+    reopened.close();
+  });
+});
+
+// The review of pooled logins: the pause card names when a share of the
+// allowance was read, so the store keeps that time apart from the reading's.
+describe("the migration that keeps when a pushed reading's share was reported", () => {
+  it("adds the nullable column, reads an earlier share as taken at its own time, keeps a new one through a refusal, and reverses", () => {
+    const dir = tmpUserData();
+    const before = openDatabase(dir, PUSHED_SHARE_TIME_MIGRATION_VERSION - 1);
+    const columnsBefore = columnNames(before, "pushed_quota");
+    expect(columnsBefore).not.toContain(PUSHED_SHARE_COLUMN);
+    before
+      .prepare(
+        "INSERT INTO pushed_quota (account_id, window_id, status, utilization, resets_at, at) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .run("acct_a", "five_hour", "allowed", 0.4, 2_000, 1_000);
+    before.close();
+
+    const upgraded = openDatabase(dir);
+    expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
+    const store = new PushedQuotaStore(upgraded);
+    const earlier = store.windowsFor("acct_a");
+    expect(earlier).toEqual([
+      { windowId: "five_hour", status: "allowed", utilization: 0.4, resetsAt: 2_000, at: 1_000 },
+    ]);
+    expect(earlier.map(shareAtOf)).toEqual([1_000]);
+    // A refusal that names only its reset replaces the reading, not the time.
+    store.record("acct_a", {
+      windowId: "five_hour",
+      status: "rejected",
+      resetsAt: 9_000,
+      at: 3_000,
+    });
+    upgraded.close();
+
+    const reopened = openDatabase(dir);
+    expect(new PushedQuotaStore(reopened).windowsFor("acct_a")).toEqual([
+      { windowId: "five_hour", status: "rejected", resetsAt: 9_000, at: 3_000, shareAt: 1_000 },
+    ]);
+    reopened.exec(`ALTER TABLE pushed_quota DROP COLUMN ${PUSHED_SHARE_COLUMN};`);
     expect(columnNames(reopened, "pushed_quota")).toEqual(columnsBefore);
     expect(reopened.prepare("SELECT COUNT(*) AS n FROM pushed_quota").get()).toEqual({ n: 1 });
     reopened.close();

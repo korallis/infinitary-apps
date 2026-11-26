@@ -2739,6 +2739,42 @@
       <string>%1$ld tâches</string>
     </dict>
   </dict>
+  <key>settingsSubscriptionsOwnPoolAccounts</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld compte regroupé</string>
+      <key>many</key>
+      <string>%1$ld de comptes regroupés</string>
+      <key>other</key>
+      <string>%1$ld comptes regroupés</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsOwnPoolSignedOut</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld doit se reconnecter</string>
+      <key>many</key>
+      <string>%1$ld doivent se reconnecter</string>
+      <key>other</key>
+      <string>%1$ld doivent se reconnecter</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsPoolAccounts</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

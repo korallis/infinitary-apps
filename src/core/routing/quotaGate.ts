@@ -1,3 +1,4 @@
+import { accountsPoolOf } from "@shared/accountPools";
 import { SLOTS, type Slot } from "@shared/modelSlots";
 import {
   answersOnCredits,
@@ -7,6 +8,7 @@ import {
   servedModelKey,
 } from "@shared/quota";
 import { allowanceSpent } from "@shared/quotaSignals";
+import { effectiveFromPool, poolMembers } from "../quota/catalog";
 import type { PiModelRef } from "./routingEngine";
 
 /** What a quota-reset gate reads, each only when its ref needs it. */
@@ -36,8 +38,12 @@ export function quotaGateRefValid(ref: string): boolean {
  * clears when any available model placed in that slot has headroom, or
  * unknown headroom - uncertainty stays eligible - so a slot no model sits
  * in clears only once one is placed there, never on a reset. A provider
- * ref clears when any of its windows has headroom. Either clears, too, on
- * an account that keeps going on credits (`answersOnCredits`).
+ * ref clears when any of its windows has headroom, and one whose own
+ * logins pool (docs/quota.md, "A pool of your own logins") clears while the
+ * pool has allowance left or its allowance is unknown: one spent login
+ * holds nothing while another has room, and the gate holds only when every
+ * login of the pool is spent. Either clears, too, on an account that keeps
+ * going on credits (`answersOnCredits`).
  */
 export function quotaGateCleared(ref: string, reads: QuotaGateReads): boolean {
   if (ref.startsWith("bucket:")) {
@@ -50,17 +56,19 @@ export function quotaGateCleared(ref: string, reads: QuotaGateReads): boolean {
       return !(row && allowanceSpent(row));
     });
   }
+  const snapshot = reads.quota.latest();
+  const now = Date.now();
+  const pool = accountsPoolOf(snapshot?.pools, ref);
+  if (snapshot && pool)
+    return !allowanceSpent(effectiveFromPool(pool, poolMembers(pool, snapshot.providers), now));
   return (
-    reads.quota
-      .latest()
-      ?.providers.some(
-        (provider) =>
-          provider.provider === ref &&
-          (answersOnCredits(provider) ||
-            provider.windows.some(
-              (window) =>
-                typeof window.percentRemaining !== "number" || window.percentRemaining > 0,
-            )),
-      ) ?? false
+    snapshot?.providers.some(
+      (provider) =>
+        provider.provider === ref &&
+        (answersOnCredits(provider) ||
+          provider.windows.some(
+            (window) => typeof window.percentRemaining !== "number" || window.percentRemaining > 0,
+          )),
+    ) ?? false
   );
 }

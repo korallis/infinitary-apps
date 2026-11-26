@@ -4049,6 +4049,9 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsNotReady`() -> String { PhoneWords.format("settingsSubscriptionsNotReady", []) }
     public static func `settingsSubscriptionsOnPace`() -> String { PhoneWords.format("settingsSubscriptionsOnPace", []) }
     public static func `settingsSubscriptionsOnPaceAll`() -> String { PhoneWords.format("settingsSubscriptionsOnPaceAll", []) }
+    public static func `settingsSubscriptionsOwnPoolAccounts`(`count`: Int) -> String { PhoneWords.format("settingsSubscriptionsOwnPoolAccounts", [`count`]) }
+    public static func `settingsSubscriptionsOwnPoolName`() -> String { PhoneWords.format("settingsSubscriptionsOwnPoolName", []) }
+    public static func `settingsSubscriptionsOwnPoolSignedOut`(`count`: Int) -> String { PhoneWords.format("settingsSubscriptionsOwnPoolSignedOut", [`count`]) }
     public static func `settingsSubscriptionsPaused`() -> String { PhoneWords.format("settingsSubscriptionsPaused", []) }
     public static func `settingsSubscriptionsPersonalResourcesDescription`(`computer`: String, `computers`: String) -> String { PhoneWords.format("settingsSubscriptionsPersonalResourcesDescription", [`computer`, `computers`]) }
     public static func `settingsSubscriptionsPersonalResourcesTitle`() -> String { PhoneWords.format("settingsSubscriptionsPersonalResourcesTitle", []) }
@@ -8760,6 +8763,9 @@ extension PhoneWords {
         "settingsSubscriptionsNotReady": [],
         "settingsSubscriptionsOnPace": [],
         "settingsSubscriptionsOnPaceAll": [],
+        "settingsSubscriptionsOwnPoolAccounts": ["count"],
+        "settingsSubscriptionsOwnPoolName": [],
+        "settingsSubscriptionsOwnPoolSignedOut": ["count"],
         "settingsSubscriptionsPaused": [],
         "settingsSubscriptionsPersonalResourcesDescription": ["computer", "computers"],
         "settingsSubscriptionsPersonalResourcesTitle": [],
@@ -9577,6 +9583,8 @@ extension PhoneWords {
         "settingsProjectsTagsCheckProgress": "total",
         "settingsProjectsTagsRemoveQuestion": "count",
         "settingsProjectsTagsTasks": "count",
+        "settingsSubscriptionsOwnPoolAccounts": "count",
+        "settingsSubscriptionsOwnPoolSignedOut": "count",
         "settingsSubscriptionsPoolAccounts": "count",
         "settingsSubscriptionsPoolSignInBy": "count",
         "settingsSubscriptionsPoolSignedOut": "count",

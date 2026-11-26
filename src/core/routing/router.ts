@@ -338,7 +338,9 @@ export class Router {
       ? options.pool.catalog
       : (this.options.quota.latestModels()?.models ?? []);
     // Each model is ranked by the account that would serve it: a computer's
-    // own binding there, or this Mac's crew account pick.
+    // own binding there, or this Mac's crew account pick. Where that account
+    // is a login of a pool here, the pool gives the share left, band and
+    // score, and the account still gives who serves, its reset and charge.
     const pool = options.pool;
     const crewAccount = this.options.crewAccount;
     const bound = pool
@@ -357,6 +359,8 @@ export class Router {
         Date.now(),
         bound,
         options.placed,
+        // The pools are this computer's own logins: another computer ranks by its own readings.
+        pool ? undefined : this.options.quota.latest()?.pools,
       ) ?? rawCatalog;
     const pooled = (options.pool?.available ?? this.options.availableModels()).filter(
       (model) => !without || model.provider !== without,

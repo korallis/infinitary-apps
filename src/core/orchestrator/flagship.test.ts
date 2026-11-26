@@ -1,6 +1,17 @@
-import type { QuotaSnapshotView } from "@shared/quota";
-import { describe, expect, it } from "vitest";
+import { accountPools } from "@shared/accountPools";
+import { formatResetText, type QuotaProviderView, type QuotaSnapshotView } from "@shared/quota";
+import { describe, expect, it, vi } from "vitest";
 import type { ModelRuntime } from "../pi/types";
+import { buildModelsCatalog, limitingResetOf } from "../quota/catalog";
+import { rowOfOutcome } from "../quota/cliProxy/proxyQuota";
+import {
+  pushedOnlyProviderViews,
+  pushedProviderViews,
+  withRejectedReadings,
+} from "../quota/pushedQuota";
+import { QuotaService } from "../quota/quotaService";
+import { quotaGateCleared } from "../routing/quotaGate";
+import { openInMemoryDatabase } from "../storage/db";
 import { Flagship, type FlagshipVaultView } from "./flagship";
 import {
   firstmatePauseCard,
@@ -649,4 +660,613 @@ describe("a seat whose allowance is spent but whose provider has credits", () =>
       arg: "acct",
     });
   });
+});
+
+// The review's ask on pooled logins (docs/quota.md, "A pool of your own
+// logins"): the provider's wait, a level's wait and the first mate's seat
+// agree, reading by reading, on when a spent pool serves again - with the
+// first login that can serve, not with a login's first window to reset.
+// The captain's choice on the review's question: the pause card says an
+// allowance was checked only when a reading of it was taken, for every login.
+describe("the allowance check a pause card reports", () => {
+  const NOW = Date.parse("2026-11-25T16:40:00Z");
+  const account = {
+    accountId: "acct",
+    accountLabel: "Personal",
+    quotaId: "claude",
+    providerLabel: "Claude",
+  };
+  const rejected = {
+    windowId: "five_hour",
+    status: "rejected" as const,
+    utilization: 1,
+    resetsAt: NOW + 3_600_000,
+    at: NOW - 1_000,
+  };
+  const sensed: QuotaProviderView = {
+    provider: "claude",
+    label: "Claude",
+    accountId: "acct",
+    status: "ok",
+    stale: false,
+    measuredAt: NOW - 60_000,
+    windows: [{ id: "five_hour", label: "session", percentRemaining: 40 }],
+  };
+  const checkOf = (row: QuotaProviderView) =>
+    new Flagship({
+      vault: vaultOf([
+        { id: "acct", providerId: "anthropic-claude", label: "Personal", enabled: true },
+      ]),
+      settings: settingsOf("acct"),
+      quota: {
+        latest: () => ({
+          generatedAt: new Date(NOW).toISOString(),
+          fetchedAt: NOW,
+          providers: [row],
+        }),
+      },
+      baseRuntime,
+    }).allowanceCheck("acct");
+
+  it("is a check when the reading was taken, a refusal over it included", () => {
+    expect(checkOf(sensed)).toEqual({ at: NOW - 60_000, read: true });
+    expect(checkOf(withRejectedReadings(sensed, [rejected], NOW))).toEqual({
+      at: NOW - 60_000,
+      read: true,
+    });
+  });
+
+  it("is no check when the reading failed and only the provider's refusal is known", () => {
+    const failed: QuotaProviderView = {
+      ...sensed,
+      status: "unavailable",
+      reason: "sensor_error",
+      windows: [],
+    };
+    const row = withRejectedReadings(failed, [rejected], NOW);
+    // The row still holds the account: its allowance reads used up.
+    expect(row.windows.map((window) => window.percentRemaining)).toEqual([0]);
+    expect(checkOf(row)).toEqual({ read: false });
+  });
+
+  it("is no check for a login no session has reported on yet", () => {
+    const [row] = pushedProviderViews([account], () => [], NOW);
+    if (!row) throw new Error("the login has no row");
+    expect(row).toMatchObject({ status: "ok", windows: [] });
+    expect(checkOf(row)).toEqual({ read: false });
+    // Nor for an answer whose one window names a reset and no share, built
+    // through the app's own proxy row builder, which stamps its time: that
+    // time is no reading's, so the row is unread and the receipt names none.
+    const dated = rowOfOutcome(
+      row,
+      { status: "ok", windows: [{ id: "five_hour", label: "session", resetsAtMs: NOW + 1 }] },
+      NOW - 2_000,
+    );
+    expect(dated).toMatchObject({ measuredAt: NOW - 2_000, unread: true });
+    expect(checkOf(dated)).toEqual({ read: false });
+    // A row saved before such answers were marked carries the time and no
+    // mark, fresh or carried forward as stale: still no time is named.
+    const { unread: _unread, ...saved } = dated;
+    expect(checkOf(saved)).toEqual({ read: false });
+    expect(checkOf({ ...saved, stale: true })).toEqual({ read: false });
+  });
+
+  // The review's findings: a refusal that names a reset and no share is no
+  // reading on either path, and a later reading is one again.
+  const refusalAlone = {
+    windowId: "five_hour",
+    status: "rejected" as const,
+    resetsAt: NOW + 3_600_000,
+    at: NOW - 1_000,
+  };
+
+  it("is no check for a login whose sessions reported only a refusal", () => {
+    const [row] = pushedOnlyProviderViews([account], () => [refusalAlone], NOW);
+    if (!row) throw new Error("the login has no row");
+    expect(row.windows.map((window) => window.percentRemaining)).toEqual([0]);
+    expect(checkOf(row)).toEqual({ read: false });
+    // Once a session reports a share, it is a reading.
+    const [read] = pushedOnlyProviderViews(
+      [account],
+      () => [{ ...refusalAlone, status: "allowed" as const, utilization: 0.4 }],
+      NOW,
+    );
+    if (!read) throw new Error("the login has no row");
+    // The receipt's time is the session's own, not the snapshot's (NOW).
+    expect(checkOf(read)).toEqual({ at: NOW - 1_000, read: true });
+    // A later refusal that names no share does not move that time.
+    const [refusedSince] = pushedOnlyProviderViews(
+      [account],
+      () => [
+        { windowId: "seven_day", status: "allowed" as const, utilization: 0.4, at: NOW - 5_000 },
+        refusalAlone,
+      ],
+      NOW,
+    );
+    if (!refusedSince) throw new Error("the login has no row");
+    expect(checkOf(refusedSince)).toEqual({ at: NOW - 5_000, read: true });
+  });
+
+  it("is no check when the reading answered with no share and a refusal stands", () => {
+    const empty: QuotaProviderView = { ...sensed, windows: [] };
+    const row = withRejectedReadings(empty, [refusalAlone], NOW);
+    expect(row.windows.map((window) => window.percentRemaining)).toEqual([0]);
+    expect(checkOf(row)).toEqual({ read: false });
+  });
+
+  it("is a check again once a proxy's reading replaces a row known only by a refusal", () => {
+    const failed: QuotaProviderView = { ...sensed, status: "unavailable", windows: [] };
+    const refusedOnly = withRejectedReadings(failed, [rejected], NOW);
+    expect(checkOf(refusedOnly)).toEqual({ read: false });
+    const recovered = rowOfOutcome(
+      refusedOnly,
+      { status: "ok", windows: [{ id: "five_hour", label: "session", percentRemaining: 60 }] },
+      NOW + 5_000,
+    );
+    expect(checkOf(recovered)).toEqual({ at: NOW + 5_000, read: true });
+  });
+});
+
+describe("a spent pool of two logins, across its resets", () => {
+  const T = Date.parse("2026-11-25T16:40:00Z");
+  const HOUR = 60 * 60 * 1000;
+  type Left = [percent: number, resetsAtMs: number];
+  const login = (accountId: string, session: Left, weekly: Left) => ({
+    provider: "codex",
+    label: "Codex",
+    accountId,
+    status: "ok" as const,
+    stale: false,
+    windows: [
+      { id: "session", label: "session", percentRemaining: session[0], resetsAtMs: session[1] },
+      { id: "weekly", label: "weekly", percentRemaining: weekly[0], resetsAtMs: weekly[1] },
+    ],
+  });
+  const reading = (at: number, rows: ReturnType<typeof login>[]): QuotaSnapshotView => ({
+    generatedAt: new Date(at).toISOString(),
+    fetchedAt: at,
+    providers: rows,
+    pools: accountPools(
+      rows,
+      rows.map((row) => ({ accountId: row.accountId, provider: row.provider })),
+      at,
+    ),
+  });
+  const sol = { provider: "openai-codex", id: "gpt-6-sol" };
+  const catalogOf = (snapshot: QuotaSnapshotView) =>
+    buildModelsCatalog(
+      [{ ...sol, name: "Sol" }],
+      snapshot.providers,
+      snapshot.generatedAt,
+      snapshot.fetchedAt,
+      snapshot.pools,
+    );
+  const standing = (snapshot: QuotaSnapshotView) =>
+    standingOn({ latest: () => snapshot, latestModels: () => catalogOf(snapshot) });
+  const standingOn = (
+    quota: {
+      latest: () => QuotaSnapshotView | undefined;
+      latestMeasured?: () => QuotaSnapshotView | undefined;
+      latestModels: () => ReturnType<typeof catalogOf> | undefined;
+    },
+    /** The provider's own refusal of login B, while one stands. */
+    refusedB?: () => FakeAccount["cutOff"],
+  ) => {
+    const cutOff = refusedB?.();
+    const flagship = new Flagship({
+      vault: vaultOf([
+        { id: "a", providerId: "openai-codex", label: "A", enabled: true },
+        {
+          id: "b",
+          providerId: "openai-codex",
+          label: "B",
+          enabled: true,
+          ...(cutOff ? { cutOff } : {}),
+        },
+      ]),
+      settings: settingsOf("a"),
+      quota,
+      baseRuntime,
+    });
+    const reads = { availableModels: () => [sol], slotsOf: () => ["high" as const], quota };
+    return {
+      provider: quotaGateCleared("codex", reads),
+      level: quotaGateCleared("bucket:high", reads),
+      seatA: flagship.pause("a")?.class,
+      seatB: flagship.pause("b")?.class,
+      moveTo: flagship.sibling("a")?.id,
+      // Whether the pause card may say B's allowance was checked.
+      readB: flagship.allowanceCheck("b")?.read,
+      poolBackAt: quota.latest()?.pools?.[0]?.pool?.backAtMs,
+      // The pooled meter, as Settings draws it: each window's share left.
+      meter: Object.fromEntries(
+        quota.latest()?.pools?.[0]?.windows.map((window) => [window.id, window.percentRemaining]) ??
+          [],
+      ),
+    };
+  };
+  // Both logins spent: every window of the pool reads empty.
+  const emptyMeter = { session: 0, weekly: 0 };
+  const week = T + 72 * HOUR;
+
+  it("holds every wait and the seat until the first login can serve, then clears them together", () => {
+    // A's session resets in 1 hour and its week in 72; B's session in 2 hours.
+    const spent = standing(
+      reading(T, [login("a", [0, T + HOUR], [0, week]), login("b", [0, T + 2 * HOUR], [50, week])]),
+    );
+    expect(spent).toEqual({
+      provider: false,
+      level: false,
+      seatA: "no_headroom",
+      seatB: "no_headroom",
+      moveTo: undefined,
+      readB: true,
+      poolBackAt: T + 2 * HOUR,
+      meter: emptyMeter,
+    });
+
+    // A's session has reset; its week still blocks it, so nothing serves yet.
+    const firstReset = standing(
+      reading(T + 1.1 * HOUR, [
+        login("a", [100, T + 6 * HOUR], [0, week]),
+        login("b", [0, T + 2 * HOUR], [50, week]),
+      ]),
+    );
+    expect(firstReset).toEqual(spent);
+
+    // B's session has reset: B serves, and every reader says so at once.
+    expect(
+      standing(
+        reading(T + 2.1 * HOUR, [
+          login("a", [100, T + 6 * HOUR], [0, week]),
+          login("b", [100, T + 7 * HOUR], [50, week]),
+        ]),
+      ),
+    ).toEqual({
+      provider: true,
+      level: true,
+      seatA: "no_headroom",
+      seatB: undefined,
+      moveTo: "b",
+      readB: true,
+      poolBackAt: week,
+      // B read a full session and half its week; A, spent, weighs zero in each.
+      meter: { session: 50, weekly: 25 },
+    });
+  });
+
+  // One reading for the two clock-only cases below. A's session resets in 1
+  // hour and its week in 72; B's session in 2 hours.
+  const rows = [login("a", [0, T + HOUR], [0, week]), login("b", [0, T + 2 * HOUR], [50, week])];
+  const pools = (
+    snapshot: QuotaSnapshotView,
+    refusedUntil?: (accountId: string) => number | undefined,
+  ) =>
+    accountPools(
+      snapshot.providers,
+      rows.map((row) => ({ accountId: row.accountId, provider: row.provider })),
+      snapshot.fetchedAt,
+      refusedUntil,
+    );
+  const held = {
+    provider: false,
+    level: false,
+    seatA: "no_headroom",
+    seatB: "no_headroom",
+    moveTo: undefined,
+    readB: true as boolean | undefined,
+    poolBackAt: T + 2 * HOUR,
+    meter: emptyMeter,
+  };
+  // B's used-up session is gone from its row: its week reads half, and A,
+  // spent, weighs zero beside it.
+  const serving = {
+    provider: true,
+    level: true,
+    seatA: "no_headroom",
+    seatB: undefined,
+    moveTo: "b",
+    readB: true as boolean | undefined,
+    poolBackAt: week,
+    meter: { weekly: 25 },
+  };
+
+  // The captain's choice on the review's question: pooled work resumes at
+  // the first reset that makes a login usable, with no new reading.
+  it("clears them together when that reset passes, on the one reading it already has", async () => {
+    let now = T;
+    const refresh = vi.fn(async () => ({
+      snapshot: { generatedAt: new Date(T).toISOString(), fetchedAt: T, providers: rows },
+      catalog: { generatedAt: new Date(T).toISOString(), models: [] },
+    }));
+    const broadcast = vi.fn();
+    const service = new QuotaService({
+      refresh,
+      db: openInMemoryDatabase(),
+      broadcast,
+      now: () => now,
+      catalogFor: catalogOf,
+      pools,
+    });
+    await service.refresh("demand");
+    service.stop();
+    expect(standingOn(service)).toEqual(held);
+
+    // A's session has reset; its week still blocks it, so nothing serves yet.
+    now = T + 1.1 * HOUR;
+    expect(standingOn(service)).toEqual(held);
+
+    // B's session has reset: B serves, and every reader says so at once.
+    broadcast.mockClear();
+    now = T + 2.1 * HOUR;
+    expect(standingOn(service)).toEqual(serving);
+    // Every surface is told once, and nothing was read again.
+    expect(broadcast).toHaveBeenCalledTimes(1);
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  // The review's finding: a window's reset frees nothing while the
+  // provider's own refusal of that login still stands.
+  it("holds them past a login's reset while its provider still refuses it", async () => {
+    let now = T;
+    // B's provider refused it until an hour after its session resets.
+    const refusedB = () =>
+      now < T + 3 * HOUR ? { class: "no_headroom" as const, resetsAt: T + 3 * HOUR } : undefined;
+    const service = new QuotaService({
+      refresh: async () => ({
+        snapshot: { generatedAt: new Date(T).toISOString(), fetchedAt: T, providers: rows },
+        catalog: { generatedAt: new Date(T).toISOString(), models: [] },
+      }),
+      db: openInMemoryDatabase(),
+      broadcast: () => {},
+      now: () => now,
+      catalogFor: catalogOf,
+      pools,
+      refusedUntil: (accountId) => (accountId === "b" ? refusedB()?.resetsAt : undefined),
+    });
+    await service.refresh("demand");
+    service.stop();
+    // The pool is back when B's refusal ends, not at B's session reset, and
+    // each of its meters names that same time.
+    const refused = { ...held, poolBackAt: T + 3 * HOUR };
+    const meterResets = () => service.latest()?.pools?.[0]?.windows.map((w) => w.resetsAtMs);
+    expect(standingOn(service, refusedB)).toEqual(refused);
+    expect(meterResets()).toEqual([T + 3 * HOUR, T + 3 * HOUR]);
+
+    // B's session has reset, and its provider still refuses it.
+    now = T + 2.1 * HOUR;
+    expect(standingOn(service, refusedB)).toEqual(refused);
+    expect(meterResets()).toEqual([T + 3 * HOUR, T + 3 * HOUR]);
+
+    // The refusal has ended: B serves.
+    now = T + 3.1 * HOUR;
+    expect(standingOn(service, refusedB)).toEqual(serving);
+  });
+
+  // The review's findings: a refused pooled login's return is its last
+  // blocker among the windows that bound the model, the refusal's end or a
+  // used-up window's own reset, whichever is later; no time is named when a
+  // blocker's reset is not known; and a login outside a pool is read as
+  // before, by the first window with the least left.
+  it.each([
+    {
+      blocker: "a used-up week that outlasts the refusal",
+      windows: [
+        { id: "session", label: "session", percentRemaining: 50, resetsAtMs: T + 2 * HOUR },
+        { id: "weekly", label: "weekly", percentRemaining: 0, resetsAtMs: week },
+      ],
+      backAt: week,
+      last: "weekly",
+      // Outside a pool: the session, read used up until the refusal ends.
+      unpooledBackAt: T + 3 * HOUR,
+    },
+    {
+      blocker: "the refusal, which outlasts a used-up session",
+      windows: [
+        { id: "session", label: "session", percentRemaining: 0, resetsAtMs: T + 2 * HOUR },
+        { id: "weekly", label: "weekly", percentRemaining: 50, resetsAtMs: week },
+      ],
+      backAt: T + 3 * HOUR,
+      last: "weekly",
+      unpooledBackAt: T + 2 * HOUR,
+    },
+    {
+      blocker: "no time, when a used-up week has no known reset",
+      windows: [
+        { id: "session", label: "session", percentRemaining: 0, resetsAtMs: T + 2 * HOUR },
+        { id: "weekly", label: "weekly", percentRemaining: 0 },
+      ],
+      backAt: undefined,
+      last: undefined,
+      unpooledBackAt: T + 2 * HOUR,
+    },
+    {
+      blocker: "the refusal, whatever another model's window and credits say",
+      windows: [
+        { id: "session", label: "session", percentRemaining: 50, resetsAtMs: T + 2 * HOUR },
+        { id: "weekly", label: "weekly", percentRemaining: 50, resetsAtMs: week },
+        { id: "model:other", label: "Other", percentRemaining: 0, resetsAtMs: week + HOUR },
+        { id: "overage", label: "credits", percentRemaining: 0, resetsAtMs: week + 2 * HOUR },
+      ],
+      backAt: T + 3 * HOUR,
+      last: "weekly",
+      unpooledBackAt: T + 3 * HOUR,
+    },
+    {
+      blocker: "the refusal, when every window was already used up and resets before it ends",
+      windows: [
+        { id: "session", label: "session", percentRemaining: 0, resetsAtMs: T + 2 * HOUR },
+        { id: "weekly", label: "weekly", percentRemaining: 0, resetsAtMs: T + 2.5 * HOUR },
+      ],
+      backAt: T + 3 * HOUR,
+      // No window names the refusal's end: the words are the refusal's own.
+      last: "refusal",
+      unpooledBackAt: T + 2 * HOUR,
+    },
+  ])(
+    "names a refused login's return by $blocker",
+    async ({ windows, backAt, last, unpooledBackAt }) => {
+      const service = new QuotaService({
+        refresh: async () => ({
+          snapshot: {
+            generatedAt: new Date(T).toISOString(),
+            fetchedAt: T,
+            providers: [
+              login("a", [0, T + HOUR], [0, week]),
+              {
+                ...login("b", [0, 0], [0, 0]),
+                windows: windows.map((window) => ({
+                  ...window,
+                  resetText: `as read: ${window.id}`,
+                })),
+              },
+            ],
+          },
+          catalog: { generatedAt: new Date(T).toISOString(), models: [] },
+        }),
+        db: openInMemoryDatabase(),
+        broadcast: () => {},
+        now: () => T,
+        catalogFor: catalogOf,
+        pools,
+        refusedUntil: (accountId) => (accountId === "b" ? T + 3 * HOUR : undefined),
+      });
+      await service.refresh("demand");
+      service.stop();
+      const seatOver = (quota: { latest: () => QuotaSnapshotView | undefined }) =>
+        new Flagship({
+          vault: vaultOf([
+            { id: "a", providerId: "openai-codex", label: "A", enabled: true },
+            { id: "b", providerId: "openai-codex", label: "B", enabled: true },
+          ]),
+          settings: settingsOf("a"),
+          quota,
+          baseRuntime,
+        });
+      const snapshot = service.latest();
+      const row = snapshot?.providers.find((entry) => entry.accountId === "b");
+      if (!snapshot || !row) throw new Error("login B has no served row");
+      const textOf = (id: string | undefined) =>
+        id === "refusal"
+          ? formatResetText(T + 3 * HOUR, T)
+          : row.windows.find((window) => window.id === id)?.resetText;
+
+      expect(limitingResetOf(row, T, undefined, snapshot.pools)).toBe(backAt);
+      if (last) expect(textOf(last)).toBeTruthy();
+      // The seat reads the clock itself: hold it at the reading's time.
+      const clock = vi.spyOn(Date, "now").mockReturnValue(T);
+      try {
+        expect(seatOver(service).resetText("b")).toBe(textOf(last));
+      } finally {
+        clock.mockRestore();
+      }
+
+      // The same row with no pool over it.
+      const { pools: _pools, ...unpooled } = snapshot;
+      expect(limitingResetOf(row, T)).toBe(unpooledBackAt);
+      expect(textOf("session")).toBeTruthy();
+      expect(seatOver({ latest: () => unpooled }).resetText("b")).toBe(textOf("session"));
+    },
+  );
+
+  // The review's finding: the refusal itself holds the login, whatever its
+  // reading says. A reading taken before the refusal shows room; a reading
+  // that failed shows nothing.
+  it.each([
+    {
+      reading: "shows room left",
+      b: [login("b", [50, T + 2 * HOUR], [50, week])],
+      atFirst: emptyMeter,
+      afterAReset: emptyMeter,
+      readB: true,
+      // Once back, B's half and A's nothing: a quarter in each window.
+      back: { meter: { session: 25, weekly: 25 } },
+    },
+    {
+      reading: "could not be taken",
+      b: [{ ...login("b", [0, 0], [0, 0]), status: "error" as const, stale: true, windows: [] }],
+      // A's session has reset and B is known only by the refusal's window.
+      atFirst: emptyMeter,
+      afterAReset: { weekly: 0 },
+      // The refusal is no reading: the pause card must not say B was checked.
+      readB: false,
+      // Once back, B is not read yet: the pool's allowance is unknown.
+      back: { meter: {} },
+    },
+    {
+      reading: "has a window read without a share",
+      b: [
+        {
+          ...login("b", [50, T + 2 * HOUR], [50, week]),
+          windows: [
+            { id: "session", label: "session", resetsAtMs: T + 2 * HOUR },
+            { id: "weekly", label: "weekly", percentRemaining: 50, resetsAtMs: week },
+          ],
+        },
+      ],
+      atFirst: emptyMeter,
+      afterAReset: emptyMeter,
+      readB: true,
+      // Once back, B's week reads half beside A's nothing; no session is read.
+      back: { meter: { weekly: 25 } },
+    },
+    {
+      reading: "has the model's own window read without a share",
+      b: [
+        {
+          ...login("b", [50, T + 2 * HOUR], [50, week]),
+          windows: [
+            { id: "session", label: "session", percentRemaining: 50, resetsAtMs: T + 2 * HOUR },
+            { id: "weekly", label: "weekly", percentRemaining: 50, resetsAtMs: week },
+            { id: "model:gpt-6-sol", label: "Sol", resetsAtMs: week },
+          ],
+        },
+      ],
+      // The refusal is the whole account's: the model's own window reads used up too.
+      atFirst: { ...emptyMeter, "model:gpt-6-sol": 0 },
+      afterAReset: { ...emptyMeter, "model:gpt-6-sol": 0 },
+      readB: true,
+      back: { meter: { session: 25, weekly: 25 } },
+    },
+    {
+      reading: "is missing",
+      b: [],
+      atFirst: emptyMeter,
+      afterAReset: { weekly: 0 },
+      readB: undefined,
+      back: { meter: {} },
+    },
+  ])(
+    "holds them while a login's provider refuses it and its reading $reading",
+    async ({ b, atFirst, afterAReset, readB, back }) => {
+      let now = T;
+      const refusedB = () =>
+        now < T + 3 * HOUR ? { class: "no_headroom" as const, resetsAt: T + 3 * HOUR } : undefined;
+      const service = new QuotaService({
+        refresh: async () => ({
+          snapshot: {
+            generatedAt: new Date(T).toISOString(),
+            fetchedAt: T,
+            providers: [login("a", [0, T + HOUR], [0, week]), ...b],
+          },
+          catalog: { generatedAt: new Date(T).toISOString(), models: [] },
+        }),
+        db: openInMemoryDatabase(),
+        broadcast: () => {},
+        now: () => now,
+        catalogFor: catalogOf,
+        pools,
+        refusedUntil: (accountId) => (accountId === "b" ? refusedB()?.resetsAt : undefined),
+      });
+      await service.refresh("demand");
+      service.stop();
+      const refused = { ...held, readB, poolBackAt: T + 3 * HOUR, meter: atFirst };
+      expect(standingOn(service, refusedB)).toEqual(refused);
+      now = T + 2.9 * HOUR;
+      expect(standingOn(service, refusedB)).toEqual({ ...refused, meter: afterAReset });
+
+      now = T + 3.1 * HOUR;
+      expect(standingOn(service, refusedB)).toEqual({ ...serving, readB, ...back });
+    },
+  );
 });

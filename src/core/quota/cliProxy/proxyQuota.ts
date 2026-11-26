@@ -1,4 +1,5 @@
 import {
+  answeredNoShare,
   formatResetText,
   QUOTA_POOL_KINDS,
   QUOTA_POOL_NAMES,
@@ -87,6 +88,7 @@ export function rowOfOutcome(
     detail: _detail,
     retryAfter: _retryAfter,
     measuredAt: _measuredAt,
+    unread: _unread,
     fromProxy: _fromProxy,
     ...rest
   } = row;
@@ -96,6 +98,7 @@ export function rowOfOutcome(
     windows: outcome.windows,
     stale: false,
     ...(outcome.windows.length > 0 ? { measuredAt: atMs } : {}),
+    ...(answeredNoShare(outcome.windows) ? { unread: true as const } : {}),
     ...(outcome.pool ? { pool: outcome.pool } : {}),
     ...(outcome.credits ? { credits: outcome.credits } : {}),
     ...(outcome.reason ? { reason: outcome.reason } : {}),

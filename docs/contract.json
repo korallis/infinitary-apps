@@ -13098,6 +13098,15 @@
                                   "measuredAt": {
                                     "type": "number"
                                   },
+                                  "unread": {
+                                    "type": "boolean"
+                                  },
+                                  "lastShareAt": {
+                                    "type": "number"
+                                  },
+                                  "refusedUntilMs": {
+                                    "type": "number"
+                                  },
                                   "reason": {
                                     "type": "string"
                                   },
@@ -13205,6 +13214,266 @@
                                           "claude",
                                           "chatgpt"
                                         ]
+                                      },
+                                      "source": {
+                                        "type": "string",
+                                        "enum": [
+                                          "accounts",
+                                          "proxy"
+                                        ]
+                                      },
+                                      "accounts": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "logins": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "read": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "unread": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "spent": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "backAtMs": {
+                                        "type": "number"
+                                      },
+                                      "switchedOff": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInEnded": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInSoon": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInByMs": {
+                                        "type": "number"
+                                      },
+                                      "models": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "logins",
+                                      "read",
+                                      "unread",
+                                      "spent",
+                                      "switchedOff",
+                                      "signInEnded",
+                                      "signInSoon"
+                                    ]
+                                  },
+                                  "fromProxy": {
+                                    "type": "boolean",
+                                    "const": true
+                                  },
+                                  "detail": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "provider",
+                                  "label",
+                                  "status",
+                                  "stale",
+                                  "windows"
+                                ]
+                              }
+                            },
+                            "pools": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "provider": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "accountId": {
+                                    "type": "string"
+                                  },
+                                  "accountLabel": {
+                                    "type": "string"
+                                  },
+                                  "plan": {
+                                    "type": "string"
+                                  },
+                                  "account": {
+                                    "type": "string"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ok",
+                                      "auth_required",
+                                      "rate_limited",
+                                      "unavailable",
+                                      "not_measured",
+                                      "error",
+                                      "skipped"
+                                    ]
+                                  },
+                                  "stale": {
+                                    "type": "boolean"
+                                  },
+                                  "measuredAt": {
+                                    "type": "number"
+                                  },
+                                  "unread": {
+                                    "type": "boolean"
+                                  },
+                                  "lastShareAt": {
+                                    "type": "number"
+                                  },
+                                  "refusedUntilMs": {
+                                    "type": "number"
+                                  },
+                                  "reason": {
+                                    "type": "string"
+                                  },
+                                  "retryAfter": {
+                                    "type": "string"
+                                  },
+                                  "windows": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string"
+                                        },
+                                        "label": {
+                                          "type": "string"
+                                        },
+                                        "percentRemaining": {
+                                          "type": "number"
+                                        },
+                                        "pace": {
+                                          "type": "string",
+                                          "enum": [
+                                            "ahead",
+                                            "on_pace",
+                                            "behind",
+                                            "unknown"
+                                          ]
+                                        },
+                                        "resetText": {
+                                          "type": "string"
+                                        },
+                                        "resetsAtMs": {
+                                          "type": "number"
+                                        },
+                                        "startsAtMs": {
+                                          "type": "number"
+                                        },
+                                        "windowSeconds": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "label"
+                                      ]
+                                    }
+                                  },
+                                  "credits": {
+                                    "type": "object",
+                                    "properties": {
+                                      "state": {
+                                        "type": "string",
+                                        "enum": [
+                                          "available",
+                                          "spent",
+                                          "off",
+                                          "unknown"
+                                        ]
+                                      },
+                                      "usedPercent": {
+                                        "type": "number"
+                                      },
+                                      "balance": {
+                                        "type": "string"
+                                      },
+                                      "unlimited": {
+                                        "type": "boolean"
+                                      },
+                                      "inUse": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "state"
+                                    ]
+                                  },
+                                  "savedResets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "available": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "applicable": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "available"
+                                    ]
+                                  },
+                                  "keepGoingOnCredits": {
+                                    "type": "boolean"
+                                  },
+                                  "pool": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "claude",
+                                          "chatgpt"
+                                        ]
+                                      },
+                                      "source": {
+                                        "type": "string",
+                                        "enum": [
+                                          "accounts",
+                                          "proxy"
+                                        ]
+                                      },
+                                      "accounts": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
                                       },
                                       "logins": {
                                         "type": "integer",
@@ -38931,6 +39200,15 @@
                     "measuredAt": {
                       "type": "number"
                     },
+                    "unread": {
+                      "type": "boolean"
+                    },
+                    "lastShareAt": {
+                      "type": "number"
+                    },
+                    "refusedUntilMs": {
+                      "type": "number"
+                    },
                     "reason": {
                       "type": "string"
                     },
@@ -39038,6 +39316,266 @@
                             "claude",
                             "chatgpt"
                           ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "accounts",
+                            "proxy"
+                          ]
+                        },
+                        "accounts": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "logins": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "read": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "unread": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "spent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "backAtMs": {
+                          "type": "number"
+                        },
+                        "switchedOff": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInEnded": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInSoon": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInByMs": {
+                          "type": "number"
+                        },
+                        "models": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "logins",
+                        "read",
+                        "unread",
+                        "spent",
+                        "switchedOff",
+                        "signInEnded",
+                        "signInSoon"
+                      ]
+                    },
+                    "fromProxy": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "label",
+                    "status",
+                    "stale",
+                    "windows"
+                  ]
+                }
+              },
+              "pools": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "accountId": {
+                      "type": "string"
+                    },
+                    "accountLabel": {
+                      "type": "string"
+                    },
+                    "plan": {
+                      "type": "string"
+                    },
+                    "account": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "auth_required",
+                        "rate_limited",
+                        "unavailable",
+                        "not_measured",
+                        "error",
+                        "skipped"
+                      ]
+                    },
+                    "stale": {
+                      "type": "boolean"
+                    },
+                    "measuredAt": {
+                      "type": "number"
+                    },
+                    "unread": {
+                      "type": "boolean"
+                    },
+                    "lastShareAt": {
+                      "type": "number"
+                    },
+                    "refusedUntilMs": {
+                      "type": "number"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "retryAfter": {
+                      "type": "string"
+                    },
+                    "windows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "percentRemaining": {
+                            "type": "number"
+                          },
+                          "pace": {
+                            "type": "string",
+                            "enum": [
+                              "ahead",
+                              "on_pace",
+                              "behind",
+                              "unknown"
+                            ]
+                          },
+                          "resetText": {
+                            "type": "string"
+                          },
+                          "resetsAtMs": {
+                            "type": "number"
+                          },
+                          "startsAtMs": {
+                            "type": "number"
+                          },
+                          "windowSeconds": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label"
+                        ]
+                      }
+                    },
+                    "credits": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "available",
+                            "spent",
+                            "off",
+                            "unknown"
+                          ]
+                        },
+                        "usedPercent": {
+                          "type": "number"
+                        },
+                        "balance": {
+                          "type": "string"
+                        },
+                        "unlimited": {
+                          "type": "boolean"
+                        },
+                        "inUse": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ]
+                    },
+                    "savedResets": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "applicable": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "available"
+                      ]
+                    },
+                    "keepGoingOnCredits": {
+                      "type": "boolean"
+                    },
+                    "pool": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "claude",
+                            "chatgpt"
+                          ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "accounts",
+                            "proxy"
+                          ]
+                        },
+                        "accounts": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         },
                         "logins": {
                           "type": "integer",
@@ -39188,6 +39726,15 @@
                     "measuredAt": {
                       "type": "number"
                     },
+                    "unread": {
+                      "type": "boolean"
+                    },
+                    "lastShareAt": {
+                      "type": "number"
+                    },
+                    "refusedUntilMs": {
+                      "type": "number"
+                    },
                     "reason": {
                       "type": "string"
                     },
@@ -39295,6 +39842,266 @@
                             "claude",
                             "chatgpt"
                           ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "accounts",
+                            "proxy"
+                          ]
+                        },
+                        "accounts": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "logins": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "read": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "unread": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "spent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "backAtMs": {
+                          "type": "number"
+                        },
+                        "switchedOff": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInEnded": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInSoon": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInByMs": {
+                          "type": "number"
+                        },
+                        "models": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "logins",
+                        "read",
+                        "unread",
+                        "spent",
+                        "switchedOff",
+                        "signInEnded",
+                        "signInSoon"
+                      ]
+                    },
+                    "fromProxy": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "label",
+                    "status",
+                    "stale",
+                    "windows"
+                  ]
+                }
+              },
+              "pools": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "accountId": {
+                      "type": "string"
+                    },
+                    "accountLabel": {
+                      "type": "string"
+                    },
+                    "plan": {
+                      "type": "string"
+                    },
+                    "account": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "auth_required",
+                        "rate_limited",
+                        "unavailable",
+                        "not_measured",
+                        "error",
+                        "skipped"
+                      ]
+                    },
+                    "stale": {
+                      "type": "boolean"
+                    },
+                    "measuredAt": {
+                      "type": "number"
+                    },
+                    "unread": {
+                      "type": "boolean"
+                    },
+                    "lastShareAt": {
+                      "type": "number"
+                    },
+                    "refusedUntilMs": {
+                      "type": "number"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "retryAfter": {
+                      "type": "string"
+                    },
+                    "windows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "percentRemaining": {
+                            "type": "number"
+                          },
+                          "pace": {
+                            "type": "string",
+                            "enum": [
+                              "ahead",
+                              "on_pace",
+                              "behind",
+                              "unknown"
+                            ]
+                          },
+                          "resetText": {
+                            "type": "string"
+                          },
+                          "resetsAtMs": {
+                            "type": "number"
+                          },
+                          "startsAtMs": {
+                            "type": "number"
+                          },
+                          "windowSeconds": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label"
+                        ]
+                      }
+                    },
+                    "credits": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "available",
+                            "spent",
+                            "off",
+                            "unknown"
+                          ]
+                        },
+                        "usedPercent": {
+                          "type": "number"
+                        },
+                        "balance": {
+                          "type": "string"
+                        },
+                        "unlimited": {
+                          "type": "boolean"
+                        },
+                        "inUse": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ]
+                    },
+                    "savedResets": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "applicable": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "available"
+                      ]
+                    },
+                    "keepGoingOnCredits": {
+                      "type": "boolean"
+                    },
+                    "pool": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "claude",
+                            "chatgpt"
+                          ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "accounts",
+                            "proxy"
+                          ]
+                        },
+                        "accounts": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         },
                         "logins": {
                           "type": "integer",
@@ -39445,6 +40252,15 @@
                     "measuredAt": {
                       "type": "number"
                     },
+                    "unread": {
+                      "type": "boolean"
+                    },
+                    "lastShareAt": {
+                      "type": "number"
+                    },
+                    "refusedUntilMs": {
+                      "type": "number"
+                    },
                     "reason": {
                       "type": "string"
                     },
@@ -39552,6 +40368,266 @@
                             "claude",
                             "chatgpt"
                           ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "accounts",
+                            "proxy"
+                          ]
+                        },
+                        "accounts": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "logins": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "read": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "unread": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "spent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "backAtMs": {
+                          "type": "number"
+                        },
+                        "switchedOff": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInEnded": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInSoon": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "signInByMs": {
+                          "type": "number"
+                        },
+                        "models": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "logins",
+                        "read",
+                        "unread",
+                        "spent",
+                        "switchedOff",
+                        "signInEnded",
+                        "signInSoon"
+                      ]
+                    },
+                    "fromProxy": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "label",
+                    "status",
+                    "stale",
+                    "windows"
+                  ]
+                }
+              },
+              "pools": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "accountId": {
+                      "type": "string"
+                    },
+                    "accountLabel": {
+                      "type": "string"
+                    },
+                    "plan": {
+                      "type": "string"
+                    },
+                    "account": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "auth_required",
+                        "rate_limited",
+                        "unavailable",
+                        "not_measured",
+                        "error",
+                        "skipped"
+                      ]
+                    },
+                    "stale": {
+                      "type": "boolean"
+                    },
+                    "measuredAt": {
+                      "type": "number"
+                    },
+                    "unread": {
+                      "type": "boolean"
+                    },
+                    "lastShareAt": {
+                      "type": "number"
+                    },
+                    "refusedUntilMs": {
+                      "type": "number"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "retryAfter": {
+                      "type": "string"
+                    },
+                    "windows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "percentRemaining": {
+                            "type": "number"
+                          },
+                          "pace": {
+                            "type": "string",
+                            "enum": [
+                              "ahead",
+                              "on_pace",
+                              "behind",
+                              "unknown"
+                            ]
+                          },
+                          "resetText": {
+                            "type": "string"
+                          },
+                          "resetsAtMs": {
+                            "type": "number"
+                          },
+                          "startsAtMs": {
+                            "type": "number"
+                          },
+                          "windowSeconds": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label"
+                        ]
+                      }
+                    },
+                    "credits": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "available",
+                            "spent",
+                            "off",
+                            "unknown"
+                          ]
+                        },
+                        "usedPercent": {
+                          "type": "number"
+                        },
+                        "balance": {
+                          "type": "string"
+                        },
+                        "unlimited": {
+                          "type": "boolean"
+                        },
+                        "inUse": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ]
+                    },
+                    "savedResets": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "applicable": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "available"
+                      ]
+                    },
+                    "keepGoingOnCredits": {
+                      "type": "boolean"
+                    },
+                    "pool": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "claude",
+                            "chatgpt"
+                          ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "accounts",
+                            "proxy"
+                          ]
+                        },
+                        "accounts": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         },
                         "logins": {
                           "type": "integer",
@@ -95566,6 +96642,15 @@
                             "measuredAt": {
                               "type": "number"
                             },
+                            "unread": {
+                              "type": "boolean"
+                            },
+                            "lastShareAt": {
+                              "type": "number"
+                            },
+                            "refusedUntilMs": {
+                              "type": "number"
+                            },
                             "reason": {
                               "type": "string"
                             },
@@ -95673,6 +96758,266 @@
                                     "claude",
                                     "chatgpt"
                                   ]
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "enum": [
+                                    "accounts",
+                                    "proxy"
+                                  ]
+                                },
+                                "accounts": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "logins": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "read": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "unread": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "spent": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "backAtMs": {
+                                  "type": "number"
+                                },
+                                "switchedOff": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "signInEnded": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "signInSoon": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "signInByMs": {
+                                  "type": "number"
+                                },
+                                "models": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "logins",
+                                "read",
+                                "unread",
+                                "spent",
+                                "switchedOff",
+                                "signInEnded",
+                                "signInSoon"
+                              ]
+                            },
+                            "fromProxy": {
+                              "type": "boolean",
+                              "const": true
+                            },
+                            "detail": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "provider",
+                            "label",
+                            "status",
+                            "stale",
+                            "windows"
+                          ]
+                        }
+                      },
+                      "pools": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "provider": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "accountId": {
+                              "type": "string"
+                            },
+                            "accountLabel": {
+                              "type": "string"
+                            },
+                            "plan": {
+                              "type": "string"
+                            },
+                            "account": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "ok",
+                                "auth_required",
+                                "rate_limited",
+                                "unavailable",
+                                "not_measured",
+                                "error",
+                                "skipped"
+                              ]
+                            },
+                            "stale": {
+                              "type": "boolean"
+                            },
+                            "measuredAt": {
+                              "type": "number"
+                            },
+                            "unread": {
+                              "type": "boolean"
+                            },
+                            "lastShareAt": {
+                              "type": "number"
+                            },
+                            "refusedUntilMs": {
+                              "type": "number"
+                            },
+                            "reason": {
+                              "type": "string"
+                            },
+                            "retryAfter": {
+                              "type": "string"
+                            },
+                            "windows": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "percentRemaining": {
+                                    "type": "number"
+                                  },
+                                  "pace": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ahead",
+                                      "on_pace",
+                                      "behind",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "resetText": {
+                                    "type": "string"
+                                  },
+                                  "resetsAtMs": {
+                                    "type": "number"
+                                  },
+                                  "startsAtMs": {
+                                    "type": "number"
+                                  },
+                                  "windowSeconds": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "label"
+                                ]
+                              }
+                            },
+                            "credits": {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available",
+                                    "spent",
+                                    "off",
+                                    "unknown"
+                                  ]
+                                },
+                                "usedPercent": {
+                                  "type": "number"
+                                },
+                                "balance": {
+                                  "type": "string"
+                                },
+                                "unlimited": {
+                                  "type": "boolean"
+                                },
+                                "inUse": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "state"
+                              ]
+                            },
+                            "savedResets": {
+                              "type": "object",
+                              "properties": {
+                                "available": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "applicable": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "available"
+                              ]
+                            },
+                            "keepGoingOnCredits": {
+                              "type": "boolean"
+                            },
+                            "pool": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "claude",
+                                    "chatgpt"
+                                  ]
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "enum": [
+                                    "accounts",
+                                    "proxy"
+                                  ]
+                                },
+                                "accounts": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 "logins": {
                                   "type": "integer",
@@ -100629,6 +101974,15 @@
                 "measuredAt": {
                   "type": "number"
                 },
+                "unread": {
+                  "type": "boolean"
+                },
+                "lastShareAt": {
+                  "type": "number"
+                },
+                "refusedUntilMs": {
+                  "type": "number"
+                },
                 "reason": {
                   "type": "string"
                 },
@@ -100736,6 +102090,266 @@
                         "claude",
                         "chatgpt"
                       ]
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "accounts",
+                        "proxy"
+                      ]
+                    },
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "logins": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "read": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "unread": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "spent": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "backAtMs": {
+                      "type": "number"
+                    },
+                    "switchedOff": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "signInEnded": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "signInSoon": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "signInByMs": {
+                      "type": "number"
+                    },
+                    "models": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "logins",
+                    "read",
+                    "unread",
+                    "spent",
+                    "switchedOff",
+                    "signInEnded",
+                    "signInSoon"
+                  ]
+                },
+                "fromProxy": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "provider",
+                "label",
+                "status",
+                "stale",
+                "windows"
+              ]
+            }
+          },
+          "pools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "accountId": {
+                  "type": "string"
+                },
+                "accountLabel": {
+                  "type": "string"
+                },
+                "plan": {
+                  "type": "string"
+                },
+                "account": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "auth_required",
+                    "rate_limited",
+                    "unavailable",
+                    "not_measured",
+                    "error",
+                    "skipped"
+                  ]
+                },
+                "stale": {
+                  "type": "boolean"
+                },
+                "measuredAt": {
+                  "type": "number"
+                },
+                "unread": {
+                  "type": "boolean"
+                },
+                "lastShareAt": {
+                  "type": "number"
+                },
+                "refusedUntilMs": {
+                  "type": "number"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "retryAfter": {
+                  "type": "string"
+                },
+                "windows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "percentRemaining": {
+                        "type": "number"
+                      },
+                      "pace": {
+                        "type": "string",
+                        "enum": [
+                          "ahead",
+                          "on_pace",
+                          "behind",
+                          "unknown"
+                        ]
+                      },
+                      "resetText": {
+                        "type": "string"
+                      },
+                      "resetsAtMs": {
+                        "type": "number"
+                      },
+                      "startsAtMs": {
+                        "type": "number"
+                      },
+                      "windowSeconds": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label"
+                    ]
+                  }
+                },
+                "credits": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "available",
+                        "spent",
+                        "off",
+                        "unknown"
+                      ]
+                    },
+                    "usedPercent": {
+                      "type": "number"
+                    },
+                    "balance": {
+                      "type": "string"
+                    },
+                    "unlimited": {
+                      "type": "boolean"
+                    },
+                    "inUse": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ]
+                },
+                "savedResets": {
+                  "type": "object",
+                  "properties": {
+                    "available": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "applicable": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "available"
+                  ]
+                },
+                "keepGoingOnCredits": {
+                  "type": "boolean"
+                },
+                "pool": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "claude",
+                        "chatgpt"
+                      ]
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "accounts",
+                        "proxy"
+                      ]
+                    },
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     },
                     "logins": {
                       "type": "integer",
@@ -110790,6 +112404,15 @@
                                   "measuredAt": {
                                     "type": "number"
                                   },
+                                  "unread": {
+                                    "type": "boolean"
+                                  },
+                                  "lastShareAt": {
+                                    "type": "number"
+                                  },
+                                  "refusedUntilMs": {
+                                    "type": "number"
+                                  },
                                   "reason": {
                                     "type": "string"
                                   },
@@ -110897,6 +112520,266 @@
                                           "claude",
                                           "chatgpt"
                                         ]
+                                      },
+                                      "source": {
+                                        "type": "string",
+                                        "enum": [
+                                          "accounts",
+                                          "proxy"
+                                        ]
+                                      },
+                                      "accounts": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "logins": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "read": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "unread": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "spent": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "backAtMs": {
+                                        "type": "number"
+                                      },
+                                      "switchedOff": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInEnded": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInSoon": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInByMs": {
+                                        "type": "number"
+                                      },
+                                      "models": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "logins",
+                                      "read",
+                                      "unread",
+                                      "spent",
+                                      "switchedOff",
+                                      "signInEnded",
+                                      "signInSoon"
+                                    ]
+                                  },
+                                  "fromProxy": {
+                                    "type": "boolean",
+                                    "const": true
+                                  },
+                                  "detail": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "provider",
+                                  "label",
+                                  "status",
+                                  "stale",
+                                  "windows"
+                                ]
+                              }
+                            },
+                            "pools": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "provider": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "accountId": {
+                                    "type": "string"
+                                  },
+                                  "accountLabel": {
+                                    "type": "string"
+                                  },
+                                  "plan": {
+                                    "type": "string"
+                                  },
+                                  "account": {
+                                    "type": "string"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ok",
+                                      "auth_required",
+                                      "rate_limited",
+                                      "unavailable",
+                                      "not_measured",
+                                      "error",
+                                      "skipped"
+                                    ]
+                                  },
+                                  "stale": {
+                                    "type": "boolean"
+                                  },
+                                  "measuredAt": {
+                                    "type": "number"
+                                  },
+                                  "unread": {
+                                    "type": "boolean"
+                                  },
+                                  "lastShareAt": {
+                                    "type": "number"
+                                  },
+                                  "refusedUntilMs": {
+                                    "type": "number"
+                                  },
+                                  "reason": {
+                                    "type": "string"
+                                  },
+                                  "retryAfter": {
+                                    "type": "string"
+                                  },
+                                  "windows": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string"
+                                        },
+                                        "label": {
+                                          "type": "string"
+                                        },
+                                        "percentRemaining": {
+                                          "type": "number"
+                                        },
+                                        "pace": {
+                                          "type": "string",
+                                          "enum": [
+                                            "ahead",
+                                            "on_pace",
+                                            "behind",
+                                            "unknown"
+                                          ]
+                                        },
+                                        "resetText": {
+                                          "type": "string"
+                                        },
+                                        "resetsAtMs": {
+                                          "type": "number"
+                                        },
+                                        "startsAtMs": {
+                                          "type": "number"
+                                        },
+                                        "windowSeconds": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "label"
+                                      ]
+                                    }
+                                  },
+                                  "credits": {
+                                    "type": "object",
+                                    "properties": {
+                                      "state": {
+                                        "type": "string",
+                                        "enum": [
+                                          "available",
+                                          "spent",
+                                          "off",
+                                          "unknown"
+                                        ]
+                                      },
+                                      "usedPercent": {
+                                        "type": "number"
+                                      },
+                                      "balance": {
+                                        "type": "string"
+                                      },
+                                      "unlimited": {
+                                        "type": "boolean"
+                                      },
+                                      "inUse": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "state"
+                                    ]
+                                  },
+                                  "savedResets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "available": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "applicable": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "available"
+                                    ]
+                                  },
+                                  "keepGoingOnCredits": {
+                                    "type": "boolean"
+                                  },
+                                  "pool": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "claude",
+                                          "chatgpt"
+                                        ]
+                                      },
+                                      "source": {
+                                        "type": "string",
+                                        "enum": [
+                                          "accounts",
+                                          "proxy"
+                                        ]
+                                      },
+                                      "accounts": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
                                       },
                                       "logins": {
                                         "type": "integer",
@@ -112658,6 +114541,15 @@
                                   "measuredAt": {
                                     "type": "number"
                                   },
+                                  "unread": {
+                                    "type": "boolean"
+                                  },
+                                  "lastShareAt": {
+                                    "type": "number"
+                                  },
+                                  "refusedUntilMs": {
+                                    "type": "number"
+                                  },
                                   "reason": {
                                     "type": "string"
                                   },
@@ -112765,6 +114657,266 @@
                                           "claude",
                                           "chatgpt"
                                         ]
+                                      },
+                                      "source": {
+                                        "type": "string",
+                                        "enum": [
+                                          "accounts",
+                                          "proxy"
+                                        ]
+                                      },
+                                      "accounts": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "logins": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "read": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "unread": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "spent": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "backAtMs": {
+                                        "type": "number"
+                                      },
+                                      "switchedOff": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInEnded": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInSoon": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "signInByMs": {
+                                        "type": "number"
+                                      },
+                                      "models": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "logins",
+                                      "read",
+                                      "unread",
+                                      "spent",
+                                      "switchedOff",
+                                      "signInEnded",
+                                      "signInSoon"
+                                    ]
+                                  },
+                                  "fromProxy": {
+                                    "type": "boolean",
+                                    "const": true
+                                  },
+                                  "detail": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "provider",
+                                  "label",
+                                  "status",
+                                  "stale",
+                                  "windows"
+                                ]
+                              }
+                            },
+                            "pools": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "provider": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "accountId": {
+                                    "type": "string"
+                                  },
+                                  "accountLabel": {
+                                    "type": "string"
+                                  },
+                                  "plan": {
+                                    "type": "string"
+                                  },
+                                  "account": {
+                                    "type": "string"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ok",
+                                      "auth_required",
+                                      "rate_limited",
+                                      "unavailable",
+                                      "not_measured",
+                                      "error",
+                                      "skipped"
+                                    ]
+                                  },
+                                  "stale": {
+                                    "type": "boolean"
+                                  },
+                                  "measuredAt": {
+                                    "type": "number"
+                                  },
+                                  "unread": {
+                                    "type": "boolean"
+                                  },
+                                  "lastShareAt": {
+                                    "type": "number"
+                                  },
+                                  "refusedUntilMs": {
+                                    "type": "number"
+                                  },
+                                  "reason": {
+                                    "type": "string"
+                                  },
+                                  "retryAfter": {
+                                    "type": "string"
+                                  },
+                                  "windows": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string"
+                                        },
+                                        "label": {
+                                          "type": "string"
+                                        },
+                                        "percentRemaining": {
+                                          "type": "number"
+                                        },
+                                        "pace": {
+                                          "type": "string",
+                                          "enum": [
+                                            "ahead",
+                                            "on_pace",
+                                            "behind",
+                                            "unknown"
+                                          ]
+                                        },
+                                        "resetText": {
+                                          "type": "string"
+                                        },
+                                        "resetsAtMs": {
+                                          "type": "number"
+                                        },
+                                        "startsAtMs": {
+                                          "type": "number"
+                                        },
+                                        "windowSeconds": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "label"
+                                      ]
+                                    }
+                                  },
+                                  "credits": {
+                                    "type": "object",
+                                    "properties": {
+                                      "state": {
+                                        "type": "string",
+                                        "enum": [
+                                          "available",
+                                          "spent",
+                                          "off",
+                                          "unknown"
+                                        ]
+                                      },
+                                      "usedPercent": {
+                                        "type": "number"
+                                      },
+                                      "balance": {
+                                        "type": "string"
+                                      },
+                                      "unlimited": {
+                                        "type": "boolean"
+                                      },
+                                      "inUse": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "state"
+                                    ]
+                                  },
+                                  "savedResets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "available": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "applicable": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "available"
+                                    ]
+                                  },
+                                  "keepGoingOnCredits": {
+                                    "type": "boolean"
+                                  },
+                                  "pool": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "claude",
+                                          "chatgpt"
+                                        ]
+                                      },
+                                      "source": {
+                                        "type": "string",
+                                        "enum": [
+                                          "accounts",
+                                          "proxy"
+                                        ]
+                                      },
+                                      "accounts": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
                                       },
                                       "logins": {
                                         "type": "integer",
@@ -116991,6 +119143,15 @@
                           "measuredAt": {
                             "type": "number"
                           },
+                          "unread": {
+                            "type": "boolean"
+                          },
+                          "lastShareAt": {
+                            "type": "number"
+                          },
+                          "refusedUntilMs": {
+                            "type": "number"
+                          },
                           "reason": {
                             "type": "string"
                           },
@@ -117098,6 +119259,266 @@
                                   "claude",
                                   "chatgpt"
                                 ]
+                              },
+                              "source": {
+                                "type": "string",
+                                "enum": [
+                                  "accounts",
+                                  "proxy"
+                                ]
+                              },
+                              "accounts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "logins": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "read": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "unread": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "spent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "backAtMs": {
+                                "type": "number"
+                              },
+                              "switchedOff": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "signInEnded": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "signInSoon": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "signInByMs": {
+                                "type": "number"
+                              },
+                              "models": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "logins",
+                              "read",
+                              "unread",
+                              "spent",
+                              "switchedOff",
+                              "signInEnded",
+                              "signInSoon"
+                            ]
+                          },
+                          "fromProxy": {
+                            "type": "boolean",
+                            "const": true
+                          },
+                          "detail": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "provider",
+                          "label",
+                          "status",
+                          "stale",
+                          "windows"
+                        ]
+                      }
+                    },
+                    "pools": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "accountLabel": {
+                            "type": "string"
+                          },
+                          "plan": {
+                            "type": "string"
+                          },
+                          "account": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "ok",
+                              "auth_required",
+                              "rate_limited",
+                              "unavailable",
+                              "not_measured",
+                              "error",
+                              "skipped"
+                            ]
+                          },
+                          "stale": {
+                            "type": "boolean"
+                          },
+                          "measuredAt": {
+                            "type": "number"
+                          },
+                          "unread": {
+                            "type": "boolean"
+                          },
+                          "lastShareAt": {
+                            "type": "number"
+                          },
+                          "refusedUntilMs": {
+                            "type": "number"
+                          },
+                          "reason": {
+                            "type": "string"
+                          },
+                          "retryAfter": {
+                            "type": "string"
+                          },
+                          "windows": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "percentRemaining": {
+                                  "type": "number"
+                                },
+                                "pace": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ahead",
+                                    "on_pace",
+                                    "behind",
+                                    "unknown"
+                                  ]
+                                },
+                                "resetText": {
+                                  "type": "string"
+                                },
+                                "resetsAtMs": {
+                                  "type": "number"
+                                },
+                                "startsAtMs": {
+                                  "type": "number"
+                                },
+                                "windowSeconds": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "label"
+                              ]
+                            }
+                          },
+                          "credits": {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "spent",
+                                  "off",
+                                  "unknown"
+                                ]
+                              },
+                              "usedPercent": {
+                                "type": "number"
+                              },
+                              "balance": {
+                                "type": "string"
+                              },
+                              "unlimited": {
+                                "type": "boolean"
+                              },
+                              "inUse": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "state"
+                            ]
+                          },
+                          "savedResets": {
+                            "type": "object",
+                            "properties": {
+                              "available": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "applicable": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "available"
+                            ]
+                          },
+                          "keepGoingOnCredits": {
+                            "type": "boolean"
+                          },
+                          "pool": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "claude",
+                                  "chatgpt"
+                                ]
+                              },
+                              "source": {
+                                "type": "string",
+                                "enum": [
+                                  "accounts",
+                                  "proxy"
+                                ]
+                              },
+                              "accounts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
                               },
                               "logins": {
                                 "type": "integer",

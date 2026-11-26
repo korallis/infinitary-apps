@@ -2435,6 +2435,38 @@
       <string>%1$ld tasks</string>
     </dict>
   </dict>
+  <key>settingsSubscriptionsOwnPoolAccounts</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld account pooled</string>
+      <key>other</key>
+      <string>%1$ld accounts pooled</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsOwnPoolSignedOut</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld needs signing in again</string>
+      <key>other</key>
+      <string>%1$ld need signing in again</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsPoolAccounts</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

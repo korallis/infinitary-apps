@@ -1,8 +1,16 @@
+import { accountsPoolOf } from "@shared/accountPools";
 import type { CatalogModelView, ModelsCatalogView, QuotaProviderView } from "@shared/quota";
-import { allowanceProviderOf, answersOnCredits } from "@shared/quota";
+import {
+  allowanceProviderOf,
+  answersOnCredits,
+  formatResetText,
+  inAccountsPool,
+} from "@shared/quota";
 import {
   allowanceSpent,
+  type BandFacts,
   compareSpendRank,
+  poolRank,
   providerScopes,
   type ScopeSignals,
 } from "@shared/quotaSignals";
@@ -56,13 +64,66 @@ function modelScope(
   return view.allModels;
 }
 
-/** When the window holding a model's least headroom on one account row resets. */
+/**
+ * What blocks a model on a pooled login's row, and until when (docs/quota.md,
+ * "A pool of your own logins"): of the windows that bound the model, the
+ * used-up one that resets last, since the login serves the model again only
+ * when every one of them has reset, or the end of its provider's refusal of
+ * the login (`refusedUntilMs`) when that is later. Nothing when nothing
+ * blocks it; a blocker with no time when a used-up window has no known
+ * reset, so no return can be named. Another model's window and credits past
+ * the allowance bound nothing here and are never the blocker.
+ */
+export function pooledBlockerOf(
+  provider: QuotaProviderView,
+  nowMs: number,
+  modelId?: string,
+): { backAtMs?: number; resetText?: string } | undefined {
+  const bounds = modelScope(provider, nowMs, modelId)?.boundedBy ?? [];
+  const usedUp = provider.windows.filter(
+    (window) =>
+      bounds.includes(window.id) &&
+      typeof window.percentRemaining === "number" &&
+      window.percentRemaining <= 0,
+  );
+  const refusedUntilMs =
+    provider.refusedUntilMs !== undefined && provider.refusedUntilMs > nowMs
+      ? provider.refusedUntilMs
+      : undefined;
+  if (usedUp.length === 0 && refusedUntilMs === undefined) return undefined;
+  if (usedUp.some((window) => window.resetsAtMs === undefined)) return {};
+  const last = usedUp.reduce<(typeof usedUp)[number] | undefined>(
+    (latest, window) =>
+      !latest || (window.resetsAtMs as number) > (latest.resetsAtMs as number) ? window : latest,
+    undefined,
+  );
+  if (refusedUntilMs !== undefined && (!last || refusedUntilMs > (last.resetsAtMs as number))) {
+    const resetText = formatResetText(refusedUntilMs, nowMs);
+    return { backAtMs: refusedUntilMs, ...(resetText ? { resetText } : {}) };
+  }
+  return {
+    ...(last?.resetsAtMs !== undefined ? { backAtMs: last.resetsAtMs } : {}),
+    ...(last?.resetText ? { resetText: last.resetText } : {}),
+  };
+}
+
+/**
+ * When the window holding a model's least headroom on one account row
+ * resets. For a login of one of `pools`, when what blocks the model is
+ * gone instead (`pooledBlockerOf`): the last such reset, and none when one
+ * is not known.
+ */
 export function limitingResetOf(
   provider: QuotaProviderView,
   nowMs: number,
   modelId?: string,
+  pools?: readonly QuotaProviderView[],
 ): number | undefined {
   if (provider.status !== "ok" || provider.stale) return undefined;
+  if (inAccountsPool(accountsPoolOf(pools, provider.provider), provider.accountId)) {
+    const blocker = pooledBlockerOf(provider, nowMs, modelId);
+    if (blocker) return blocker.backAtMs;
+  }
   const id = modelScope(provider, nowMs, modelId)?.limitingWindowId;
   return provider.windows.find((window) => window.id === id)?.resetsAtMs;
 }
@@ -114,6 +175,73 @@ export function effectiveFromProvider(
       ? { onCredits: true as const }
       : {}),
   };
+}
+
+/**
+ * A model's view over a pool of the person's own logins (docs/quota.md, "A
+ * pool of your own logins"), from `members`' own views of that model: what
+ * is left is the pool's, its place in the spend order is `poolRank` of the
+ * members, and a spent pool keeps going on credits when a member answers on
+ * them. The pool is spent for the model exactly when no read member can
+ * serve it: a window only some logins report can read zero in the pool
+ * while another login has room, and the share left is then the mean of the
+ * members' own.
+ */
+export function pooledView(
+  pool: QuotaProviderView,
+  nowMs: number,
+  modelId: string | undefined,
+  members: readonly BandFacts[],
+): EffectiveView {
+  const known = members.flatMap((member) =>
+    typeof member.effectivePercentRemaining === "number"
+      ? [Math.max(0, member.effectivePercentRemaining)]
+      : [],
+  );
+  const room = known.some((left) => left > 0);
+  const pooled = effectiveFromProvider(pool, nowMs, modelId).effectivePercentRemaining;
+  const left =
+    pooled === undefined
+      ? undefined
+      : room
+        ? pooled > 0
+          ? pooled
+          : known.reduce((sum, each) => sum + each, 0) / known.length
+        : known.length > 0 && known.length === members.length
+          ? 0
+          : pooled;
+  return {
+    ...(left !== undefined ? { effectivePercentRemaining: left } : {}),
+    ...poolRank(members),
+    ...(left !== undefined && left <= 0 && members.some((member) => member.onCredits === true)
+      ? { onCredits: true as const }
+      : {}),
+  };
+}
+
+/** `pooledView` over the member rows themselves, as read at `nowMs`. */
+export function effectiveFromPool(
+  pool: QuotaProviderView,
+  members: readonly QuotaProviderView[],
+  nowMs: number,
+  modelId?: string,
+): EffectiveView {
+  return pooledView(
+    pool,
+    nowMs,
+    modelId,
+    members.map((member) => effectiveFromProvider(member, nowMs, modelId)),
+  );
+}
+
+/** The rows of the logins an `accounts` pool folds. */
+export function poolMembers(
+  pool: QuotaProviderView,
+  providers: readonly QuotaProviderView[],
+): QuotaProviderView[] {
+  return providers.filter(
+    (row) => row.provider === pool.provider && inAccountsPool(pool, row.accountId),
+  );
 }
 
 /**
@@ -201,9 +329,21 @@ function runwayRank(model: CatalogModelView): number {
 export function markCredits(
   catalog: ModelsCatalogView,
   providers: QuotaProviderView[],
+  /** The snapshot's pools of the person's own logins (`QuotaSnapshotView.pools`). */
+  pools?: readonly QuotaProviderView[],
 ): ModelsCatalogView {
+  // A pooled provider's models answer on a login of the pool that serves,
+  // as `pooledView` reads them: a paused account outside it, and a login
+  // whose sign-in ended or whose reading is not current, serves nothing,
+  // whatever its switch says.
   const credited = new Set(
-    providers.filter((row) => answersOnCredits(row)).map((row) => row.provider),
+    providers
+      .filter((row) => {
+        if (!answersOnCredits(row)) return false;
+        const pool = accountsPoolOf(pools, row.provider);
+        return !pool || (inAccountsPool(pool, row.accountId) && row.status === "ok" && !row.stale);
+      })
+      .map((row) => row.provider),
   );
   return {
     ...catalog,
@@ -221,6 +361,8 @@ export function buildModelsCatalog(
   providers: QuotaProviderView[],
   generatedAt: string,
   nowMs?: number,
+  /** The snapshot's pools of the person's own logins (`QuotaSnapshotView.pools`). */
+  pools?: readonly QuotaProviderView[],
 ): ModelsCatalogView {
   const at =
     nowMs ?? (Number.isFinite(Date.parse(generatedAt)) ? Date.parse(generatedAt) : Date.now());
@@ -238,7 +380,12 @@ export function buildModelsCatalog(
     const rows = (byQuotaId.get(quotaId) ?? []).filter(
       (row) => !model.pool || row.pool?.kind === model.pool,
     );
-    const effective = effectiveAcrossAccounts(rows, at, model.id);
+    // A provider whose own logins pool is read as that pool, not as its
+    // best login (docs/quota.md, "A pool of your own logins").
+    const pool = model.pool ? undefined : accountsPoolOf(pools, quotaId);
+    const effective = pool
+      ? effectiveFromPool(pool, poolMembers(pool, providers), at, model.id)
+      : effectiveAcrossAccounts(rows, at, model.id);
     return [
       {
         provider: quotaId,

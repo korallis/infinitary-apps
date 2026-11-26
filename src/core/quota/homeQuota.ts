@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { accountPools } from "@shared/accountPools";
 import type { CutOff } from "@shared/authFailure";
 import {
   accountIdFromNeedsReauthCard,
@@ -30,7 +31,12 @@ import type { StandIns } from "../standIns";
 import type { AppDatabase } from "../storage/db";
 import { UsageStore } from "../storage/usageStore";
 import { type QuotaCatalogModel, quotaEntryForPiProvider, quotaRowProviderOf } from "./auth";
-import { buildModelsCatalog, effectiveFromProvider } from "./catalog";
+import {
+  buildModelsCatalog,
+  effectiveFromPool,
+  effectiveFromProvider,
+  poolMembers,
+} from "./catalog";
 import { managedFromClaudeStore } from "./claudeAuthResolve";
 import {
   addressIsProxy,
@@ -53,6 +59,7 @@ import {
   pushedCredits,
   pushedOnlyProviderViews,
   pushedProviderViews,
+  shareAtOf,
   withPushedCredits,
   withRejectedReadings,
 } from "./pushedQuota";
@@ -297,8 +304,15 @@ export function startHomeQuota(options: {
       if (window.status === "rejected") {
         // Ending the refusal is not a new word from the session: whether it
         // was answering on extra usage is not carried to the new time.
+        // Nor is it a reading: a share the window keeps keeps its own time.
         const { usingOverage: _using, ...rest } = window;
-        pushedQuota.record(accountId, { ...rest, status: "allowed", at: Date.now() });
+        const shareAt = shareAtOf(window);
+        pushedQuota.record(accountId, {
+          ...rest,
+          status: "allowed",
+          at: Date.now(),
+          ...(shareAt !== undefined ? { shareAt } : {}),
+        });
       }
     }
   };
@@ -454,9 +468,31 @@ export function startHomeQuota(options: {
       ? {}
       : {
           catalogFor: (snapshot: QuotaSnapshotView) =>
-            buildModelsCatalog(catalogModels(), snapshot.providers, snapshot.generatedAt),
+            buildModelsCatalog(
+              catalogModels(),
+              snapshot.providers,
+              snapshot.generatedAt,
+              undefined,
+              snapshot.pools,
+            ),
         }),
     stamp: (snapshot) => stampSnapshot(snapshot, keepsGoing),
+    // Every enabled login here is a pool member; the fold keeps a provider
+    // with fewer than two, and every provider but Claude and ChatGPT, out.
+    pools: (snapshot, refusedUntil) =>
+      accountPools(
+        snapshot.providers,
+        vault.list().flatMap((account) => {
+          const quotaId = quotaEntryForPiProvider(account.providerId)?.quotaId;
+          return account.enabled && quotaId ? [{ accountId: account.id, provider: quotaId }] : [];
+        }),
+        snapshot.fetchedAt,
+        refusedUntil,
+      ),
+    refusedUntil: (accountId) => {
+      const standing = vault.cutOff(accountId);
+      return standing?.class === "no_headroom" ? standing.resetsAt : undefined;
+    },
     broadcast: options.broadcast,
     ...(readProxy
       ? {
@@ -483,6 +519,9 @@ export function startHomeQuota(options: {
       .map((account) => account.id),
   );
   vault.onCutOffChange((accountId) => {
+    // A pooled login's refusal began or ended: its served row follows it now
+    // (`refusedUntil`), not at the next reading.
+    if (quota.latest()?.pools) quota.restamp();
     if (vault.cutOff(accountId)?.class === "no_headroom") {
       spentHeld.add(accountId);
       return;
@@ -514,6 +553,8 @@ export function startHomeQuota(options: {
           : {}),
         ...(reading.usingOverage !== undefined ? { usingOverage: reading.usingOverage } : {}),
         at: now,
+        // A share the session reports is a reading of the allowance, taken now.
+        ...(reading.utilization !== undefined ? { shareAt: now } : {}),
       });
       const after = pushedQuota.windowsFor(accountId);
       const creditsAfter = pushedCredits(after, now)?.credits;
@@ -527,7 +568,10 @@ export function startHomeQuota(options: {
       if (vault.claudeConfigDir(accountId) !== undefined) {
         const shown = (windows: PushedWindow[]) => {
           const window = windows.find((entry) => entry.windowId === reading.windowId);
-          return window && [window.status, window.utilization, window.resetsAt].join();
+          // The same share reported again is a newer reading: its time moves.
+          return (
+            window && [window.status, window.utilization, window.resetsAt, window.shareAt].join()
+          );
         };
         if (shown(before) === shown(after) && !creditsMoved) return;
         const [row] = pushedOnlyViews(now, accountId);
@@ -612,24 +656,31 @@ export function startHomeQuota(options: {
  * A compact one-line quota digest for the Firstmate context block: each
  * account's EFFECTIVE remaining (min across its bounding windows - never an
  * arbitrary window) plus its spend priority when measurable (higher =
- * paid allowance on track to expire unused).
+ * paid allowance on track to expire unused). A provider whose own logins
+ * pool is named first, as that pool, before its logins.
  */
 export function quotaContextLine(snapshot: QuotaSnapshotView | undefined): string {
   if (!snapshot || snapshot.providers.length === 0) return "unknown";
   const now = Date.now();
-  const parts = snapshot.providers
+  const pools = (snapshot.pools ?? []).filter((pool) => pool.pool?.source === "accounts");
+  const parts = [...pools, ...snapshot.providers]
     .filter((provider) => provider.status === "ok")
     .flatMap((provider) => {
-      const effective = effectiveFromProvider(provider, now);
+      const own = provider.pool?.source === "accounts";
+      const effective = own
+        ? effectiveFromPool(provider, poolMembers(provider, snapshot.providers), now)
+        : effectiveFromProvider(provider, now);
       if (typeof effective.effectivePercentRemaining !== "number") return [];
       const account = provider.accountLabel
         ? `${provider.provider}/${provider.accountLabel}`
         : provider.provider;
       // A connection to a CLI proxy has a row per pool: each is named.
       // i18n-exempt: the first mate's digest, served to a model in English
-      const subject = provider.pool
-        ? `${account} ${QUOTA_POOL_NAMES[provider.pool.kind]} pool`
-        : account;
+      const subject = own
+        ? `${provider.provider} pool of ${provider.pool?.logins} logins`
+        : provider.pool
+          ? `${account} ${QUOTA_POOL_NAMES[provider.pool.kind]} pool`
+          : account;
       const priority =
         typeof effective.spendPriority === "number"
           ? ` (spend priority ${effective.spendPriority.toFixed(2)})`

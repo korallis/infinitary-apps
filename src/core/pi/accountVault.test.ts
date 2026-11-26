@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { accountPools } from "@shared/accountPools";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
 import { HERE } from "@shared/deviceNames";
 import type { AuthNotice, AuthPromptView } from "@shared/providers";
@@ -23,6 +24,7 @@ import { signOutCodexHome } from "../codex/savedResets";
 import { appPathsFor } from "../paths";
 import { createQuotaFetcher } from "../quota/fetchQuota";
 import { PushedQuotaStore, withRejectedReadings } from "../quota/pushedQuota";
+import { QuotaService } from "../quota/quotaService";
 import { lowestLeft, recordCutOff } from "../quota/spentAllowance";
 import { openInMemoryDatabase } from "../storage/db";
 import type { AuthInteractionBridge } from "./piAuth";
@@ -951,6 +953,75 @@ describe("a typed cut-off on the account", () => {
     expect(vault.cutOff(id)).toBeUndefined();
     await Promise.resolve();
     expect(heard).toEqual([id]);
+  });
+
+  // A pool of own logins waits on a refused login's return (docs/quota.md,
+  // "A reset between readings"): when the provider names an earlier return,
+  // the wait must hear it, with no new reading.
+  it("tells its listeners when a spent allowance's return moves, and not when it is named again", async () => {
+    const world = claudeWorld();
+    const { vault, id } = await signedInClaude(world);
+    const HOUR = 60 * 60_000;
+    const start = world.facts.now;
+    vault.noteCutOff(id, { class: "no_headroom", resetsAt: start + 3 * HOUR });
+    await Promise.resolve();
+
+    // The pooled login's used-up session reset an hour ago; the refusal holds it.
+    const row = (accountId: string) => ({
+      provider: "claude",
+      label: "Claude",
+      accountId,
+      status: "ok" as const,
+      stale: false,
+      windows: [{ id: "session", label: "session", percentRemaining: 0, resetsAtMs: start - HOUR }],
+    });
+    const quota = new QuotaService({
+      refresh: async () => ({
+        snapshot: {
+          generatedAt: new Date(start).toISOString(),
+          fetchedAt: start,
+          providers: [row(id), row("other")],
+        },
+        catalog: { generatedAt: new Date(start).toISOString(), models: [] },
+      }),
+      db: openInMemoryDatabase(),
+      broadcast: () => {},
+      now: () => world.facts.now,
+      pools: (snapshot, refusedUntil) =>
+        accountPools(
+          snapshot.providers,
+          [id, "other"].map((accountId) => ({ accountId, provider: "claude" })),
+          snapshot.fetchedAt,
+          refusedUntil,
+        ),
+      refusedUntil: (accountId) => (accountId === id ? vault.cutOff(id)?.resetsAt : undefined),
+    });
+    const heard: string[] = [];
+    vault.onCutOffChange((accountId) => {
+      heard.push(accountId);
+      quota.restamp();
+    });
+    await quota.refresh("demand");
+    quota.stop();
+    const sessionOf = () =>
+      quota
+        .latest()
+        ?.providers.find((entry) => entry.accountId === id)
+        ?.windows.map((window) => window.id);
+    expect(sessionOf()).toEqual(["session"]);
+
+    // The same return named again is no news.
+    vault.noteCutOff(id, { class: "no_headroom", resetsAt: start + 3 * HOUR });
+    await Promise.resolve();
+    expect(heard).toEqual([]);
+
+    // The provider now says one hour, not three.
+    vault.noteCutOff(id, { class: "no_headroom", resetsAt: start + HOUR });
+    await Promise.resolve();
+    expect(heard).toEqual([id]);
+    expect(sessionOf()).toEqual(["session"]);
+    world.facts.now = start + HOUR;
+    expect(sessionOf()).toEqual([]);
   });
 
   // INF-4104 piece 2: Keep going on credits, and a top-up ending the hold.

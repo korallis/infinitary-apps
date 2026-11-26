@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "id": "pooled-own-logins",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "Several accounts of one provider count as one pool",
+      "body": "When two or more Claude accounts, or two or more ChatGPT accounts, are in use on this computer, Settings → Intelligence shows one set of meters for all of them together above their rows, with how many are spent, not read yet or need signing in again. The crew orders models by that pool, and work waits for a reset only when every account in it is spent.",
+      "picture": {
+        "dark": "pooled-own-logins-dark.webp",
+        "light": "pooled-own-logins-light.webp",
+        "alt": "The Codex accounts in Settings headed by an All accounts row, showing 87% of the session and 24% of the week left across two pooled accounts."
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "allowance-check-words",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "A paused first mate says an allowance was checked only when it was read",
+      "body": "When your first mate pauses on a used-up allowance, its card said Checked at with a time even when the reading had failed and only the provider's refusal was known, or when nothing had been read for that account yet. It now says the allowance could not be read just now.",
+      "noPicture": "This changes one sentence on the existing pause card, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}
