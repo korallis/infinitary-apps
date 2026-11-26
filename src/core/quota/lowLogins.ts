@@ -41,6 +41,11 @@ export type LowLoginsOptions = {
   refillsOf: (providerId: string, accountId: string) => string | undefined;
   /** The started tasks whose conversation is on a login (`LoginMoves.tasksOn`). */
   tasksOn: (accountId: string) => string[];
+  /**
+   * Those of them no move is named for yet (`LoginMoves.unnamedOn`): the
+   * work `spread` still asks about. A click already named the rest's login.
+   */
+  unnamedOn?: (accountId: string) => string[];
   /** Binds each of them to the named login, where it moves between turns (`LoginMoves.moveOff`). */
   moveOff: (from: string, to: string) => unknown;
   /**
@@ -263,7 +268,10 @@ export class LowLogins {
         : choice === "spread"
           ? [...lowOnes]
               .sort((a, b) => Number(b.accountId === pin) - Number(a.accountId === pin))
-              .find((login) => this.options.tasksOn(login.accountId).length > 0)
+              .find(
+                (login) =>
+                  (this.options.unnamedOn ?? this.options.tasksOn)(login.accountId).length > 0,
+              )
           : undefined;
     const other = subject ? roomiestOther(logins, subject.accountId) : undefined;
     const offer = this.offers.get(provider.id);

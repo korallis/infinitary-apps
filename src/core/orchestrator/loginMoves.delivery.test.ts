@@ -384,6 +384,9 @@ describe("an idle task held at its cost limit when its login's work is moved", (
     await tick();
     expect(h.sessionSpecs).toHaveLength(0);
     expect(h.tasks.get("t-move")?.accountId).toBe("acct_personal");
+    // Still on Personal, its login is already named: no card asks about it again.
+    expect(h.supervisor.loginMoves.tasksOn("acct_personal")).toEqual(["t-move"]);
+    expect(h.supervisor.loginMoves.unnamedOn("acct_personal")).toEqual([]);
     await expect(h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
       "recorded-held",
     );
@@ -1538,6 +1541,208 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     ).toEqual(["acct_spare", "acct_spare"]);
     expect(vault.pin).toBe("acct_spare");
     expect(TASKS.map((id) => relaunched.loginMoves.awaitsCheck(id))).toEqual([false, false]);
+    await relaunched.disposeAll();
+  });
+
+  /**
+   * After the click was cut off and the app relaunched, both tasks wait in
+   * the backlog: one is sent a message, the other a message whose files
+   * have crossed, while the click is still to be checked.
+   */
+  async function sentToBacklogBeforeTheCheck() {
+    const { h, vault, cardId } = await clickCutOff();
+    expect(() =>
+      h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_spare"),
+    ).toThrow("the app quit");
+    await h.supervisor.disposeAll();
+
+    const specs: { binding?: unknown }[] = [];
+    const boots: FakeCrewmate[] = [];
+    const relaunched = reboot(
+      h,
+      async (spec: { binding?: unknown }) => {
+        specs.push(spec);
+        const boot = fakeCrewmate({});
+        boots.push(boot);
+        return boot;
+      },
+      { router: h.router as unknown as Router, ...h.relaunchWith },
+    );
+    vault.quitsAtPin = false;
+    for (const id of TASKS) {
+      h.costs.clearHold(id);
+      expect(
+        relaunched.hostOps.moveToBacklog(id, { actor: "firstmate", via: "tool", decision: null })
+          .ok,
+      ).toBe(true);
+    }
+    await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "recorded-held",
+    );
+    seedTask(h.tasks, { id: "t-finder", title: "Find the screenshot", status: "idle" });
+    const picture = join(scratchDir("infinitary-handed-"), "clipped card.png");
+    writeFileSync(picture, "a picture of the clipped card");
+    await keepHandoverFiles([picture], crewmateHandoverDir(h.paths, "t-finder"));
+    await relaunched.steer.steerAfterFiles("t-finder", "t-other", "look at it", {
+      response: { mode: "guidance-only" as const },
+    });
+    await relaunched.watch.sweepInbox(Date.now());
+    await tick();
+    expect(specs).toEqual([]);
+    const prompts = () => boots.flatMap((boot) => boot.promptCalls);
+    const accounts = () =>
+      specs.map((spec) => (spec.binding as { accountId?: string } | undefined)?.accountId);
+    return { h, vault, relaunched, boots, prompts, accounts };
+  }
+
+  it("delivers what was sent to backlog tasks before the check on the named login once the click is accepted, with no second message or Start", async () => {
+    const { h, vault, relaunched, boots, prompts, accounts } = await sentToBacklogBeforeTheCheck();
+    watching(h, relaunched, vault, () => [
+      reading("acct_personal", "Personal", 4),
+      reading("acct_work", "Work", 95),
+      reading("acct_spare", "Spare", 60),
+    ]).read();
+    await vi.waitFor(() =>
+      expect(boots.filter((boot) => boot.promptCalls.length > 0)).toHaveLength(2),
+    );
+    expect(accounts()).toEqual(["acct_spare", "acct_spare"]);
+    expect(prompts().every((prompt) => prompt.startsWith(BACKLOG_STEER_LINE))).toBe(true);
+    expect(prompts().some((prompt) => prompt.includes("Check the footer too."))).toBe(true);
+    expect(
+      prompts().some((prompt) => /Files handed to you from [^\n]*\n\nlook at it/.test(prompt)),
+    ).toBe(true);
+    expect(TASKS.map((id) => h.tasks.get(id)?.backlogSince != null)).toEqual([true, true]);
+    await relaunched.disposeAll();
+  });
+
+  it("delivers what was sent to backlog tasks before the check where they are once the click is refused, with no second message or Start", async () => {
+    const { h, vault, relaunched, boots, prompts, accounts } = await sentToBacklogBeforeTheCheck();
+    // Spare has 3% left now.
+    watching(h, relaunched, vault, () => [
+      reading("acct_personal", "Personal", 4),
+      reading("acct_work", "Work", 40),
+      reading("acct_spare", "Spare", 3),
+    ]).read();
+    await vi.waitFor(() =>
+      expect(boots.filter((boot) => boot.promptCalls.length > 0)).toHaveLength(2),
+    );
+    expect(accounts()).toEqual(["acct_personal", "acct_personal"]);
+    expect(prompts().every((prompt) => prompt.startsWith(BACKLOG_STEER_LINE))).toBe(true);
+    expect(prompts().some((prompt) => prompt.includes("Check the footer too."))).toBe(true);
+    expect(
+      prompts().some((prompt) => /Files handed to you from [^\n]*\n\nlook at it/.test(prompt)),
+    ).toBe(true);
+    await relaunched.disposeAll();
+  });
+
+  it("delivers what was sent before the check as soon as the tasks' moves are named, whatever else the reading settles", async () => {
+    const { h, vault, relaunched, boots, prompts, accounts } = await sentToBacklogBeforeTheCheck();
+    // Nothing but the naming of the moves tells the tasks the click was checked.
+    const forget = vi.spyOn(relaunched.loginMoves, "forget").mockImplementation(() => {});
+    watching(h, relaunched, vault, () => [
+      reading("acct_personal", "Personal", 4),
+      reading("acct_work", "Work", 95),
+      reading("acct_spare", "Spare", 60),
+    ]).read();
+    await vi.waitFor(() =>
+      expect(boots.filter((boot) => boot.promptCalls.length > 0)).toHaveLength(2),
+    );
+    forget.mockRestore();
+    expect(accounts()).toEqual(["acct_spare", "acct_spare"]);
+    expect(prompts().every((prompt) => prompt.startsWith(BACKLOG_STEER_LINE))).toBe(true);
+    await relaunched.disposeAll();
+  });
+
+  it("delivers what was sent to a backlog task with its conversation open before the check, on the named login once the click is accepted", async () => {
+    const { h, vault, first, cardId } = await clickCutOff();
+    for (const id of TASKS) {
+      h.costs.clearHold(id);
+      expect(
+        h.supervisor.hostOps.moveToBacklog(id, { actor: "firstmate", via: "tool", decision: null })
+          .ok,
+      ).toBe(true);
+    }
+    await h.supervisor.sessions.resumeTask("t-move");
+    expect(boundAccount(h, 0)).toBe("acct_personal");
+    expect(() =>
+      h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_spare"),
+    ).toThrow("the app quit");
+    await expect(h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "recorded-held",
+    );
+    await tick();
+    expect(h.inbox.allFor("t-move").filter((row) => row.deliveredAt == null)).toHaveLength(1);
+
+    vault.quitsAtPin = false;
+    first.read();
+    await vi.waitFor(() =>
+      expect(h.inbox.allFor("t-move").filter((row) => row.deliveredAt == null)).toHaveLength(0),
+    );
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_spare");
+    expect(boundAccount(h, 1)).toBe("acct_spare");
+    expect(h.tasks.get("t-move")?.backlogSince != null).toBe(true);
+    await h.supervisor.disposeAll();
+  });
+
+  it("delivers files whose crossing ended after the click was cut off, on the named login once the click is checked", async () => {
+    const { h, vault } = await clickCutOff();
+    await h.supervisor.disposeAll();
+    const specs: { binding?: unknown }[] = [];
+    const boots: FakeCrewmate[] = [];
+    const relaunched = reboot(
+      h,
+      async (spec: { binding?: unknown }) => {
+        specs.push(spec);
+        const boot = fakeCrewmate({});
+        boots.push(boot);
+        return boot;
+      },
+      { router: h.router as unknown as Router, ...h.relaunchWith },
+    );
+    // The card the last launch left open is still to be answered.
+    const watch = watching(h, relaunched, vault, () => [
+      reading("acct_personal", "Personal", 4),
+      reading("acct_work", "Work", 95),
+      reading("acct_spare", "Spare", 60),
+    ]);
+    for (const id of TASKS) {
+      h.costs.clearHold(id);
+      expect(
+        relaunched.hostOps.moveToBacklog(id, { actor: "firstmate", via: "tool", decision: null })
+          .ok,
+      ).toBe(true);
+    }
+    seedTask(h.tasks, { id: "t-finder", title: "Find the screenshot", status: "idle" });
+    const picture = join(scratchDir("infinitary-handed-"), "clipped card.png");
+    writeFileSync(picture, "a picture of the clipped card");
+    await keepHandoverFiles([picture], crewmateHandoverDir(h.paths, "t-finder"));
+    // Sent with no click made yet; the click is cut off while the files cross.
+    await relaunched.steer.steerAfterFiles("t-finder", "t-other", "look at it", {
+      response: { mode: "guidance-only" as const },
+    });
+    expect(relaunched.steer.handingOver("t-other")).toBe(true);
+    expect(() =>
+      relaunched.cardActions.act(
+        loginLowCardId("openai-codex"),
+        "move-login-acct_personal-acct_spare",
+      ),
+    ).toThrow("the app quit");
+    await vi.waitFor(() => expect(relaunched.steer.handingOver("t-other")).toBe(false));
+    await tick();
+    expect(specs).toEqual([]);
+
+    vault.quitsAtPin = false;
+    watch.read();
+    await vi.waitFor(() =>
+      expect(boots.filter((boot) => boot.promptCalls.length > 0)).toHaveLength(1),
+    );
+    const prompt = boots.flatMap((boot) => boot.promptCalls)[0] ?? "";
+    expect(prompt.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+    expect(prompt).toMatch(/Files handed to you from [^\n]*\n\nlook at it/);
+    expect(
+      specs.map((spec) => (spec.binding as { accountId?: string } | undefined)?.accountId),
+    ).toContain("acct_spare");
+    expect(h.tasks.get("t-other")?.accountId).toBe("acct_spare");
     await relaunched.disposeAll();
   });
 

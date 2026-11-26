@@ -10,8 +10,12 @@ export type LoginMovesHost = {
   releaseSession(runtime: TaskRuntime): void;
   forgetRuntime(taskId: string): void;
   resumeTask(taskId: string): Promise<TaskRuntime>;
-  /** Hand an idle crewmate what waits on its lane; true when it took it. */
-  deliverPendingToTask(task: TaskRuntime): boolean;
+  /**
+   * Hand an idle crewmate what waits on its lane; true when it took it.
+   * `sent` marks the delivery of a message someone sent, which a task in
+   * the backlog still reads.
+   */
+  deliverPendingToTask(task: TaskRuntime, sent?: boolean): boolean;
   /** A lane's due rows go now, resuming the task if need be. */
   deliverLane(taskId: string): void;
   /** Where a task's crewmate runs: the computer that runs work its record names, or this Mac. */
@@ -57,6 +61,8 @@ export class LoginMoves {
   private readonly moving = new Map<string, Going>();
   /** Each task still to move, with the login it leaves and the one named for it. */
   private readonly bound = new Map<string, { from: string; to: string }>();
+  /** Each task sent a message while its click's check was awaited (`keepsSent`). */
+  private readonly owed = new Set<string>();
 
   constructor(
     private readonly options: Pick<
@@ -120,8 +126,40 @@ export class LoginMoves {
     // The moves begin once the caller has finished what follows the save in
     // the same step (the pin, the answer's end), which they are held for.
     return Promise.resolve().then(async () => {
+      this.payOwed();
       await Promise.all(taskIds.map((taskId) => this.begin(taskId).done));
     });
+  }
+
+  /**
+   * A message someone sent is kept on the task's lane because its click's
+   * check is awaited: true when so. The check's outcome then delivers it
+   * as a sent message, on the named login or where the task is, so a task
+   * in the backlog, which no sweep opens, still reads it.
+   */
+  keepsSent(taskId: string): boolean {
+    if (!this.awaitsCheck(taskId)) return false;
+    this.owed.add(taskId);
+    return true;
+  }
+
+  /** Delivers each kept sent message whose click has been checked. */
+  private payOwed(): void {
+    for (const taskId of [...this.owed]) {
+      if (this.awaitsCheck(taskId)) continue;
+      this.owed.delete(taskId);
+      const deliver = (task: TaskRuntime) => this.host.deliverPendingToTask(task, true);
+      if (this.takes(taskId, deliver, true) || this.host.laneHeld(taskId)) continue;
+      const open = this.host.runtime(taskId);
+      if (open) deliver(open);
+      else
+        void this.host
+          .resumeTask(taskId)
+          .then(deliver)
+          .catch(() => {
+            // The rows are durable: the next message or Start delivers them.
+          });
+    }
   }
 
   /**
@@ -132,6 +170,8 @@ export class LoginMoves {
   forget(from: string, to?: string): void {
     for (const [taskId, move] of [...this.bound])
       if (move.from === from && (to === undefined || move.to === to)) this.bind(taskId, undefined);
+    // After the caller has ended the answer that held them.
+    if (this.owed.size > 0) void Promise.resolve().then(() => this.payOwed());
   }
 
   /**
@@ -157,6 +197,11 @@ export class LoginMoves {
    */
   bindsTask(taskId: string): boolean {
     return this.bound.has(taskId);
+  }
+
+  /** The login's started tasks no move is named for yet: those a card may still ask about. */
+  unnamedOn(accountId: string): string[] {
+    return this.tasksOn(accountId).filter((taskId) => !this.bound.has(taskId));
   }
 
   /**

@@ -294,6 +294,8 @@ export class CrewSteer {
         });
       return;
     }
+    // Held for its click's check, it is delivered as sent once the check is made.
+    if (record && this.core.facts.inBacklog(taskId)) this.core.loginMoves.keepsSent(taskId);
     void this.core.watch.sweepTaskLane(taskId, this.core.now());
   }
 
@@ -584,6 +586,7 @@ export class CrewSteer {
       const pending = enqueue();
       if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
         // Kept on the lane until the account serves again, or the task leaves the backlog.
+        this.core.loginMoves.keepsSent(taskId);
         this.recordSteer(taskId, message, source, "recorded-held", pending);
         if (sentByHost) this.tellBacklogNews(taskId, message);
         return "recorded-held";
@@ -604,6 +607,7 @@ export class CrewSteer {
     }
     const resumeId = enqueue();
     if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
+      this.core.loginMoves.keepsSent(taskId);
       this.recordSteer(taskId, message, source, "recorded-held", resumeId);
       if (sentByHost) this.tellBacklogNews(taskId, message);
       return "recorded-held";

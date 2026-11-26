@@ -67,17 +67,22 @@ function home(
       saved.chosen = action;
     },
   };
+  /** The task's move is named: recorded and not yet made, as for a task busy or held. */
+  let named: string | undefined;
   const loginMoves = {
     tasksOn: () => ["task-1"],
+    unnamedOn: () => (named !== undefined ? [] : ["task-1"]),
     // As `LoginMoves.moveOff`: a record that cannot be written throws before the promise.
     moveOff: (from: string, to: string) => {
       if (state.movesUnwritable) throw new Error("the record could not be written");
       moved.push(`${from} to ${to}`);
       order.push(`tasks ${from} to ${to}`);
+      named = from;
       return Promise.resolve();
     },
     forget: (from: string, to?: string) => {
       if (to !== undefined) discarded.push(`${from} to ${to}`);
+      else if (named === from) named = undefined;
     },
   } as unknown as LoginMoves;
   const watch = startLowLogins({
@@ -481,6 +486,28 @@ describe("the home's watch after a relaunch, while the login a Move click left i
     after.watch.read();
     expect(after.order).toEqual(["tasks personal to spare", "pin spare"]);
     expect(after.saved.over).toBeDefined();
+  });
+
+  it("asks nothing again under spread about work a recovered click already named a login for, while that work has not moved yet", () => {
+    const logins = [
+      login("personal", "Personal", 4),
+      login("work", "Work", 40),
+      login("spare", "Spare", 60),
+    ];
+    const before = home(logins);
+    before.state.choice = "spread";
+    before.watch.read();
+    before.saved.chosen = moveLoginActionId("personal", "spare");
+
+    const after = home(logins, before.saved);
+    after.state.choice = "spread";
+    after.watch.read();
+    expect(after.order).toEqual(["tasks personal to spare", "pin spare"]);
+    // The task is still on Personal, busy or held: its move is named, not made.
+    after.watch.read();
+    after.watch.read();
+    expect(after.raised).toEqual([]);
+    expect(after.order).toEqual(["tasks personal to spare", "pin spare"]);
   });
 
   it("refuses the click without waiting for the reading once the choice no longer asks", () => {

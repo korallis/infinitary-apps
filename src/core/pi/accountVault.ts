@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  renameSync,
   rmdirSync,
   rmSync,
   writeFileSync,
@@ -1766,10 +1767,16 @@ export class AccountVault {
 
   private saveRegistry(): void {
     this.registryUnread = false;
-    writeFileSync(this.registryPath(), `${JSON.stringify(this.registry, null, 2)}\n`, {
-      mode: 0o600,
-    });
-    chmodSync(this.registryPath(), 0o600);
+    // Staged whole, with its permissions, and put in place in one step: a
+    // save that fails leaves the registry on disk as it was.
+    const staged = `${this.registryPath()}.pending`;
+    try {
+      writeFileSync(staged, `${JSON.stringify(this.registry, null, 2)}\n`, { mode: 0o600 });
+      chmodSync(staged, 0o600);
+      renameSync(staged, this.registryPath());
+    } finally {
+      rmSync(staged, { force: true });
+    }
   }
 }
 
