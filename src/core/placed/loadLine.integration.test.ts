@@ -827,9 +827,10 @@ describe("the declared heavy-run line through its native command", () => {
 
   it("ends receipt pursuit with a short-lived payload, without retaining its streams or reviving an ended group", async () => {
     const dir = scratchDir("infinitary-load-short-receipt-");
-    const entered = deferred<LoadReceipt>();
+    const stateFile = join(dir, "load.json");
+    const entered = deferred<{ identity: LoadReceipt; heard: () => boolean }>();
     const release = deferred<void>();
-    const line = new LoadLine({ stateFile: join(dir, "load.json"), now: stillClock });
+    const line = new LoadLine({ stateFile, now: stillClock });
     lines.push(line);
     line.observe(reading, null);
     const load = line.forTask("short");
@@ -846,7 +847,7 @@ describe("the declared heavy-run line through its native command", () => {
       ...load,
       receipt: (input: LoadReceipt, permitted?: () => boolean) => {
         calls++;
-        entered.resolve(input);
+        entered.resolve({ identity: input, heard: permitted ?? (() => true) });
         const work = release.promise.then(() => load.receipt(input, permitted));
         results.push(work);
         return work;
@@ -858,14 +859,23 @@ describe("the declared heavy-run line through its native command", () => {
       "console.log('short payload');process.stdin.resume();process.stdin.on('end',()=>process.exit(3))",
     ]);
     try {
-      const identity = await entered.promise;
+      const { identity, heard } = await entered.promise;
       payload.child.stdin.end();
       expect(await payload.ended).toBe(3);
       await expect
         .poll(async () => (await readProcesses())?.some((row) => row.group === identity.pid))
         .toBe(false);
+      // The supervisor canceled the worker's request with the payload. Once the app has
+      // heard that connection close, the delayed check is refused for its caller's leaving,
+      // before it looks at the group.
+      await expect.poll(heard).toBe(false);
       release.resolve();
-      await expect(results[0]).rejects.toThrow("living admitted group");
+      await expect(results[0]).rejects.toThrow("no longer has a load command");
+      // Asked with no caller to have left, the line itself refuses the ended group.
+      await expect(load.receipt(identity)).rejects.toThrow("living admitted group");
+      expect(JSON.parse(readFileSync(stateFile, "utf8"))).not.toContainEqual(
+        expect.objectContaining({ launch: expect.anything() }),
+      );
       expect(calls).toBe(1);
       expect(payload.output()).toBe("short payload\n");
       console.info(
