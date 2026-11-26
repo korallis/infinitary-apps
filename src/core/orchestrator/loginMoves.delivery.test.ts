@@ -1215,11 +1215,12 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     supervisor: ReturnType<typeof reboot>,
     vault: { pin: string; quitsAtPin: boolean; savedAtPin?: unknown },
     readings: () => LoginReading[],
+    choice: "ask" | "wait" = "ask",
   ) {
     const settings = new SettingsStore(h.db);
     return startLowLogins({
       settings: {
-        getWhenLoginLow: () => "ask",
+        getWhenLoginLow: () => choice,
         getLoginAnswersOver: () => settings.getLoginAnswersOver(),
         setLoginAnswersOver: (over) => settings.setLoginAnswersOver(over),
       },
@@ -1304,7 +1305,7 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     expect(vault.pin).toBe("acct_spare");
     expect(vault.savedAtPin).toEqual(bothNamed);
     // The captain is not asked to choose again.
-    expect(relaunched.cards.stored(cardId)?.status).not.toBe("open");
+    expect(relaunched.cards.get(cardId)).toBeUndefined();
 
     for (const id of TASKS) h.costs.clearHold(id);
     for (const id of TASKS) await relaunched.steer.steerCrewmate(id, "Check the footer too.");
@@ -1316,6 +1317,127 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     ).toEqual(["acct_spare", "acct_spare"]);
     expect(TASKS.map((id) => h.tasks.get(id)?.accountId)).toEqual(["acct_spare", "acct_spare"]);
     expect(new SettingsStore(h.db).getLoginMoves()).toEqual({});
+    await relaunched.disposeAll();
+  });
+
+  /** Two held tasks on Personal, the card up offering Spare, and the click cut off at the pin. */
+  async function clickCutOff() {
+    const h = threeLogins("openai-codex", fakeCrewmate({}), fakeCrewmate({}), false);
+    for (const id of TASKS) {
+      seedRunning(h, MODEL, `/tmp/${id}.jsonl`, id);
+      h.costs.placeHold({ taskId: id, limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    }
+    const vault: { pin: string; quitsAtPin: boolean; savedAtPin?: unknown } = {
+      pin: "acct_personal",
+      quitsAtPin: true,
+    };
+    const offeringSpare = () => [
+      reading("acct_personal", "Personal", 4),
+      reading("acct_work", "Work", 40),
+      reading("acct_spare", "Spare", 60),
+    ];
+    const first = watching(h, h.supervisor, vault, offeringSpare);
+    first.read();
+    return { h, vault, first, cardId: loginLowCardId("openai-codex") };
+  }
+
+  it("opens no task on the named login when that login has run low by the relaunch, though the tasks' moves were already saved", async () => {
+    const { h, vault, cardId } = await clickCutOff();
+    expect(() =>
+      h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_spare"),
+    ).toThrow("the app quit");
+    expect(Object.keys(new SettingsStore(h.db).getLoginMoves())).toEqual(TASKS);
+    await h.supervisor.disposeAll();
+
+    const specs: { binding?: unknown }[] = [];
+    const boots: FakeCrewmate[] = [];
+    const relaunched = reboot(
+      h,
+      async (spec: { binding?: unknown }) => {
+        specs.push(spec);
+        const boot = fakeCrewmate({});
+        boots.push(boot);
+        return boot;
+      },
+      { router: h.router as unknown as Router, ...h.relaunchWith },
+    );
+    vault.quitsAtPin = false;
+    // Spare has 3% left now; Work has room.
+    const second = watching(h, relaunched, vault, () => [
+      reading("acct_personal", "Personal", 4),
+      reading("acct_work", "Work", 40),
+      reading("acct_spare", "Spare", 3),
+    ]);
+    // From the watch's start no task is still to move to Spare.
+    expect(TASKS.map((id) => relaunched.loginMoves.bindsTask(id))).toEqual([false, false]);
+    expect(new SettingsStore(h.db).getLoginMoves()).toEqual({});
+    second.read();
+    await tick();
+    expect(vault.pin).toBe("acct_personal");
+    expect(new SettingsStore(h.db).getLoginMoves()).toEqual({});
+    // The captain is asked about what is true now.
+    expect(relaunched.cards.get(cardId)?.actions?.[0]?.label).toBe("Move to Work");
+
+    for (const id of TASKS) h.costs.clearHold(id);
+    for (const id of TASKS) await relaunched.steer.steerCrewmate(id, "Check the footer too.");
+    await vi.waitFor(() =>
+      expect(boots.filter((boot) => boot.promptCalls.length > 0)).toHaveLength(2),
+    );
+    expect(
+      specs.map((spec) => (spec.binding as { accountId?: string } | undefined)?.accountId),
+    ).toEqual(["acct_personal", "acct_personal"]);
+    await relaunched.disposeAll();
+  });
+
+  it("names no task, moves no login in use and keeps the answer when the tasks' moves cannot be saved, then makes the whole move at the next reading", async () => {
+    const { h, vault, first, cardId } = await clickCutOff();
+    vault.quitsAtPin = false;
+    const settings = new SettingsStore(h.db);
+    const write = vi.spyOn(SettingsStore.prototype, "setLoginMoves").mockImplementationOnce(() => {
+      throw new Error("the record could not be written");
+    });
+    expect(() =>
+      h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_spare"),
+    ).toThrow("the record could not be written");
+    expect(TASKS.map((id) => h.supervisor.loginMoves.bindsTask(id))).toEqual([false, false]);
+    expect(settings.getLoginMoves()).toEqual({});
+    expect(vault.pin).toBe("acct_personal");
+    expect(settings.getLoginAnswersOver()).toEqual({});
+
+    first.read();
+    await tick();
+    write.mockRestore();
+    const named = { from: "acct_personal", to: "acct_spare" };
+    expect(settings.getLoginMoves()).toEqual({ "t-move": named, "t-other": named });
+    expect(vault.pin).toBe("acct_spare");
+    expect(Object.keys(settings.getLoginAnswersOver())).toEqual(["openai-codex"]);
+    await h.supervisor.disposeAll();
+  });
+
+  it("takes down at the first reading a card left open by the last launch, once the choice is wait", async () => {
+    const { h, vault, cardId } = await clickCutOff();
+    expect(h.supervisor.cards.get(cardId)).toBeDefined();
+    await h.supervisor.disposeAll();
+
+    const relaunched = reboot(h, async () => fakeCrewmate({}), {
+      router: h.router as unknown as Router,
+      ...h.relaunchWith,
+    });
+    // The card store brought the unanswered card back.
+    expect(relaunched.cards.get(cardId)).toBeDefined();
+    const second = watching(
+      h,
+      relaunched,
+      vault,
+      () => [
+        reading("acct_personal", "Personal", 4),
+        reading("acct_work", "Work", 40),
+        reading("acct_spare", "Spare", 60),
+      ],
+      "wait",
+    );
+    second.read();
+    expect(relaunched.cards.get(cardId)).toBeUndefined();
     await relaunched.disposeAll();
   });
 });

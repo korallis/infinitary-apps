@@ -100,27 +100,34 @@ export class LoginMoves {
 
   /**
    * Binds each task on `from` to `to` and moves those between turns now;
-   * one inside a turn moves at its lane's next delivery.
+   * one inside a turn moves at its lane's next delivery. Every task's move
+   * is saved in one write before any is bound: a write that fails throws
+   * here, before the promise, with no task bound and nothing saved.
    */
-  async moveOff(from: string, to: string): Promise<void> {
+  moveOff(from: string, to: string): Promise<void> {
     const taskIds = this.tasksOn(from);
-    let named = false;
-    for (const taskId of taskIds) {
-      // The same move named again keeps its binding, so a pick already out for it stands.
+    // The same move named again keeps its binding, so a pick already out for it stands.
+    const named = taskIds.filter((taskId) => {
       const bound = this.bound.get(taskId);
-      if (bound?.from === from && bound.to === to) continue;
-      this.bound.set(taskId, { from, to });
-      named = true;
+      return bound?.from !== from || bound.to !== to;
+    });
+    if (named.length > 0) {
+      const next = new Map(this.bound);
+      for (const taskId of named) next.set(taskId, { from, to });
+      this.options.loginMoveRecord?.write(Object.fromEntries(next));
+      for (const taskId of named) this.bound.set(taskId, { from, to });
     }
-    // Saved in one write, before anything else follows the click: every task or none.
-    if (named) this.save();
-    await Promise.all(taskIds.map((taskId) => this.begin(taskId).done));
+    return Promise.all(taskIds.map((taskId) => this.begin(taskId).done)).then(() => undefined);
   }
 
-  /** The login has room again, or work now waits: its tasks still to move stay. */
-  forget(from: string): void {
+  /**
+   * The login has room again, or work now waits: its tasks still to move
+   * stay. With `to`, only the moves to that login: a click's moves that
+   * the click's own check then refused.
+   */
+  forget(from: string, to?: string): void {
     for (const [taskId, move] of [...this.bound])
-      if (move.from === from) this.bind(taskId, undefined);
+      if (move.from === from && (to === undefined || move.to === to)) this.bind(taskId, undefined);
   }
 
   /**

@@ -1,53 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type { Card } from "@shared/cards";
 import { type Said, said } from "@shared/i18n/said";
-import { CREW_NEAR_FLOOR_PERCENT } from "@shared/quotaSignals";
 import type { WhenLoginLow } from "@shared/whenLoginLow";
 import { loginLowCard, loginLowCardId } from "../orchestrator/loginCards";
-import type { AccountCandidate } from "../routing/accountPolicy";
+import { hasRoom, type LoginReading, runsLow } from "../routing/accountPolicy";
 
-/**
- * A login as a pick reads it: whether it serves, and how much of its
- * allowance is left. `runOut` is the vault's typed `no_headroom` cut-off: the
- * provider refused the login for a spent allowance, whatever its meter says.
- */
-export type LoginReading = Pick<
-  AccountCandidate,
-  | "accountId"
-  | "label"
-  | "enabled"
-  | "connected"
-  | "withheld"
-  | "effectivePercentRemaining"
-  | "onCredits"
-> & { runOut?: { resetsAt?: number } };
-
-/**
- * The moment: a typed run-out, or 10% of its allowance or less left by a
- * measured reading.
- */
-export function runsLow(login: LoginReading): boolean {
-  return (
-    login.runOut !== undefined ||
-    (login.effectivePercentRemaining !== undefined &&
-      login.effectivePercentRemaining <= CREW_NEAR_FLOOR_PERCENT)
-  );
-}
+export { hasRoom, type LoginReading, runsLow };
 
 /** No reading of the login yet: neither a typed run-out nor a measured allowance. */
 function unread(login: LoginReading): boolean {
   return login.runOut === undefined && login.effectivePercentRemaining === undefined;
-}
-
-/** Whether work may move to the login: on, serving, on its included allowance and not low itself. */
-export function hasRoom(login: LoginReading): boolean {
-  return (
-    login.enabled &&
-    login.connected !== false &&
-    login.withheld === undefined &&
-    !login.onCredits &&
-    !runsLow(login)
-  );
 }
 
 /**
@@ -81,8 +43,16 @@ export type LowLoginsOptions = {
   tasksOn: (accountId: string) => string[];
   /** Binds each of them to the named login, where it moves between turns (`LoginMoves.moveOff`). */
   moveOff: (from: string, to: string) => unknown;
-  /** The tasks still to move off a login stay on it (`LoginMoves.forget`). */
-  forget: (from: string) => void;
+  /**
+   * The tasks still to move off a login stay on it; with `to`, only those
+   * named for that login (`LoginMoves.forget`).
+   */
+  forget: (from: string, to?: string) => void;
+  /**
+   * Each provider's card the card store still has open from the last
+   * launch: the login it asks about and the one it offers, where it says.
+   */
+  openOffers?: () => { providerId: string; from?: string; to?: string }[];
   cards: {
     raiseHostCard: (card: Omit<Card, "author" | "priority" | "status" | "createdAt">) => unknown;
     withdrawHostCard: (id: string, reason: string) => void;
@@ -130,7 +100,18 @@ export class LowLogins {
   /** Each provider's card that is up: the login it asks about, the one it offers, and its words. */
   private readonly offers = new Map<string, { from: string; to: string; words: string }>();
 
-  constructor(private readonly options: LowLoginsOptions) {}
+  constructor(private readonly options: LowLoginsOptions) {
+    // A card still open from the last launch is the card up now, so the
+    // readings revise it or take it down as they would one raised here.
+    for (const open of options.openOffers?.() ?? [])
+      this.offers.set(open.providerId, { from: open.from ?? "", to: open.to ?? "", words: "" });
+    // A Move click the last launch was cut off in is made again whole by
+    // `accept`, or not at all: until then none of its tasks is still to move.
+    for (const provider of options.providers()) {
+      const answer = options.answered(provider.id);
+      if (answer?.to !== undefined) options.forget(answer.from, answer.to);
+    }
+  }
 
   read(): void {
     const choice = this.options.whenLow();
@@ -163,7 +144,9 @@ export class LowLogins {
    * Makes the move a click named, true when work moved. The tasks' moves
    * are recorded before the pin, and the answer ends last: a quit part way
    * leaves an answer the next launch finishes (`readProvider`), which
-   * records the same moves again and never picks another login.
+   * records the same moves again and never picks another login. A record
+   * that cannot be saved throws from `moveOff` before the pin or the
+   * answer change, so the next reading tries the whole move again.
    */
   private accept(provider: { id: string; name: string }, from: string, accountId: string): boolean {
     const choice = this.options.whenLow();
@@ -186,6 +169,8 @@ export class LowLogins {
         );
       }
     }
+    // Refused, the click leaves no task named for the login it named.
+    else this.options.forget(from, accountId);
     this.options.endAnswer(provider.id);
     return Boolean(moves);
   }
@@ -273,6 +258,10 @@ export class LowLogins {
               .find((login) => this.options.tasksOn(login.accountId).length > 0)
           : undefined;
     const other = subject ? roomiestOther(logins, subject.accountId) : undefined;
+    const offer = this.offers.get(provider.id);
+    const asked = logins.find((login) => login.accountId === offer?.from);
+    // The login the card up asks about is not read yet, as at launch: nothing is known against it.
+    if (!subject && asked && unread(asked) && (choice === "ask" || choice === "spread")) return;
     if (!subject || !other) {
       // i18n-exempt: a withdrawal's reason on the card's record, never shown
       this.withdraw(provider.id, "no longer asked");
@@ -296,7 +285,6 @@ export class LowLogins {
     };
     const card = loginLowCard(asks);
     const words = JSON.stringify([card.title, card.body, card.actions]);
-    const offer = this.offers.get(provider.id);
     if (offer?.from === subject.accountId && offer.to === other.accountId && offer.words === words)
       return;
     this.offers.set(provider.id, { from: subject.accountId, to: other.accountId, words });
