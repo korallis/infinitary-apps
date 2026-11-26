@@ -1,3 +1,4 @@
+import { settlePoolResets } from "@shared/accountPools";
 import {
   type ModelsCatalogView,
   modelsCatalogViewSchema,
@@ -27,6 +28,8 @@ const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
  * whose reading must be taken under the new login.
  */
 const FORCED_REASONS: ReadonlySet<string> = new Set(["demand", "account-changed"]);
+/** The longest wait one timer holds: `setTimeout` fires at once past 2^31 - 1 ms. */
+const LONGEST_TIMER_MS = 2 ** 31 - 1;
 /** A focus event only refreshes when the last snapshot is older than this. */
 const FOCUS_STALENESS_MS = 60 * 1000;
 /**
@@ -83,6 +86,12 @@ export class QuotaService {
   private localRunning = false;
   /** The last local reading's rewrite, laid over each refresh until the next one. */
   private localRewrite: ((snapshot: QuotaSnapshotView) => QuotaSnapshotView) | undefined;
+  /**
+   * When a pooled login's used-up window next resets: the last snapshot is
+   * read again from then (`settle`), with no new reading.
+   */
+  private settleAtMs: number | undefined;
+  private settleTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly now: () => number;
   private readonly snapshots: QuotaSnapshotStore;
 
@@ -97,18 +106,62 @@ export class QuotaService {
     }
   }
 
-  /** A snapshot with what is derived from its rows laid over it: the switches, then the pools. */
+  /**
+   * A snapshot with what is derived from its rows laid over it: the
+   * switches, then the pools, whose logins' rows stand as of now
+   * (`settlePoolResets`): a pooled login's used-up window that has reset
+   * since the reading is gone from its row before the pool is folded.
+   */
   private laid(snapshot: QuotaSnapshotView): QuotaSnapshotView {
     const { pools: _was, ...stamped } = this.options.stamp?.(snapshot) ?? snapshot;
-    const pools = this.options.pools?.(stamped) ?? [];
-    return pools.length > 0 ? { ...stamped, pools } : stamped;
+    const fold = this.options.pools;
+    const read = fold?.(stamped) ?? [];
+    const settled = settlePoolResets(stamped.providers, read, this.now());
+    this.settleAtMs = settled.nextAtMs;
+    this.arm();
+    if (!fold || !settled.changed) return read.length > 0 ? { ...stamped, pools: read } : stamped;
+    const standing = { ...stamped, providers: settled.providers };
+    const pools = fold(standing);
+    return pools.length > 0 ? { ...standing, pools } : standing;
+  }
+
+  /**
+   * The one reset fact every reader shares (docs/quota.md, "A pool of your
+   * own logins"): once a pooled login's used-up window has reset, the last
+   * snapshot and its catalog are read again without it and pushed, so the
+   * meters, both waits, routing and the first mate's seat change together
+   * at that moment. A timer brings it, and so does any read after it, so a
+   * late timer never leaves two readers on different facts.
+   */
+  private settle(): void {
+    if (this.settleAtMs === undefined || this.settleAtMs > this.now()) return;
+    this.settleAtMs = undefined;
+    this.restamp();
+  }
+
+  /** Arms the timer for the reset `settle` waits on, or clears it when there is none. */
+  private arm(): void {
+    if (this.settleTimer) clearTimeout(this.settleTimer);
+    this.settleTimer = undefined;
+    if (this.settleAtMs === undefined) return;
+    const wait = Math.min(Math.max(0, this.settleAtMs - this.now()), LONGEST_TIMER_MS);
+    this.settleTimer = setTimeout(() => {
+      this.settleTimer = undefined;
+      this.settle();
+      // Fired before the reset, as a capped wait does: wait out the rest.
+      if (!this.settleTimer) this.arm();
+    }, wait);
+    // A reset days away never holds the process open.
+    this.settleTimer.unref?.();
   }
 
   latest(): QuotaSnapshotView | undefined {
+    this.settle();
     return this.latestSnapshot;
   }
 
   latestModels(): ModelsCatalogView | undefined {
+    this.settle();
     return this.latestCatalog;
   }
 
@@ -192,6 +245,8 @@ export class QuotaService {
   stop(): void {
     if (this.interval) clearInterval(this.interval);
     if (this.localInterval) clearInterval(this.localInterval);
+    if (this.settleTimer) clearTimeout(this.settleTimer);
+    this.settleTimer = undefined;
   }
 
   /**

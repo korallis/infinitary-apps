@@ -1,5 +1,6 @@
 import {
   formatResetText,
+  inAccountsPool,
   POOL_QUOTA_PROVIDER,
   QUOTA_POOL_KINDS,
   QUOTA_POOL_NAMES,
@@ -57,8 +58,9 @@ function loginOfRow(row: QuotaProviderView | undefined, nowMs: number): PoolLogi
  * answers for is that proxy's pool already and is no member. The row names
  * no account: each login keeps its own row, and the pool is a reading of
  * them, never an allowance of its own. `nowMs` is when the rows were read
- * (the snapshot's own time), not when the pool is looked at: a login's row
- * keeps what it read until the next reading, and the pool agrees with it.
+ * (the snapshot's own time), not when the pool is looked at: the pool
+ * agrees with the rows it is given, and a reset that passes between
+ * readings reaches it through those rows (`settlePoolResets`).
  */
 export function accountPools(
   providers: readonly QuotaProviderView[],
@@ -104,6 +106,43 @@ export function accountPools(
     });
   }
   return pools;
+}
+
+/**
+ * The rows of pooled logins as they stand at `nowMs`, with no new reading
+ * (docs/quota.md, "A pool of your own logins"): a used-up window whose own
+ * reset has passed is no longer what the login has, so it leaves the row,
+ * and every reader of the row, the pool and the catalog then agrees the
+ * login serves again once its last such window is gone. Its other windows
+ * keep what they read. `nextAtMs` is the next reset of a used-up window
+ * still on a pooled login's row: when the rows change again. Rows of a
+ * provider with no pool in `pools` are left as read.
+ */
+export function settlePoolResets(
+  providers: readonly QuotaProviderView[],
+  pools: readonly QuotaProviderView[],
+  nowMs: number,
+): { providers: QuotaProviderView[]; changed: boolean; nextAtMs?: number } {
+  const resetOfUsedUp = (window: QuotaProviderView["windows"][number]) =>
+    typeof window.percentRemaining === "number" && window.percentRemaining <= 0
+      ? window.resetsAtMs
+      : undefined;
+  let changed = false;
+  let nextAtMs: number | undefined;
+  const settled = providers.map((row) => {
+    if (row.pool || !inAccountsPool(accountsPoolOf(pools, row.provider), row.accountId)) return row;
+    const windows = row.windows.filter((window) => {
+      const resetsAtMs = resetOfUsedUp(window);
+      if (resetsAtMs === undefined) return true;
+      if (resetsAtMs <= nowMs) return false;
+      if (nextAtMs === undefined || resetsAtMs < nextAtMs) nextAtMs = resetsAtMs;
+      return true;
+    });
+    if (windows.length === row.windows.length) return row;
+    changed = true;
+    return { ...row, windows };
+  });
+  return { providers: settled, changed, ...(nextAtMs !== undefined ? { nextAtMs } : {}) };
 }
 
 /** The snapshot's pool of the person's own logins of `provider`, when it has one. */

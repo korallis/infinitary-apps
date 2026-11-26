@@ -283,6 +283,128 @@ describe("QuotaService", () => {
     expect(broadcast).toHaveBeenCalledTimes(1);
   });
 
+  // The captain's choice (docs/quota.md, "A pool of your own logins"): a
+  // pooled login's used-up window leaves its row once its reset has passed.
+  it("drops a pooled login's used-up window once it has reset, and leaves a login with no pool as read", async () => {
+    const login = (provider: string, accountId: string) => ({
+      provider,
+      label: provider,
+      accountId,
+      status: "ok" as const,
+      stale: false,
+      windows: [
+        { id: "session", label: "session", percentRemaining: 0, resetsAtMs: 9000 },
+        { id: "weekly", label: "weekly", percentRemaining: 40, resetsAtMs: 20000 },
+      ],
+    });
+    const snapshot = {
+      ...SNAPSHOT,
+      providers: [login("claude", "personal"), login("claude", "work"), login("codex", "only")],
+    };
+    const pool = {
+      provider: "claude",
+      label: "Claude",
+      status: "ok" as const,
+      stale: false,
+      windows: [],
+      pool: {
+        kind: "claude" as const,
+        logins: 2,
+        read: 2,
+        unread: 0,
+        spent: 0,
+        switchedOff: 0,
+        signInEnded: 0,
+        signInSoon: 0,
+        source: "accounts" as const,
+        accounts: ["personal", "work"],
+      },
+    };
+    let now = 5000;
+    const broadcast = vi.fn();
+    const service = new QuotaService({
+      refresh: vi.fn(async () => ({ snapshot, catalog: CATALOG })),
+      db: openInMemoryDatabase(),
+      broadcast,
+      now: () => now,
+      pools: () => [pool],
+    });
+    await service.refresh("demand");
+    service.stop();
+    const windowsOf = () =>
+      service
+        .latest()
+        ?.providers.map((row) => [row.accountId, row.windows.map((window) => window.id)]);
+    const asRead = ["session", "weekly"];
+    expect(windowsOf()).toEqual([
+      ["personal", asRead],
+      ["work", asRead],
+      ["only", asRead],
+    ]);
+
+    broadcast.mockClear();
+    now = 9000;
+    expect(windowsOf()).toEqual([
+      ["personal", ["weekly"]],
+      ["work", ["weekly"]],
+      ["only", asRead],
+    ]);
+    expect(broadcast).toHaveBeenCalledTimes(1);
+  });
+
+  // The meters are pushed, never polled: the service tells every surface
+  // itself at the moment a pooled login's used-up window resets.
+  it("pushes the snapshot at a pooled login's reset with nothing reading it", async () => {
+    vi.useFakeTimers({ now: 5000 });
+    try {
+      const login = (accountId: string) => ({
+        provider: "claude",
+        label: "Claude",
+        accountId,
+        status: "ok" as const,
+        stale: false,
+        windows: [{ id: "session", label: "session", percentRemaining: 0, resetsAtMs: 9000 }],
+      });
+      const pool = {
+        ...login("pool"),
+        accountId: undefined,
+        pool: {
+          kind: "claude" as const,
+          logins: 2,
+          read: 0,
+          unread: 0,
+          spent: 2,
+          switchedOff: 0,
+          signInEnded: 0,
+          signInSoon: 0,
+          source: "accounts" as const,
+          accounts: ["personal", "work"],
+        },
+      };
+      const pushed: (string[] | undefined)[] = [];
+      const service = new QuotaService({
+        refresh: vi.fn(async () => ({
+          snapshot: { ...SNAPSHOT, providers: [login("personal"), login("work")] },
+          catalog: CATALOG,
+        })),
+        db: openInMemoryDatabase(),
+        broadcast: (snapshot) =>
+          pushed.push(snapshot.providers.flatMap((row) => row.windows.map((window) => window.id))),
+        pools: () => [pool],
+      });
+      await service.refresh("demand");
+      expect(pushed).toEqual([["session", "session"]]);
+
+      vi.advanceTimersByTime(3999);
+      expect(pushed).toHaveLength(1);
+      vi.advanceTimersByTime(1);
+      expect(pushed).toEqual([["session", "session"], []]);
+      service.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("rebuilds the model catalog over the last snapshot without fetching, and re-pushes it", async () => {
     // docs/model-lists.md: a runtime catalog read landed a model the catalog
     // had no row for, so routing could neither name nor pick it.

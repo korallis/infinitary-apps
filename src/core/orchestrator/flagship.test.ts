@@ -1,9 +1,11 @@
 import { accountPools } from "@shared/accountPools";
 import type { QuotaSnapshotView } from "@shared/quota";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ModelRuntime } from "../pi/types";
 import { buildModelsCatalog } from "../quota/catalog";
+import { QuotaService } from "../quota/quotaService";
 import { quotaGateCleared } from "../routing/quotaGate";
+import { openInMemoryDatabase } from "../storage/db";
 import { Flagship, type FlagshipVaultView } from "./flagship";
 import {
   firstmatePauseCard,
@@ -684,38 +686,37 @@ describe("a spent pool of two logins, across its resets", () => {
     ),
   });
   const sol = { provider: "openai-codex", id: "gpt-6-sol" };
-  const standing = (snapshot: QuotaSnapshotView) => {
+  const catalogOf = (snapshot: QuotaSnapshotView) =>
+    buildModelsCatalog(
+      [{ ...sol, name: "Sol" }],
+      snapshot.providers,
+      snapshot.generatedAt,
+      snapshot.fetchedAt,
+      snapshot.pools,
+    );
+  const standing = (snapshot: QuotaSnapshotView) =>
+    standingOn({ latest: () => snapshot, latestModels: () => catalogOf(snapshot) });
+  const standingOn = (quota: {
+    latest: () => QuotaSnapshotView | undefined;
+    latestModels: () => ReturnType<typeof catalogOf> | undefined;
+  }) => {
     const flagship = new Flagship({
       vault: vaultOf([
         { id: "a", providerId: "openai-codex", label: "A", enabled: true },
         { id: "b", providerId: "openai-codex", label: "B", enabled: true },
       ]),
       settings: settingsOf("a"),
-      quota: { latest: () => snapshot },
+      quota,
       baseRuntime,
     });
-    const reads = {
-      availableModels: () => [sol],
-      slotsOf: () => ["high" as const],
-      quota: {
-        latest: () => snapshot,
-        latestModels: () =>
-          buildModelsCatalog(
-            [{ ...sol, name: "Sol" }],
-            snapshot.providers,
-            snapshot.generatedAt,
-            snapshot.fetchedAt,
-            snapshot.pools,
-          ),
-      },
-    };
+    const reads = { availableModels: () => [sol], slotsOf: () => ["high" as const], quota };
     return {
       provider: quotaGateCleared("codex", reads),
       level: quotaGateCleared("bucket:high", reads),
       seatA: flagship.pause("a")?.class,
       seatB: flagship.pause("b")?.class,
       moveTo: flagship.sibling("a")?.id,
-      poolBackAt: snapshot.pools?.[0]?.pool?.backAtMs,
+      poolBackAt: quota.latest()?.pools?.[0]?.pool?.backAtMs,
     };
   };
   const week = T + 72 * HOUR;
@@ -759,5 +760,60 @@ describe("a spent pool of two logins, across its resets", () => {
       moveTo: "b",
       poolBackAt: week,
     });
+  });
+
+  // The captain's choice on the review's question: pooled work resumes at
+  // the first reset that makes a login usable, with no new reading.
+  it("clears them together when that reset passes, on the one reading it already has", async () => {
+    let now = T;
+    const rows = [login("a", [0, T + HOUR], [0, week]), login("b", [0, T + 2 * HOUR], [50, week])];
+    const refresh = vi.fn(async () => ({
+      snapshot: { generatedAt: new Date(T).toISOString(), fetchedAt: T, providers: rows },
+      catalog: { generatedAt: new Date(T).toISOString(), models: [] },
+    }));
+    const broadcast = vi.fn();
+    const service = new QuotaService({
+      refresh,
+      db: openInMemoryDatabase(),
+      broadcast,
+      now: () => now,
+      catalogFor: catalogOf,
+      pools: (snapshot) =>
+        accountPools(
+          snapshot.providers,
+          rows.map((row) => ({ accountId: row.accountId, provider: row.provider })),
+          snapshot.fetchedAt,
+        ),
+    });
+    await service.refresh("demand");
+    service.stop();
+    const held = {
+      provider: false,
+      level: false,
+      seatA: "no_headroom",
+      seatB: "no_headroom",
+      moveTo: undefined,
+      poolBackAt: T + 2 * HOUR,
+    };
+    expect(standingOn(service)).toEqual(held);
+
+    // A's session has reset; its week still blocks it, so nothing serves yet.
+    now = T + 1.1 * HOUR;
+    expect(standingOn(service)).toEqual(held);
+
+    // B's session has reset: B serves, and every reader says so at once.
+    broadcast.mockClear();
+    now = T + 2.1 * HOUR;
+    expect(standingOn(service)).toEqual({
+      provider: true,
+      level: true,
+      seatA: "no_headroom",
+      seatB: undefined,
+      moveTo: "b",
+      poolBackAt: week,
+    });
+    // Every surface is told once, and nothing was read again.
+    expect(broadcast).toHaveBeenCalledTimes(1);
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });
