@@ -7,6 +7,7 @@ import { RESOURCE_MAX_AGE_MS, type ResourceObservation } from "@shared/resources
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deferred } from "../../../tests/helpers/deferred";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import * as platform from "../platform";
 import {
   JOURNAL_FILE,
   JOURNAL_MAX_BYTES,
@@ -438,6 +439,123 @@ describe("verified processor startup coverage", () => {
     line.observe(reading, rows);
     await expect(task.receipt(input)).rejects.toThrow("living admitted group");
     expect(line.snapshot().runs).toEqual([]);
+  });
+
+  // A Windows wrapper runs in Git Bash, which cannot read Windows' birth stamp,
+  // so its receipt names the payload by number alone. Rows are shaped like a
+  // Windows reading: a leader reads no parent, and its job is its group.
+  describe("a Windows launch receipt", () => {
+    const birth = (pid: number) => `win:1340774113061${pid}`;
+    const win = (pid: number, parent: number, group = 0): ProcessReading => ({
+      pid,
+      parent,
+      group,
+      started: birth(pid),
+      residentBytes: 3_000_000,
+    });
+    async function windowsRuns() {
+      const rows = [win(15884, 11208), win(16340, 15884), win(16020, 0), win(16412, 0)];
+      const clock = { now: 0 };
+      const stateFile = join(scratchDir("windows-receipt-"), "holds.json");
+      const jobs: LoadJobs = { lead: (_pid, started) => started, adopt: () => true };
+      const line = new LoadLine({
+        stateFile,
+        now: () => clock.now,
+        processes: async () => rows,
+        groupExists: () => true,
+        jobs,
+      });
+      lines.push(line);
+      let sequence = 0;
+      // 7.6 processors measured idle: room for the later run's six, never beside the first's eight.
+      const sample = (start: number, end: number) => {
+        clock.now = end;
+        line.observe(
+          {
+            ...reading,
+            sequence: ++sequence,
+            sampleMs: end - start,
+            cpu: { ...reading.cpu, idleFraction: 9.5 / 14 },
+          },
+          rows,
+          end,
+          undefined,
+          { epoch: reading.epoch, start, end },
+        );
+      };
+      sample(-2000, 0);
+      const task = line.forTask("windows");
+      const first = await held(
+        task.claim({ pid: 16020, caller: 16340, demand: { cpu: 8, memoryBytes: 1024 ** 3 } }),
+      );
+      expect(first.state).toBe("running");
+      const later = () =>
+        held(task.claim({ pid: 16412, demand: { cpu: 6, memoryBytes: 1024 ** 3 } }));
+      expect((await later()).state).toBe("waiting");
+      const saved = () =>
+        (
+          JSON.parse(readFileSync(stateFile, "utf8")) as Array<{ id: string; launch?: unknown }>
+        ).find((row) => row.id === first.id)?.launch;
+      return { line, rows, clock, sample, task, first, later, saved };
+    }
+
+    it("stamps the payload's birth from its own reading, and a covering interval then frees the run's processors", async () => {
+      const f = await windowsRuns();
+      f.rows.push(win(16500, 16020, 16020));
+      f.clock.now = 1;
+      const receipt = { hold: f.first.id, pid: 16020, payload: 16500 };
+      await expect(f.task.receipt(receipt)).resolves.toBeUndefined();
+      expect(f.saved()).toEqual({ pid: 16500, started: birth(16500) });
+      // A repeat after a lost answer is the same launch.
+      await expect(f.task.receipt(receipt)).resolves.toBeUndefined();
+      // An interval that began no later than the verification proves nothing about the start.
+      f.sample(1, 2001);
+      expect((await f.later()).state).toBe("waiting");
+      f.sample(2002, 4002);
+      expect((await f.later()).state).toBe("running");
+      expect(f.line.snapshot().runs.map((run) => run.state)).toEqual(["running", "running"]);
+    });
+
+    it("refuses a number outside the run's job, its leader's own, or one that names nothing, and keeps the charge", async () => {
+      const f = await windowsRuns();
+      for (const payload of [15884, 16020, 16999])
+        await expect(f.task.receipt({ hold: f.first.id, pid: 16020, payload })).rejects.toThrow(
+          "living admitted group",
+        );
+      expect(f.saved()).toBeUndefined();
+      f.sample(2002, 4002);
+      expect((await f.later()).state).toBe("waiting");
+    });
+
+    it("keeps the first verified launch against another member or a reused number", async () => {
+      const f = await windowsRuns();
+      f.rows.push(win(16500, 16020, 16020), win(16501, 16500, 16020));
+      await f.task.receipt({ hold: f.first.id, pid: 16020, payload: 16500 });
+      await expect(
+        f.task.receipt({ hold: f.first.id, pid: 16020, payload: 16501 }),
+      ).rejects.toThrow("different launch");
+      f.rows[4] = { ...win(16500, 16020, 16020), started: birth(16777) };
+      await expect(
+        f.task.receipt({ hold: f.first.id, pid: 16020, payload: 16500 }),
+      ).rejects.toThrow("different launch");
+      expect(f.saved()).toEqual({ pid: 16500, started: birth(16500) });
+    });
+
+    it("refuses a receipt with no birth where a run's group is not a Windows job", async () => {
+      const { line, claim, rows } = setup();
+      line.observe(reading, null);
+      const first = await claim(0);
+      const leader = rowAt(rows, 0);
+      rows.push({ ...rowAt(rows, 1), pid: 4242, group: leader.pid, parent: leader.pid });
+      const elsewhere = vi.spyOn(platform, "hostPlatform").mockReturnValue("darwin");
+      try {
+        await expect(
+          line.forTask("same-task").receipt({ hold: first.id, pid: leader.pid, payload: 4242 }),
+        ).rejects.toThrow("no process identity");
+      } finally {
+        elsewhere.mockRestore();
+      }
+    });
   });
 
   it("restores living verified groups with new coverage, while legacy holds retain their declarations", async () => {

@@ -79,7 +79,12 @@ export type LoadJournalEntry = {
  * wrapper names the outer program it was started by (docs/heavy-runs.md, "On Windows").
  */
 export type LoadClaim = { pid: number; demand: LoadDemand; parent?: string; caller?: number };
-export type LoadReceipt = { hold: string; pid: number; payload: number; started: string };
+/**
+ * `started` is the payload's birth as its receipt worker read it. A Windows
+ * worker runs in Git Bash, which cannot read Windows' birth stamp, so it sends
+ * none and the line stamps the birth from its own reading of the run's job.
+ */
+export type LoadReceipt = { hold: string; pid: number; payload: number; started?: string };
 /**
  * A claim's answer: its run, or, when the process table could not be read
  * and the caller holds no verified place, a wait with no hold that the
@@ -500,12 +505,14 @@ export class LoadLine {
       !Number.isSafeInteger(input.payload) ||
       input.pid <= 0 ||
       input.payload <= 0 ||
-      typeof input.started !== "string" ||
-      !input.started
+      // Only a line whose groups are Windows jobs stamps a birth itself.
+      (input.started === undefined
+        ? !this.jobs()
+        : typeof input.started !== "string" || !input.started)
     )
       throw new Error("The launch has no process identity.");
     const rows = await (this.options.processes ?? readProcesses)();
-    const utc = input.started.startsWith("utc:");
+    const utc = input.started?.startsWith("utc:") === true;
     const payload = utc
       ? await readReceiptProcess(input.payload)
       : rows?.find((row) => row.pid === input.payload);
@@ -513,20 +520,22 @@ export class LoadLine {
     if (permitted && !permitted()) throw new Error("This task no longer has a load command.");
     const held = this.held.find((held) => held.id === input.hold && held.taskId === taskId);
     const leader = rows?.find((row) => row.pid === input.pid);
+    const started = input.started ?? payload?.started;
     if (
       held?.state !== "running" ||
       held.pid !== input.pid ||
       leader?.group !== held.pid ||
       leader.started !== held.started ||
       payload?.group !== held.pid ||
-      (utc ? `utc:${payload.started}` : payload.started) !== input.started ||
+      !started ||
+      (utc ? `utc:${payload.started}` : payload.started) !== started ||
       payload.pid === held.pid ||
       payload.exited === true ||
       leader.exited === true
     )
       throw new Error("The launch does not belong to this living admitted group.");
     if (held.launch) {
-      if (held.launch.pid !== input.payload || held.launch.started !== input.started)
+      if (held.launch.pid !== input.payload || held.launch.started !== started)
         throw new Error("This hold already verified a different launch.");
       return;
     }
@@ -534,9 +543,7 @@ export class LoadLine {
     // never the payload creation. The store contains identities only.
     this.commit(
       this.held.map((row) =>
-        row.id === held.id
-          ? { ...row, launch: { pid: input.payload, started: input.started } }
-          : row,
+        row.id === held.id ? { ...row, launch: { pid: input.payload, started } } : row,
       ),
     );
     this.verified.set(held.id, this.now());

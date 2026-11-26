@@ -3,8 +3,9 @@
 # the task channel: the admitted group execs the caller's original argv here.
 # Bash's job-control group works without a terminal on macOS and Linux.
 
-# The receipt worker never creates the payload. Its supervisor cancels it when
-# that payload finishes, including a pending request or cadence wait.
+# The receipt worker never creates the payload. Its supervisor, on Windows the
+# wrapper, cancels it when that payload finishes, including a pending request
+# or cadence wait.
 if [ "${1:-}" = _receipt ]; then
   hold=$2; leader=$3; payload=$4
   launcher=${0%/*}/infinitary-load-axi
@@ -24,8 +25,34 @@ if [ "${1:-}" = _receipt ]; then
   trap cancel_receipt TERM INT HUP
   trap finish_receipt EXIT
   answerFile=$(mktemp) || exit 1
+  # A wait that the supervisor's cancellation ends at once.
+  pause() {
+    request=starting
+    sleep "$1" & request=$!
+    [ -z "$canceled" ] || finish_receipt
+    wait "$request"; request=
+  }
   birth=
-  if [ -r "/proc/$payload/stat" ]; then
+  wrapper=
+  if [ -r "/proc/$$/winpid" ]; then
+    # Windows: the wrapper runs the payload as its foreground child and cannot
+    # name it, so the last argument is the wrapper's own Git Bash number and
+    # the payload is its only other child. A shell builtin has no process and
+    # gets no receipt; the scans end so that one never polls for a whole run.
+    wrapper=$payload; payload=; scans=0
+    while :; do
+      kill -0 "$wrapper" 2>/dev/null || exit 0
+      for entry in /proc/[0-9]*; do
+        [ "${entry#/proc/}" != "$$" ] || continue
+        read -r parent < "$entry/ppid" || continue
+        if [ "$parent" = "$wrapper" ]; then payload=${entry#/proc/}; break; fi
+      done
+      [ -z "$payload" ] || break
+      scans=$((scans + 1))
+      [ "$scans" -lt 30 ] || exit 0
+      pause 1
+    done
+  elif [ -r "/proc/$payload/stat" ]; then
     IFS= read -r stat < "/proc/$payload/stat"
     stat=${stat##*)}
     set -f
@@ -37,11 +64,19 @@ if [ "${1:-}" = _receipt ]; then
     birth="${birth%"${birth##*[![:space:]]}"}"
     [ -z "$birth" ] || birth=utc:$birth
   fi
-  [ -n "$birth" ] || exit 0
+  [ -n "$birth" ] || [ -n "$wrapper" ] || exit 0
+  refusals=0
   while kill -0 "$payload" 2>/dev/null; do
+    identity=(--payload "$payload" --started "$birth")
+    if [ -n "$wrapper" ]; then
+      # Git Bash cannot read Windows' birth stamp: the app stamps this number
+      # from its own reading of the run's job.
+      read -r number < "/proc/$payload/winpid" || exit 0
+      identity=(--payload "$number")
+    fi
     request=starting
     INFINITARY_SHELL_CAP_MS= FM3000_SHELL_CAP_MS= INFINITARY_SHELL_ID= \
-      /bin/sh "$launcher" receipt --hold "$hold" --pid "$leader" --payload "$payload" --started "$birth" >"$answerFile" 2>&1 &
+      /bin/sh "$launcher" receipt --hold "$hold" --pid "$leader" "${identity[@]}" >"$answerFile" 2>&1 &
     request=$!
     [ -z "$canceled" ] || finish_receipt
     wait "$request"
@@ -52,13 +87,21 @@ if [ "${1:-}" = _receipt ]; then
     while IFS=' ' read -r key value; do
       case $key in code:) failure=$value ;; retrySeconds:) delay=$value ;; esac
     done < "$answerFile"
-    [ "$failure" = RECEIPT_UNAVAILABLE ] || exit 0
+    if [ "$failure" != RECEIPT_UNAVAILABLE ]; then
+      [ -n "$wrapper" ] || exit 0
+      # Git Bash starts a program in one Windows process and the program then
+      # takes another, so the refused number may be the process that is gone.
+      # Only a new number asks again, and a program that keeps replacing
+      # itself stops being asked about.
+      refusals=$((refusals + 1))
+      [ "$refusals" -lt 5 ] || exit 0
+      read -r next < "/proc/$payload/winpid" || exit 0
+      [ "$next" != "$number" ] || exit 0
+      continue
+    fi
     if [ -n "$delay" ]; then
       case $delay in *[!0-9]*|0) exit 0 ;; esac
-      request=starting
-      sleep "$delay" & request=$!
-      [ -z "$canceled" ] || finish_receipt
-      wait "$request"; request=
+      pause "$delay"
     fi
   done
   exit 0
@@ -175,11 +218,23 @@ while :; do
       [ -n "$hold" ] || invalid 'The app answered without the run’s hold.'
       if [ -n "${INFINITARY_LOAD_HOLD:-}" ]; then exec -- "$@"; fi
       export INFINITARY_LOAD_HOLD=$hold
-      # Windows has no native supervisor or launch receipt: the program runs
-      # in this job as this leader's child. Git Bash's exec of one of its own
-      # programs would end this Windows process, which the app reads as the
-      # run's end, so the leader waits and answers with the program's status.
-      if [ -n "$windows" ]; then "$@"; exit $?; fi
+      # Windows has no native supervisor: the program runs in this job as this
+      # leader's foreground child, keeping its input, signals and status. Git
+      # Bash's exec of one of its own programs would end this Windows process,
+      # which the app reads as the run's end, so the leader waits and answers
+      # with the program's status. The receipt worker beside it holds none of
+      # the caller's streams and is never waited for, so it cannot delay or
+      # change that answer. It is this shell's only background job, and it is
+      # cancelled as that job, never by its number: the worker may have ended
+      # long before the program, and Git Bash gives an ended program's number
+      # to a later one, which a signal by number would reach.
+      if [ -n "$windows" ]; then
+        /bin/bash "$0" _receipt "$hold" "$self" "$$" </dev/null >/dev/null 2>&1 &
+        "$@"
+        code=$?
+        kill %% 2>/dev/null
+        exit "$code"
+      fi
       supervisor=${0%/*}/../load-bin/infinitary-load-supervisor
       [ -x "$supervisor" ] || supervisor=${0%/*}/../../vendor/load-bin/infinitary-load-supervisor
       [ -x "$supervisor" ] || invalid 'The native run supervisor is missing; nothing started.'

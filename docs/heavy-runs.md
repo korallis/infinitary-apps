@@ -47,6 +47,7 @@ After creating the payload, the supervisor starts a same-group receipt worker wi
 The receipt names only task-bound hold, supervisor PID and durable birth identity, plus payload PID and birth identity; the command, arguments and environment stay local.
 LoadLine verifies live group membership and both identities, rejects exited payloads, and saves the launch identity before acknowledging it.
 Receipt birth stamps use Linux start ticks or a targeted UTC Mac reading, independent of the payload shell's timezone; existing saved group birth fields keep their original format.
+A Windows receipt carries no birth stamp, and the wrapper starts its worker ("On Windows").
 Repeated exact receipts are idempotent; a different payload, changed identity, ended hold, revoked grant or failed store cannot clear a startup charge.
 The native supervisor retains an exited payload's PID until receipt pursuit stops, preventing reuse during that handoff.
 An interrupted receipt operation returns `RECEIPT_UNAVAILABLE`, separate from `CLAIM_UNAVAILABLE`.
@@ -150,8 +151,14 @@ No program in the job may leave it, because Git Bash's programs leave every job 
 A program's group in the process table is the leader of the smallest job the app keeps that lists it, and 0 when none does.
 A job is alive while it lists a living program; after a restart the app reopens a saved hold's job by its name, and one it cannot open has ended.
 A crewmate's Pi shell starts detached, outside the job the app's process library puts its other children in, which would end every program in it when the app exits, so a run and a program a command left running outlive the app as they do on a Mac.
-After admission the wrapper runs the payload as its child and exits with its status, with no native supervisor and no launch receipt.
+After admission the wrapper runs the payload as its foreground child and exits with its status, with no native supervisor.
 It does not exec it: Git Bash's exec of one of its own programs, such as a script, ends the leader's Windows process, which the app reads as the run's end, so the leader lives exactly as long as the payload.
+Just before the payload the wrapper starts the receipt worker with none of the caller's streams; the worker finds the payload as the wrapper's only other child and sends its Windows number from `/proc/<pid>/winpid`, with no birth stamp, which Git Bash cannot read.
+The app takes a receipt with no birth stamp only where a run's group is a Windows job: it checks that the named program is a living member of the hold's job other than its leader, and saves the birth stamp from that same reading as the launch identity.
+From then on a Windows run's processor charge ends as it does on Mac and Linux, at the first complete interval that began after the verified launch ("Capacity and pressure").
+Git Bash starts a program in one Windows process that the program then replaces, so after a refusal the worker sends again only when the number changed, five times at most.
+A shell builtin has no program of its own and gets no receipt, so its run keeps its startup charge while its group remains.
+The wrapper cancels the worker when the payload ends and never waits for it, and a worker still looking for a payload stops when its wrapper ends.
 Windows may give an ended leader's number to a new program while its job still holds one; the app then keeps that job as the number's group and makes no new job under it, so the new program leads none.
 The process table, birth stamps (`win:` and the creation time in 100-nanosecond ticks), processor time and resident memory come from the system itself, never from a program the app starts.
 Windows keeps a program's parent number after the parent ends and may give that number to a newer program, so a parent missing from the table or born after its child reads as no parent.
@@ -190,7 +197,7 @@ The iPhone and iPad app retains its existing surface and ignores these optional 
 `src/core/placed/loadLine.integration.test.ts` runs real native wrappers through the task channel with a recorded ordinary-use Mac reading and explicitly supplied pressure states.
 It exercises queue order, a fitting run passing a blocked first in line only during its window, the room the first in line prints, a run too big for its computer refused at once, unchanged streams and exit status, pressure admission, unknown and stale readings, interrupted claim commands retaining their identity and hold, revoked waiters, surviving descendants, restart restoration, failed state writes, nested demands and recorded overrides.
 `src/core/axi/channel.test.ts` checks the launcher's transport-timeout classification and that an interrupted non-load action remains terminal rather than gaining retry permission.
-`src/core/placed/loadLine.test.ts` covers an exited program's reservation dropping to its leftovers' use, a waiter whose caller ended leaving the line, the journal's entries and size, a run too big for its computer refused and released, the passing window and its bound under a stream of small runs, and what "ahead" counts.
+`src/core/placed/loadLine.test.ts` covers an exited program's reservation dropping to its leftovers' use, a waiter whose caller ended leaving the line, the journal's entries and size, a run too big for its computer refused and released, the passing window and its bound under a stream of small runs, what "ahead" counts, and a Windows receipt stamped from the line's own reading, refused outside the run's job and refused where groups are not Windows jobs.
 `src/core/placed/processResources.test.ts` exercises declared-group attribution, PID reuse and explicit nested roots using recorded process metadata.
-`src/core/placed/windowsProcesses.integration.test.ts` runs only on Windows: it reads the real process table, connection table and working folders, keeps a job's programs after its leader ends, and runs a heavy run through the real launcher under Git Bash to its exit status.
+`src/core/placed/windowsProcesses.integration.test.ts` runs only on Windows: it reads the real process table, connection table and working folders, keeps a job's programs after its leader ends, runs a heavy run through the real launcher under Git Bash to its exit status, verifies its launch and starts a later run after a covering interval while the first still runs, and passes a short run's streams and status through with nothing of it left behind.
 This project's own local phone gate and journey runs declare their runs through this command (`docs/testing.md`, "A local heavy run's place").

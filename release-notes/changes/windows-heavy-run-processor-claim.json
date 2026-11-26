@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "windows-heavy-run-processor-claim",
+      "kind": "fix",
+      "title": "On a Windows PC, a crewmate's big build no longer waits while processors sit idle",
+      "body": "When a crewmate declares a big build or check, it waits in that computer's line until there is room. On a Windows PC a run that had started kept its whole declared processor count against the line until it finished, so the next run waited even while processors sat idle. A running run now counts by what the computer measures once it has started, as on a Mac or Linux computer, so the next run starts sooner.",
+      "area": "crewmates",
+      "noPicture": "A waiting run starts sooner; nothing on screen looks different while it waits or runs.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

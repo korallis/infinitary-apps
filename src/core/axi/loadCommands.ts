@@ -37,8 +37,9 @@ export function loadAxi(
       `${output(await connection.call("load", "load.read", {}))}${encode({ help: [`Use ${LOAD_COMMAND} run --processors <number> --memory-mib <number> -- <program> [arguments]`, "The caller declares the whole run's needs, including processes it starts outside its tree."] })}\n`,
     commands: {
       receipt: {
-        usage: "receipt --hold <hold> --pid <supervisor> --payload <child> --started <birth>",
-        description: "Verify this hold's one payload launch. Repeating it never launches work.",
+        usage: "receipt --hold <hold> --pid <supervisor> --payload <child> [--started <birth>]",
+        description:
+          "Verify this hold's one payload launch. Repeating it never launches work. Only a Windows wrapper leaves the birth out.",
         flags: { "--hold": "value", "--pid": "value", "--payload": "value", "--started": "value" },
         run: async (args, connection) => {
           const pid = Number(args.flags["--pid"]);
@@ -53,20 +54,18 @@ export function loadAxi(
             payload <= 0 ||
             typeof hold !== "string" ||
             !hold ||
-            typeof started !== "string" ||
-            !started
+            (started !== undefined && (typeof started !== "string" || !started))
           )
             throw new AxiError(
               "Name the hold and both live process identities.",
               "VALIDATION_ERROR",
             );
           return output(
-            await connection.call(`receipt:${hold}:${pid}:${payload}:${started}`, "load.receipt", {
-              hold,
-              pid,
-              payload,
-              started,
-            }),
+            await connection.call(
+              `receipt:${hold}:${pid}:${payload}:${started ?? ""}`,
+              "load.receipt",
+              { hold, pid, payload, ...(started !== undefined ? { started } : {}) },
+            ),
           );
         },
       },
