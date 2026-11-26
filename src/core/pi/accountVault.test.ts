@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { accountPools } from "@shared/accountPools";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
@@ -52,7 +60,19 @@ const fakes = vi.hoisted(() => ({
   runtimes: [] as { authPath: string; runtime: FakeRuntime; getAuth: FakeRuntime["getAuth"] }[],
   failNextCreate: { value: false },
   failNextLogin: { value: false },
+  /** The registry's staged bytes cannot be put in place. */
+  failRegistryPublish: { value: false },
 }));
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  const renameSync: typeof actual.renameSync = (from, to) => {
+    if (fakes.failRegistryPublish.value && String(to).endsWith("registry.json"))
+      throw new Error("the registry could not be put in place");
+    actual.renameSync(from, to);
+  };
+  return { ...actual, default: { ...actual, renameSync }, renameSync };
+});
 
 vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => ({
   // Pi's own read of a stored credential, as the Copilot meter uses it.
@@ -371,14 +391,22 @@ describe("AccountVault", () => {
     const first = await vault.add("openai-codex", "oauth", bridge());
     const second = await vault.add("openai-codex", "oauth", bridge());
     vault.setPin("openai-codex", first.id);
-    // The registry file cannot be written: a folder stands where it was.
-    const registry = join(paths.accountsDir, "registry.json");
-    rmSync(registry);
-    mkdirSync(registry);
-    expect(() => vault.setPin("openai-codex", second.id)).toThrow();
-    expect(vault.pinnedAccount("openai-codex")).toBe(first.id);
-    expect(() => vault.setPin("openai-codex", null)).toThrow();
-    expect(vault.pinnedAccount("openai-codex")).toBe(first.id);
+    // The new registry is written out whole, and then cannot be put in place.
+    fakes.failRegistryPublish.value = true;
+    try {
+      expect(() => vault.setPin("openai-codex", second.id)).toThrow();
+      expect(vault.pinnedAccount("openai-codex")).toBe(first.id);
+      expect(() => vault.setPin("openai-codex", null)).toThrow();
+      expect(vault.pinnedAccount("openai-codex")).toBe(first.id);
+    } finally {
+      fakes.failRegistryPublish.value = false;
+    }
+    // A relaunch reads the same pin, and nothing staged is left behind.
+    expect(AccountVault.create(paths).pinnedAccount("openai-codex")).toBe(first.id);
+    expect(readdirSync(paths.accountsDir).filter((name) => name.includes("pending"))).toEqual([]);
+    // Once it can be saved, the pin is the new one in memory and on disk.
+    vault.setPin("openai-codex", second.id);
+    expect(AccountVault.create(paths).pinnedAccount("openai-codex")).toBe(second.id);
   });
 
   it("refuses to pin an account under a different provider", async () => {

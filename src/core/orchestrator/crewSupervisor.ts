@@ -462,7 +462,8 @@ export class CrewSupervisor {
       releaseSession: (runtime) => this.sessions.releaseSession(runtime),
       forgetRuntime: (taskId) => this.tasks.delete(taskId),
       resumeTask: (taskId) => this.sessions.resumeTask(taskId),
-      deliverPendingToTask: (task) => this.turns.deliverPendingToTask(task),
+      deliverPendingToTask: (task, sent) =>
+        this.turns.deliverPendingToTask(task, sent ? { sent: true } : undefined),
       deliverLane: (taskId) => this.watch.deliverLane(taskId),
       machineOf: (taskId) => this.facts.machineOf(taskId),
       laneHeld: (taskId) => this.facts.laneHeld(taskId),
