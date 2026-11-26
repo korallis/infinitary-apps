@@ -1407,28 +1407,35 @@ export class CrewTurns {
    * line is a row on the task that the feed shows once per task, the
    * newest (`QUEUED_GUIDANCE_FOLD`, INF-1137). Rows are marked in-flight
    * here and acknowledged at the turn's end (runTurn -> turnComplete).
+   * True when the lane went out as a turn, or a login move took it.
    */
   deliverPendingToTask(
     task: TaskRuntime,
     options: { announce?: boolean; sent?: boolean } = {},
-  ): void {
+  ): boolean {
     // A runtime let go as its turn ended takes no more turns.
-    if (this.core.tasks.get(task.id) !== task) return;
-    if (task.turn.closing || !task.session || task.turn.busy) return;
-    if (task.turn.stage === "stopped" && !options.sent) return;
-    if (this.core.facts.laneHeld(task.id)) return;
+    if (this.core.tasks.get(task.id) !== task) return false;
+    if (task.turn.closing || !task.session || task.turn.busy) return false;
+    if (task.turn.stage === "stopped" && !options.sent) return false;
+    if (this.core.facts.laneHeld(task.id)) return false;
     // A started task in the backlog (INF-2062) takes a turn only for words
     // the captain or the first mate sent, told it stays there.
     const backlog = this.core.facts.inBacklog(task.id);
-    if (backlog && !options.sent) return;
+    if (backlog && !options.sent) return false;
     // A task bound to another login moves there first (`LoginMoves`), due
     // rows or none: what its old login's run-out held is due on the new one.
-    if (this.core.loginMoves.takes(task.id, (open) => this.deliverPendingToTask(open, options)))
-      return;
+    if (
+      this.core.loginMoves.takes(
+        task.id,
+        (open) => this.deliverPendingToTask(open, options),
+        options.sent,
+      )
+    )
+      return true;
     const rows = this.core.facts.deliverableRows(task.id, this.core.now());
-    if (rows.length === 0) return;
+    if (rows.length === 0) return false;
     const pictures = this.core.facts.rowPictures(task.id, rows);
-    if (pictures.blocked) return;
+    if (pictures.blocked) return false;
     if (options.announce && rows.some((row) => !OWN_LANE_KINDS.has(row.facts?.kind ?? ""))) {
       this.core.options.tasks.note(task.id, QUEUED_GUIDANCE_LINE, {
         news: false,
@@ -1444,6 +1451,7 @@ export class CrewTurns {
       ids,
       pictures.images,
     );
+    return true;
   }
 
   /**

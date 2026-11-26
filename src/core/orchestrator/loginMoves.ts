@@ -10,8 +10,8 @@ export type LoginMovesHost = {
   releaseSession(runtime: TaskRuntime): void;
   forgetRuntime(taskId: string): void;
   resumeTask(taskId: string): Promise<TaskRuntime>;
-  /** Hand an idle crewmate what waits on its lane. */
-  deliverPendingToTask(task: TaskRuntime): void;
+  /** Hand an idle crewmate what waits on its lane; true when it took it. */
+  deliverPendingToTask(task: TaskRuntime): boolean;
   /** A lane's due rows go now, resuming the task if need be. */
   deliverLane(taskId: string): void;
   /** Where a task's crewmate runs: the computer that runs work its record names, or this Mac. */
@@ -27,8 +27,8 @@ export type LoginMovesHost = {
 
 /** A move under way: the delivery asked of it, and whether it handed the lane on. */
 type Going = {
-  deliver: (task: TaskRuntime) => void;
-  reopen: boolean;
+  deliver: (task: TaskRuntime) => boolean;
+  sent: boolean;
   handed: boolean;
   done: Promise<void>;
 };
@@ -102,36 +102,37 @@ export class LoginMoves {
    * A lane's delivery to a task still to move: the move takes it, and
    * `deliver` hands the lane to the conversation the task ends up with.
    * Undefined when the task is bound to no move; otherwise it settles once
-   * the move is over, true when the lane was handed on. With `reopen`, a
-   * task with no open conversation is opened for `deliver` on the login it
-   * ends up with, as a message someone sent opens one; without it, its
-   * lane's own sweep does, which leaves a task in the backlog alone. A move
-   * already picking its account takes the request with it.
+   * the move is over, true when the delivery took the lane. `sent` marks
+   * the delivery of a message someone sent: a task with no open
+   * conversation is opened for it on the login it ends up with, where an
+   * ordinary delivery leaves that to the lane's own sweep, which leaves a
+   * task in the backlog alone; and a move already picking its account
+   * takes it in place of an ordinary delivery, never the reverse.
    */
   takes(
     taskId: string,
-    deliver: (task: TaskRuntime) => void,
-    reopen = false,
+    deliver: (task: TaskRuntime) => boolean,
+    sent = false,
   ): Promise<boolean> | undefined {
     if (!this.bound.has(taskId)) return undefined;
     const running = this.moving.get(taskId);
     // A sent message's delivery is not given up for a sweep's.
-    if (running && (reopen || !running.reopen)) {
+    if (running && (sent || !running.sent)) {
       running.deliver = deliver;
-      running.reopen = reopen;
+      running.sent = sent;
     }
-    const going = running ?? this.begin(taskId, deliver, reopen);
+    const going = running ?? this.begin(taskId, deliver, sent);
     return going.done.then(() => going.handed);
   }
 
   private begin(
     taskId: string,
-    deliver: (task: TaskRuntime) => void = (task) => this.host.deliverPendingToTask(task),
-    reopen = false,
+    deliver: (task: TaskRuntime) => boolean = (task) => this.host.deliverPendingToTask(task),
+    sent = false,
   ): Going {
     const running = this.moving.get(taskId);
     if (running) return running;
-    const going: Going = { deliver, reopen, handed: false, done: Promise.resolve() };
+    const going: Going = { deliver, sent, handed: false, done: Promise.resolve() };
     this.moving.set(taskId, going);
     going.done = this.move(taskId, going).finally(() => this.moving.delete(taskId));
     return going;
@@ -143,16 +144,17 @@ export class LoginMoves {
     const move = this.bound.get(taskId);
     if (!move || !accounts?.pickForSpawn) return;
     const { from, to } = move;
+    // Handed on only when the delivery took the lane: a hold that came up
+    // while the task reopened keeps its rows waiting.
     const hand = (task: TaskRuntime) => {
-      going.handed = true;
-      going.deliver(task);
+      going.handed = going.deliver(task);
     };
     // The task stays where it is, with its lane delivered there.
     const stay = async () => {
       this.bound.delete(taskId);
       const open = this.host.runtime(taskId);
       if (open) return hand(open);
-      if (!going.reopen) return;
+      if (!going.sent) return;
       try {
         hand(await this.host.resumeTask(taskId));
       } catch {
@@ -209,7 +211,7 @@ export class LoginMoves {
       });
       // What waited on the login it left is due on the one it goes to.
       this.options.inbox.movedProvider(taskId);
-      if (!runtime && !going.reopen) {
+      if (!runtime && !going.sent) {
         going.handed = true;
         this.host.deliverLane(taskId);
         return;

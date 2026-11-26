@@ -302,8 +302,9 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   A task inside a turn at the click stays bound to the named login and moves at its turn's end or its lane's next delivery, with due rows or none (`LoginMoves.takes`, from `CrewTurns.deliverPendingToTask` and the lane sweep), before any of it goes to the old login.
   Words sent to it meanwhile wait on its lane, on a backend that would take them mid-turn too (`LoginMoves.bindsTask`, read by `CrewSteer.steerInternal` and the lane sweep).
   A task that anything else holds - a cost limit, an update, a move to another computer - is not reopened and stays bound, and moves at the delivery after that hold ends (`LoginMovesHost.laneHeld`).
-  A bound task with no open conversation is opened on the named login alone, by a message someone sent it or by a hand-over of files that ended, in the backlog too; the login it leaves is not opened first (`LoginMoves.takes` with `reopen`).
-  A move still picking its account takes that request with it, and the message is answered as delivered only once the task has reopened.
+  A bound task with no open conversation is opened on the named login alone, by a message someone sent it or by a hand-over of files that ended, in the backlog too; the login it leaves is not opened first (`LoginMoves.takes` with `sent`).
+  A Start from the backlog and a background job's result open it the same way.
+  A move still picking its account takes a sent message's delivery with it, never giving it up for an ordinary one, and the message is answered as delivered only when the reopened task took it: a hold that came up meanwhile keeps it on the lane (`CrewTurns.deliverPendingToTask`'s answer).
   A cut-off on the login it leaves does not hold its lane meanwhile (`CrewFacts.laneHold`), and every other hold still does; the binding ends when its old login has room again or the choice becomes `wait`.
   Only tasks whose crewmate runs on this computer move.
 - **The first mate.**
