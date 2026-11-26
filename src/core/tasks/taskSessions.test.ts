@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { renderTasksQueryResult } from "../pi/taskTools";
+import { LOCAL_MACHINE_ID } from "../session/session";
 import { DATABASE_VERSION, openDatabase, openInMemoryDatabase } from "../storage/db";
 import { TaskSessionStore } from "../storage/taskSessionStore";
 import { exportTaskRecords, parseTaskExport } from "./taskExport";
@@ -170,6 +171,71 @@ describe("task conversation associations (INF-1288)", () => {
     );
     db.close();
   });
+
+  // A first mate that moved here from another computer brought each conversation it held into
+  // this folder, while the row keeps the location the old home saved (docs/devices.md, "A home
+  // on another system"). One of the two locations is another system's wherever this runs.
+  it.each([
+    [
+      "a Windows PC",
+      "C:\\Users\\ada\\AppData\\Roaming\\infinitary\\crewmates\\crew\\sessions\\pi-1.jsonl",
+    ],
+    [
+      "a Mac",
+      "/Users/ada/Library/Application Support/infinitary/crewmates/crew/sessions/pi-1.jsonl",
+    ],
+  ])(
+    "names a conversation the home holds by the file in its own folder when %s saved its location, and leaves one another computer holds as recorded",
+    (_system, location) => {
+      const { db, tasks, task } = setup();
+      const dir = scratchDir("infinitary-task-sessions-");
+      const here = join(dir, "pi-1.jsonl");
+      for (const id of ["pi-1", "pi-2"])
+        writeFileSync(
+          join(dir, `${id}.jsonl`),
+          `${JSON.stringify({ type: "session", version: 3, id, timestamp: "2026-09-26T10:00:00.000Z" })}\n`,
+        );
+      const home = { computer: "Home computer", device_id: LOCAL_MACHINE_ID };
+      // As the old home recorded it: the id is the file's name by that home's folder rules.
+      new TaskSessionStore(db).record(task.id, {
+        ...facts(location),
+        ...home,
+        conversation: "pi-1",
+        resume_token: location,
+        opened_at: 1_000,
+        last_at: 1_000,
+      });
+      // Another computer holds this one, and the folder here keeps a copy of it.
+      const elsewhere = "/work/crewmates/crew/sessions/pi-2.jsonl";
+      tasks.turns.setSessionFile(task.id, elsewhere, facts(elsewhere));
+      // The arrival points the task at the file that came over.
+      tasks.turns.setSessionFile(task.id, here);
+      const reach = {
+        sessionFolderOf: () => ({ dir, computer: home.computer, device: home.device_id }),
+      };
+      expect(
+        queryTasks(tasks, { key: task.key }, undefined, undefined, undefined, reach).rows[0]
+          ?.sessions,
+      ).toEqual([
+        {
+          ...facts(here),
+          ...home,
+          conversation: "pi-1",
+          opened_at: 1_000,
+          last_at: 1_000,
+          current: true,
+        },
+        {
+          ...facts(elsewhere),
+          conversation: "pi-2",
+          opened_at: 1_000,
+          last_at: 1_000,
+          current: false,
+        },
+      ]);
+      db.close();
+    },
+  );
 
   it("names the earlier attempt by key, keeping its sessions on its own by-key read and off list reads", () => {
     const { db, tasks, task } = setup();

@@ -58,26 +58,42 @@ export class TaskArchive {
     return this.writer.references.list(id);
   }
 
-  /** Recorded conversations plus unlabelled files retained before the association existed. */
-  sessions(id: string, folder?: { dir: string; computer: string }) {
+  /**
+   * Recorded conversations plus unlabelled files retained before the
+   * association existed. `folder` is this computer's folder of the task's
+   * conversation files, and `device` the id its own conversations are
+   * recorded under.
+   */
+  sessions(id: string, folder?: { dir: string; computer: string; device?: string }) {
     const task = this.writer.mustGet(id);
     // The resume binding names the conversation it resumes (INF-1296 piece
     // 3); a token from before associations names the one its file is.
     const binding = this.writer.store.execution.get(id);
     const resumes =
       binding.conversation ?? (task.sessionFile ? conversationOf(task.sessionFile) : null);
+    const kept = new Map(
+      (folder ? sessionFilesIn(folder.dir) : []).map(
+        (file) => [conversationOf(file), file] as const,
+      ),
+    );
+    // A row is matched by the conversation id it was recorded under, never by
+    // reading its saved location again: a home that moved here from a
+    // computer of another system brings locations this computer's folder
+    // rules do not read, and the file itself came over into this folder
+    // (docs/devices.md, "A home on another system").
     const rows: (Omit<TaskSession, "began" | "opened_at" | "last_at" | "resume_token"> & {
       began: string | null;
       opened_at: number | null;
       last_at: number | null;
       current: boolean;
-    })[] = this.writer.conversations.list(id).map(({ resume_token, ...session }) => ({
+    })[] = this.writer.conversations.list(id).map(({ resume_token: _token, ...session }) => ({
       ...session,
-      current: resumes !== null && resumes === conversationOf(resume_token),
+      file:
+        (session.device_id === folder?.device && kept.get(session.conversation)) || session.file,
+      current: resumes === session.conversation,
     }));
-    const known = new Set(rows.map((row) => conversationOf(row.file)));
-    for (const file of folder ? sessionFilesIn(folder.dir) : []) {
-      const conversation = conversationOf(file);
+    const known = new Set(rows.map((row) => row.conversation));
+    for (const [conversation, file] of kept) {
       if (known.has(conversation)) continue;
       rows.push({
         conversation,

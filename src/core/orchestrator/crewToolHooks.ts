@@ -763,6 +763,7 @@ export class CrewToolHooks {
       sessionFolderOf: (record) => ({
         dir: crewmateSessionsDir(this.core.options.paths, record.id),
         computer: HOME.the,
+        device: LOCAL_MACHINE_ID,
       }),
       placeOf: (record) => {
         if (record.status === "open") return undefined;

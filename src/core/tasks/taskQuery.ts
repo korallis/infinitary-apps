@@ -83,8 +83,11 @@ export type TaskQueryReach = {
   projectFolder?: (repoId: string) => string | undefined;
   /** Where the task's crewmate ran, once one did. */
   placeOf?: (record: TaskRecord) => TaskQueryPlace | undefined;
-  /** This computer's retained files, including copies from another computer. */
-  sessionFolderOf?: (record: TaskRecord) => { dir: string; computer: string };
+  /**
+   * This computer's retained files, including copies from another computer,
+   * and the id its own conversations are recorded under.
+   */
+  sessionFolderOf?: (record: TaskRecord) => { dir: string; computer: string; device?: string };
 };
 
 /** Closing metadata keeps distinct bodies; a body equal to the newest card is not repeated. */

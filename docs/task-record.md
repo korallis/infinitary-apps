@@ -54,7 +54,8 @@ A by-key `tasks` read includes `sessions`; list reads stay compact.
 Each row names its transcript file and computer, model and provider, account, opening reason, timestamps and whether it is current.
 A stronger-model task names `earlier_attempt` by task key; reading that key lists that attempt's own sessions, never copies them onto its successor.
 For conversations retained before associations existed, the by-key read also lists this computer's session-folder files, including copies from another computer, through `sessionFilesIn`.
-A retained file already named by an association is not repeated, and served sidecars are not conversations.
+A retained file whose conversation key an association already holds is not repeated, and served sidecars are not conversations.
+A conversation the home itself holds is named by the file of its key in that folder, since the row keeps the location it was saved under, which an older home on another computer wrote (`docs/devices.md`, "A home on another system"); one another computer holds keeps the location recorded for it.
 Unrecorded files have no model, account, reason or timestamps; their computer names the location of the retained copy, not an inferred original computer.
 Files still held only on an unreachable computer are not enumerated by this fallback.
 Recorded associations remain available without a readable transcript and survive task closure, timeline compaction, restart and JSONL record export/import.
