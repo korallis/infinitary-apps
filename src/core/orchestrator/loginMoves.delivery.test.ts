@@ -1961,6 +1961,31 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     await relaunched.disposeAll();
   });
 
+  // docs/inbox.md: a message the captain or first mate sends still reaches a started task in the backlog.
+  it("wakes a backlog task for a kept sent message that waits behind a full page of the lane, and delivers it after that page", async () => {
+    const { h, relaunched, boots, prompts, read } = await relaunchedInBacklog();
+    const page = h.inbox.pending("t-move").length;
+    for (let i = 0; page + i < 50; i++) h.inbox.enqueue("t-move", `Host note ${i}.`);
+    expect(h.inbox.pending("t-move")).toHaveLength(50);
+    await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "recorded-held",
+    );
+    read(60);
+    await vi.waitFor(() => expect(prompts()).toHaveLength(1));
+    expect(prompts()[0]).toContain("Host note 0.");
+    expect(prompts()[0]).not.toContain("Check the footer too.");
+
+    boots[0]?.emit({ type: "turn_end", taskId: "t-move" });
+    boots[0]?.finishPrompt();
+    await tick();
+    await relaunched.watch.sweepTaskLane("t-move", Date.now());
+    await vi.waitFor(() => expect(prompts()).toHaveLength(2));
+    expect(prompts()[1]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+    expect(prompts()[1]).toContain("Check the footer too.");
+    expect(h.tasks.get("t-move")?.backlogSince != null).toBe(true);
+    await relaunched.disposeAll();
+  });
+
   it("delivers files whose crossing ended while the click was unchecked to a backlog task with its conversation open, on the named login once the click is accepted", async () => {
     const { h, vault, first, cardId } = await clickCutOff();
     for (const id of TASKS) {
