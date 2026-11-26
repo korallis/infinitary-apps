@@ -263,7 +263,9 @@ describe("dependency install at commission (interaction P0, WI-7)", () => {
     /**
      * A pnpm stand-in that never ends by itself: a batch file starts a
      * program, which starts another under it, and both write down their
-     * process numbers and wait. `loud` also prints more than an install may;
+     * process numbers and wait. `loud` also prints more than an install may,
+     * and carries on when nothing reads its output any more, as a program
+     * that never checks its writes does, so only being ended ends it;
      * `orphan` puts a program that ends at once between the two, so nothing
      * leads from the first program to the last and Windows cannot find it
      * to end it.
@@ -290,6 +292,7 @@ appendFileSync(log, role + " " + process.pid + "\\n");
 if (role === "top") {
   start(mode === "orphan" ? "middle" : "under", false);
   if (mode === "loud") {
+    process.stdout.on("error", () => {});
     const wait = setInterval(() => {
       if (under() === before) return;
       clearInterval(wait);
