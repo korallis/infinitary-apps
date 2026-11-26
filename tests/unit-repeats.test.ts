@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve, sep } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { PROBE_FILES } from "../scripts/affected-probes.ts";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
@@ -12,6 +12,7 @@ import {
   reachParts,
   reachTimings,
   repetitionArgs,
+  roundStart,
   runLinuxReach,
   runLocalUnits,
   runRepetitions,
@@ -143,6 +144,31 @@ describe("a change's local unit-file rounds", () => {
   });
 });
 
+// The defect this guards: on a Windows PC a round started pnpm with no shell,
+// which Node cannot do for a .cmd file, so no round ran and the first one read
+// as failed.
+describe("the program a round starts", () => {
+  const root = resolve(import.meta.dirname, "..");
+  const vitestArgs = ["run", "--retry", "0", "--maxWorkers", "2", "tests/unit-repeats.test.ts"];
+  const args = ["exec", "vitest", ...vitestArgs];
+
+  it.each(["linux", "darwin"] as const)("is pnpm with the round's arguments on %s", (platform) => {
+    expect(roundStart(args, platform)).toEqual({ command: "pnpm", args });
+  });
+
+  it("is Node running Vitest's own script with the same Vitest arguments on Windows", () => {
+    // Vitest's package file is named whole, so the reach script does not read
+    // this file as a reader of the project's own package.json.
+    const { bin } = JSON.parse(
+      readFileSync(join(root, "node_modules/vitest/package.json"), "utf8"),
+    ) as { bin: { vitest: string } };
+    const { command, args: started } = roundStart(args, "win32");
+    expect(command).toBe(process.execPath);
+    expect(started).toEqual([join(root, "node_modules", "vitest", bin.vitest), ...vitestArgs]);
+    expect(existsSync(started[0] ?? "")).toBe(true);
+  });
+});
+
 // INF-2394 measure 3 preserves the edited-file rule and adds disjoint once-only proof.
 describe("direct-reader local execution", () => {
   const selection = {
@@ -188,8 +214,9 @@ it("identifies native direct readers in the once-only local selection", () => {
 // INF-2478: the round once listed integration readers and never ran them.
 describe("the pull request's direct-reader round", () => {
   const root = resolve(import.meta.dirname, "..");
+  // Vitest's report names a file by its full path with forward slashes, on Windows too.
   const ran = (files: readonly string[]) => ({
-    testResults: files.map((file) => ({ name: join(root, file) })),
+    testResults: files.map((file) => ({ name: `${root.split(sep).join("/")}/${file}` })),
   });
 
   it("runs the unedited direct readers of a changed file and leaves a Mac-only one to the local round", () => {
@@ -389,9 +416,11 @@ describe("the pull request's direct-reader round", () => {
     // The project's own test files, as a change that reaches nearly all of them selects them.
     // Listed here rather than through the reach script's own lister: the reach test's real
     // example of a reader that is not direct is this file, which reaches that script only through unit-repeats.
+    // A selection names its files as git does, with forward slashes on every system; the parts
+    // are joined so the reach script does not read this file as a reader of that whole folder.
     const files = readdirSync(join(root, "src"), { recursive: true, encoding: "utf8" })
       .filter((path) => path.endsWith(".test.ts"))
-      .map((path) => join("src", path))
+      .map((path) => ["src", ...path.split(sep)].join("/"))
       .toSorted()
       .slice(0, 2 * REACH_RUN_FILES + 1);
 

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "reached-tests-on-windows",
+      "reason": "Internal: the reached-tests selector names every path with forward slashes and its rounds start Vitest through Node on Windows, so a Windows PC selects and runs the tests a change reaches; nothing a person using the app sees changes."
+    }
+  ]
+}

@@ -1,9 +1,22 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { basename, dirname, join, normalize, relative, resolve } from "node:path";
+import { basename, dirname, join, posix, relative, resolve, sep } from "node:path";
 import ts from "typescript";
 
 /** INF-2394 measure 3: direct edges only, never the importers of an importer. */
 export const VITEST_FILE = /^(src|tests)\/.+\.test\.tsx?$/;
+
+/**
+ * A path under the project as git names it, with forward slashes on every
+ * system: the changed paths, the test files and every list here are keyed
+ * that way. Node's own path functions answer with backslashes on Windows,
+ * where a path left as they give it matches no test file and no changed
+ * path, so the selection comes back empty and the rounds pass having run
+ * nothing. A path the selector works out below the project goes through
+ * here, or through `posix` when it is built from project paths alone.
+ */
+export function projectPath(path: string): string {
+  return path.split(sep).join("/");
+}
 
 /** What the compiler reads as a module; any other imported file is data. */
 const CODE_FILE = /\.[cm]?[jt]sx?$/;
@@ -25,7 +38,7 @@ export function unitFiles(root: string): string[] {
     .flatMap((dir) =>
       readdirSync(join(root, dir), { recursive: true, withFileTypes: true })
         .filter((entry) => entry.isFile())
-        .map((entry) => join(entry.parentPath, entry.name).slice(root.length + 1))
+        .map((entry) => projectPath(join(entry.parentPath, entry.name).slice(root.length + 1)))
         .filter((file) => VITEST_FILE.test(file)),
     )
     .sort();
@@ -246,7 +259,7 @@ export function directUnitReach(
     const resolved =
       ts.resolveModuleName(bare, from, options, host, cache).resolvedModule?.resolvedFileName ??
       (bare.startsWith(".") ? resolve(dirname(from), bare) : undefined);
-    const file = resolved === undefined ? undefined : relative(root, resolved);
+    const file = resolved === undefined ? undefined : projectPath(relative(root, resolved));
     return file && !file.startsWith("..") ? file : undefined;
   };
   const specifiers = (node: ts.Node): string | undefined => {
@@ -310,7 +323,10 @@ export function directUnitReach(
       let reached = false;
       const pathMatches = (value: string) => {
         if (!value) return false;
-        const candidates = [normalize(value), normalize(join(dirname(file), value))];
+        const candidates = [
+          posix.normalize(value),
+          posix.normalize(posix.join(posix.dirname(file), value)),
+        ];
         return [...subjects].some(
           (subject) =>
             candidates.includes(subject) ||
@@ -347,7 +363,7 @@ export function directUnitReach(
             const parts = node.arguments
               .filter((arg) => ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg))
               .map((arg) => arg.text);
-            if (parts.length && pathMatches(join(...parts))) reached = true;
+            if (parts.length && pathMatches(posix.join(...parts))) reached = true;
           }
         }
         ts.forEachChild(node, visit);

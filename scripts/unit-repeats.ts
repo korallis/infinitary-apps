@@ -13,7 +13,7 @@ import {
   readShardTimings,
   type ShardTimings,
 } from "./shard-balance.ts";
-import { directUnitReach, unitFiles, VITEST_FILE } from "./unit-reach.ts";
+import { directUnitReach, projectPath, unitFiles, VITEST_FILE } from "./unit-reach.ts";
 
 /**
  * The captain's INF-2273 override to INF-2259: every edited Vitest file
@@ -40,6 +40,9 @@ const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 /** INF-2259 accepted override: ordinary coverage plus two more rounds. */
 export const REPEATS = 3;
+
+/** What a round's arguments to pnpm open with: the program `pnpm exec` starts. */
+const PNPM_VITEST = ["exec", "vitest"];
 
 export type Selection = { repeat: string[]; onMac: string[] };
 export type LocalSelection = Selection & { once: string[] };
@@ -119,8 +122,7 @@ export function reachArgs(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string[] {
   return [
-    "exec",
-    "vitest",
+    ...PNPM_VITEST,
     "run",
     "--retry",
     "0",
@@ -139,7 +141,9 @@ export function unreported(
   report: { testResults?: { name: string }[] } | undefined,
   root = ROOT,
 ): string[] {
-  const ran = new Set((report?.testResults ?? []).map((result) => relative(root, result.name)));
+  const ran = new Set(
+    (report?.testResults ?? []).map((result) => projectPath(relative(root, result.name))),
+  );
   return files.filter((file) => !ran.has(file));
 }
 
@@ -305,8 +309,7 @@ export function repetitionArgs(
     if (count > 1) split = ["--shard", `${index}/${count}`];
   }
   return [
-    "exec",
-    "vitest",
+    ...PNPM_VITEST,
     "run",
     "--retry",
     "0",
@@ -363,6 +366,38 @@ export function runLocalUnits(
     }
   }
   return runRepetitions(selection.repeat, shard, run, report, workers);
+}
+
+/**
+ * The program and arguments that start a round. On Linux and macOS that is
+ * pnpm with the round's arguments. On Windows pnpm is a .cmd file, which Node
+ * starts only through a shell: without one the round never starts
+ * (`spawnSync pnpm ENOENT`) and reads as a failed round, and a shell would
+ * read a test file's name as its own words. So on Windows a round starts the
+ * program `pnpm exec vitest` names, the Node script Vitest's package lists
+ * under `bin`, through Node itself with the same Vitest arguments.
+ */
+export function roundStart(
+  args: readonly string[],
+  platform: NodeJS.Platform = process.platform,
+  root = ROOT,
+): { command: string; args: string[] } {
+  if (platform !== "win32") return { command: "pnpm", args: [...args] };
+  const folder = join(root, "node_modules", "vitest");
+  const { bin } = JSON.parse(readFileSync(join(folder, "package.json"), "utf8")) as {
+    bin?: string | Record<string, string>;
+  };
+  const script = typeof bin === "string" ? bin : bin?.vitest;
+  if (!script) throw new Error("The installed vitest package names no program to start.");
+  return {
+    command: process.execPath,
+    args: [join(folder, script), ...args.slice(PNPM_VITEST.length)],
+  };
+}
+
+function startRound(args: string[]): number | null {
+  const round = roundStart(args);
+  return spawnSync(round.command, round.args, { cwd: ROOT, stdio: "inherit" }).status;
 }
 
 function summaryLines(
@@ -463,11 +498,7 @@ function main(): void {
       );
     report(lines);
     if (!args.includes("--run")) return;
-    process.exitCode = runLinuxReach(
-      mine,
-      (command) => spawnSync("pnpm", command, { cwd: ROOT, stdio: "inherit" }).status,
-      report,
-    );
+    process.exitCode = runLinuxReach(mine, startRound, report);
     return;
   }
   const selection = selectLocalUnits(changed);
@@ -479,13 +510,7 @@ function main(): void {
     throw new Error(
       "This selected local batch includes native files that need a Mac; do not count skipped native cases as proof.",
     );
-  process.exitCode = runLocalUnits(
-    selection,
-    shard,
-    (command) => spawnSync("pnpm", command, { cwd: ROOT, stdio: "inherit" }).status,
-    report,
-    workers,
-  );
+  process.exitCode = runLocalUnits(selection, shard, startRound, report, workers);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

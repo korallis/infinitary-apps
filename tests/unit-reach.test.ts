@@ -1,7 +1,7 @@
 import { relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CONTRACTS_PATH } from "../scripts/generate-personal-env.ts";
-import { directUnitReach } from "../scripts/unit-reach.ts";
+import { directUnitReach, projectPath } from "../scripts/unit-reach.ts";
 import { selectLinuxReach } from "../scripts/unit-repeats.ts";
 
 // INF-2394 measure 3: exercise the actual consumers that motivated local
@@ -182,7 +182,8 @@ describe("local direct unit reach", () => {
   // contracts only through the generator's path, so it declares that read.
   it("routes the personal contracts' freshness test to the PR check when the contracts change", () => {
     const freshness = "src/core/personal/infinitaryEnv.test.ts";
-    const contracts = relative(root, CONTRACTS_PATH);
+    // A changed path is named as git names it, with forward slashes on Windows too.
+    const contracts = projectPath(relative(root, CONTRACTS_PATH));
     expect(directUnitReach([contracts], [freshness], root)).toEqual([freshness]);
     expect(selectLinuxReach([contracts], root).run).toContain(freshness);
     expect(directUnitReach(["src/shared/voice.ts"], [freshness], root)).toEqual([]);
