@@ -1164,12 +1164,18 @@ export class CrewTurns {
       this.core.tasks.delete(taskId);
     }
     try {
-      // A task bound to another login restarts there, never where it was (`LoginMoves`).
-      await this.core.loginMoves.beforeRestart(taskId);
-      const resumed = await this.core.sessions.resumeTask(taskId, undefined, {
-        from,
-        changed: "refused",
-      });
+      const restart = { from, changed: "refused" as const };
+      // A task bound to another login restarts there, never where it was
+      // (`LoginMoves`); one a hold keeps from moving restarts after the hold.
+      if (await this.core.loginMoves.beforeRestart(taskId)) {
+        this.core.sessions.keepRestart(taskId, restart);
+        return {
+          ok: true,
+          // i18n-exempt: a tool answer served to the agent, not shown to a person
+          text: `${handle} opens its new conversation once what holds it is answered.`,
+        };
+      }
+      const resumed = await this.core.sessions.resumeTask(taskId, undefined, restart);
       this.deliverPendingToTask(resumed);
       return {
         ok: true,
@@ -1280,12 +1286,14 @@ export class CrewTurns {
     this.core.tasks.delete(task.id);
     try {
       if (!from) throw new Error("its earlier conversation is not on its record");
-      // A task bound to another login restarts there, never where it was (`LoginMoves`).
-      await this.core.loginMoves.beforeRestart(task.id);
-      const resumed = await this.core.sessions.resumeTask(task.id, undefined, {
-        from,
-        changed: "context",
-      });
+      const restart = { from, changed: "context" as const };
+      // A task bound to another login restarts there, never where it was
+      // (`LoginMoves`); one a hold keeps from moving restarts after the hold.
+      if (await this.core.loginMoves.beforeRestart(task.id)) {
+        this.core.sessions.keepRestart(task.id, restart);
+        return;
+      }
+      const resumed = await this.core.sessions.resumeTask(task.id, undefined, restart);
       resumed.contextRecovered = true;
       // The failed turn held only the brief, which the restart serves: the
       // new conversation still takes its turn, on the restart's words.

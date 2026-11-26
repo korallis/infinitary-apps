@@ -645,6 +645,33 @@ describe("a move still picking its account, and what it owes the task when it is
     expect(first.promptCalls[0]).toContain("Check the footer too.");
     expect(h.supervisor.loginMoves.bindsTask("t-move")).toBe(false);
   });
+
+  it("keeps the pick already out when the same login is named again, and asks for no second one", async () => {
+    const pick = heldPick();
+    let picks = 0;
+    const first = fakeCrewmate({});
+    const h = threeLogins("openai-codex", first, fakeCrewmate({}), false, undefined, () => {
+      picks += 1;
+      return pick.beforePick();
+    });
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+
+    const offered = h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    const steered = h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.");
+    await tick();
+    // The allowance is read again and offers the same move, twice.
+    const again = h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    const onceMore = h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    pick.release();
+    await Promise.all([offered, again, onceMore]);
+
+    await expect(steered).resolves.toBe("mid-turn");
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    expect(picks).toBe(1);
+    expect(h.sessionSpecs).toHaveLength(1);
+    expect(boundAccount(h, 0)).toBe("acct_work");
+    expect(first.promptCalls[0]).toContain("Check the footer too.");
+  });
 });
 
 describe("a task still to move whose conversation is restarted", () => {
@@ -725,6 +752,96 @@ describe("a task still to move whose conversation is restarted", () => {
     );
     expect(second.promptCalls[0]).toContain("carry on with the handoff");
     expect(first.promptCalls).toHaveLength(STUCK_REFUSAL_LIMIT);
+  });
+
+  it("neither moves nor opens a task restarted after refusals while its cost limit holds it, and restarts it on the named login once the limit is answered", async () => {
+    const first = fakeCrewmate({});
+    const second = fakeCrewmate({});
+    const h = threeLogins("openai-codex", first, second, false);
+    seedRunning(h, MODEL, "/tmp/s1.jsonl");
+    await h.supervisor.steer.steerCrewmate("t-move", "carry on with the handoff");
+    for (let refusal = 1; refusal <= STUCK_REFUSAL_LIMIT; refusal++) {
+      if (refusal > 1) {
+        const due = Math.max(
+          Date.now(),
+          ...h.inbox.allFor("t-move").map((row) => row.nextAttemptAt ?? 0),
+        );
+        vi.setSystemTime(due);
+        await h.supervisor.watch.sweepInbox(due);
+      }
+      await vi.waitFor(() => expect(first.promptCalls).toHaveLength(refusal));
+      first.emit({ type: "turn_failed", taskId: "t-move", error: REFUSAL });
+      first.emit({ type: "turn_end", taskId: "t-move" });
+      first.finishPrompt();
+      await tick();
+    }
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+
+    expect(await h.supervisor.turns.unstick("t-move", "restart")).toMatchObject({ ok: true });
+    await tick();
+    // The limit stands: no login change, no new conversation, no prompt.
+    expect(h.sessionSpecs).toHaveLength(1);
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_personal");
+    expect(second.promptCalls).toHaveLength(0);
+    expect(first.promptCalls).toHaveLength(STUCK_REFUSAL_LIMIT);
+
+    h.costs.clearHold("t-move");
+    await h.supervisor.watch.sweepInbox(Date.now());
+    await vi.waitFor(() => expect(second.promptCalls).toHaveLength(1));
+    expect(h.sessionSpecs).toHaveLength(2);
+    expect(boundAccount(h, 1)).toBe("acct_work");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_work");
+    expect(second.promptCalls[0]).toContain(
+      "the provider refused your earlier conversation's requests the same way several times in a row",
+    );
+    expect(second.promptCalls[0]).toContain("carry on with the handoff");
+  });
+
+  it("starts no turn for a task at the context limit whose cost limit is reached while its login is picked, and continues it on the named login once the limit is answered", async () => {
+    let release: () => void = () => {};
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const first = fakeCrewmate({ model: MODEL });
+    const second = fakeCrewmate({
+      model: MODEL,
+      sessionId: "s2",
+      resume: { backend: "pi", sessionFile: "/tmp/s2.jsonl" },
+    });
+    const h = threeLogins("openai-codex", first, second, false, undefined, () => waiting, MODEL);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Fix the login form",
+      intent: intentOf("fix the login form"),
+    });
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+
+    first.emit({
+      type: "turn_failed",
+      taskId,
+      error: "This request exceeds the context window.",
+      contextOverflow: true,
+    });
+    first.emit({ type: "turn_end", taskId });
+    first.finishPrompt();
+    await tick();
+    // The restart's move is picking its account when the task passes its cost limit.
+    h.costs.placeHold({ taskId, limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    release();
+    await tick();
+    expect(h.sessionSpecs).toHaveLength(1);
+    expect(h.tasks.get(taskId)?.accountId).toBe("acct_personal");
+    expect(second.promptCalls).toHaveLength(0);
+
+    h.costs.clearHold(taskId);
+    await h.supervisor.watch.sweepInbox(Date.now());
+    await vi.waitFor(() => expect(second.promptCalls).toHaveLength(1));
+    expect(h.sessionSpecs).toHaveLength(2);
+    expect(boundAccount(h, 1)).toBe("acct_work");
+    expect(h.tasks.get(taskId)?.accountId).toBe("acct_work");
+    expect(second.promptCalls[0]).toContain("context limit");
+    expect(first.promptCalls).toHaveLength(1);
   });
 });
 
