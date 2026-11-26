@@ -132,6 +132,8 @@ export type FirstmateHooks = {
   ) => void;
   /** Apply the rung-2 ladder move: rebind Firstmate to another provider. */
   moveFlagship?: (providerId: string) => void;
+  /** A card's "Move to" for the first mate: it moves to that login of its provider. */
+  moveFirstmateLogin?: (accountId: string) => void;
   /**
    * A pause card's "Try again": a refusal clears and the lane drains once;
    * on a spent allowance it rechecks, or attempts once when its argument

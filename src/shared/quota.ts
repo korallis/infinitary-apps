@@ -34,12 +34,18 @@ export function clockTime(at: number): string {
 }
 
 export function formatResetText(resetsAtMs: number, now: number): string | undefined {
+  const when = resetWhen(resetsAtMs, now);
+  return when === undefined ? undefined : `resets ${when}`;
+}
+
+/** When an allowance comes back, without the verb: "1:10pm" on the same day, else "Fri". */
+export function resetWhen(resetsAtMs: number, now: number): string | undefined {
   if (!Number.isFinite(resetsAtMs)) return undefined;
   const reset = new Date(resetsAtMs);
   const nowDate = new Date(now);
-  if (reset.toDateString() === nowDate.toDateString()) return `resets ${clockTime(resetsAtMs)}`;
+  if (reset.toDateString() === nowDate.toDateString()) return clockTime(resetsAtMs);
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
-  return `resets ${days[reset.getDay()]}`;
+  return days[reset.getDay()];
 }
 
 export function formatBedrockSpend(cost: number | null, partial: boolean): string {

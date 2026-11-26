@@ -11,6 +11,7 @@ import {
   sizeValue,
   themeValue,
   washValue,
+  whenLoginLowValue,
 } from "./settingValues";
 
 /**
@@ -54,6 +55,7 @@ const readable = {
   "cost-limit": { value: costLimitValue },
   "personal-resources": { value: enabledValue },
   "panels-switch": { value: panelsSwitchValue },
+  "when-login-low": { value: whenLoginLowValue },
 } satisfies Record<PanelSettingName, PanelSetting>;
 
 /** The value each readable line answers, as the core builds it. */

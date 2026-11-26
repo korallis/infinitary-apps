@@ -7,6 +7,7 @@ import {
   type ShellPreferences,
   type UiSize,
 } from "./preferences";
+import type { WhenLoginLow } from "./whenLoginLow";
 
 /**
  * The narrow value of a setting line, read from its `current` answer: the
@@ -46,6 +47,7 @@ export const ambientOwnStylesValue = (c: unknown) => ({
  */
 export const ambientPausedValue = (c: unknown) => ({ paused: look(c).ambientPaused ?? false });
 export const enabledValue = (c: unknown) => ({ enabled: c as boolean });
+export const whenLoginLowValue = (c: unknown) => ({ choice: c as WhenLoginLow });
 /** Reads the limit alone from any answer that carries it, the app's cost limit view included. */
 export const costLimitValue = (c: unknown) => ({ limit: (c as { limit: CostLimit }).limit });
 export const panelsSwitchValue = (c: unknown) => ({

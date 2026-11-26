@@ -38,6 +38,9 @@ export const NO_CLAUDE_LOGIN_USER = "infinitary-e2e-no-claude-login";
 
 export const CLAUDE_SEAT_ACCOUNT = "acct_claude_seat";
 export const CODEX_SEAT_ACCOUNT = "acct_codex_seat";
+/** A second login of Codex's provider, beside the seat's: the one a low login's work moves to. */
+export const CODEX_SECOND_ACCOUNT = "acct_codex_second";
+export const CODEX_SECOND_LABEL = "Personal";
 /** The Claude account's label, the name a pause or a move says it by. */
 // INF-2318: Claude names its current store identity, not a custom account label.
 export const CLAUDE_SEAT_LABEL = "sailor@example.com";
@@ -64,7 +67,7 @@ function fakeCodexToken(): string {
   ].join(".");
 }
 
-function seedAccounts(userDataDir: string, withCodex: boolean): void {
+function seedAccounts(userDataDir: string, withCodex: boolean, secondCodex: boolean): void {
   // Vault bookkeeping only; the login lives in HOME/.claude (CD-1=B).
   seedAccountStore(userDataDir, "anthropic-claude", CLAUDE_SEAT_ACCOUNT, {
     recursive: true,
@@ -80,15 +83,21 @@ function seedAccounts(userDataDir: string, withCodex: boolean): void {
       createdAt: Date.parse("2026-08-01T00:00:00Z"),
     },
   ];
-  if (withCodex) {
-    seedAccountStore(userDataDir, "openai-codex", CODEX_SEAT_ACCOUNT, {
+  const codexLogins = withCodex
+    ? [
+        { id: CODEX_SEAT_ACCOUNT, label: "Work" },
+        ...(secondCodex ? [{ id: CODEX_SECOND_ACCOUNT, label: CODEX_SECOND_LABEL }] : []),
+      ]
+    : [];
+  for (const [index, login] of codexLogins.entries()) {
+    seedAccountStore(userDataDir, "openai-codex", login.id, {
       recursive: true,
       mode: 0o700,
     });
     seedAccountAuth(
       userDataDir,
       "openai-codex",
-      CODEX_SEAT_ACCOUNT,
+      login.id,
       {
         "openai-codex": {
           type: "oauth",
@@ -100,15 +109,17 @@ function seedAccounts(userDataDir: string, withCodex: boolean): void {
       { mode: 0o600 },
     );
     accounts.push({
-      id: CODEX_SEAT_ACCOUNT,
+      id: login.id,
       providerId: "openai-codex",
       kind: "subscription_oauth",
-      label: "Work",
+      label: login.label,
       enabled: true,
-      createdAt: Date.parse("2026-08-02T00:00:00Z"),
+      createdAt: Date.parse("2026-08-02T00:00:00Z") + index,
     });
   }
-  seedAccountRegistry(userDataDir, accounts, {}, { mode: 0o600 });
+  // With two Codex logins the seat's own is the login in use.
+  const pins: Record<string, string> = secondCodex ? { "openai-codex": CODEX_SEAT_ACCOUNT } : {};
+  seedAccountRegistry(userDataDir, accounts, pins, { mode: 0o600 });
 }
 
 /**
@@ -167,6 +178,8 @@ export type ClaudeSeatLaunch = Pick<
 > & {
   mockProvider: MockProviderServer;
   withCodex?: boolean;
+  /** With Codex, a second Codex login beside the seat's, which is then the login in use. */
+  secondCodex?: boolean;
   /** Codex's allowance left, in percent (60 unless named). */
   codexPercent?: number;
   /** The Claude client the seat runs; the SDK's co-released one unless named. */
@@ -183,7 +196,9 @@ export type ClaudeSeatLaunch = Pick<
 export async function launchClaudeSeat(options: ClaudeSeatLaunch): Promise<LaunchedApp> {
   const relaunch = options.userDataDir !== undefined;
   const userDataDir = options.userDataDir ?? scratchDir("infinitary-e2e-");
-  if (!relaunch) seedAccounts(userDataDir, options.withCodex === true);
+  if (!relaunch) {
+    seedAccounts(userDataDir, options.withCodex === true, options.secondCodex === true);
+  }
   const launched = await launchSignedInClaude(
     CLAUDE_SEAT_ACCOUNT,
     {

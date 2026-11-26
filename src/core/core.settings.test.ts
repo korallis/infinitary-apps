@@ -175,6 +175,7 @@ describe("the core, driven with no Electron in the process", () => {
       "panels-switch": {
         enabled: (await core.dispatch("inf:shell:preferences", [])).panels.enabled,
       },
+      "when-login-low": { choice: "ask" },
     });
     await core.dispatch("inf:settings:notifications:set", [notifications]);
     await core.dispatch("inf:settings:personal-resources:set", [resources]);
@@ -383,6 +384,7 @@ describe("the core, driven with no Electron in the process", () => {
       "account-keep-going",
       "account-use-reset",
       "account-use-saved-resets",
+      "when-login-low",
       "account-disconnect",
       "custom-connection-file",
       "projects-folder",

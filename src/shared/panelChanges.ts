@@ -106,6 +106,7 @@ export const PANEL_CHANGES = {
     "Lets work spend an account's saved resets with no click",
   ],
   "account-disconnect": ["credential", "Forgets an account's sign-in"],
+  "when-login-low": true,
   "projects-folder": true,
   "custom-connection-file": true,
   "project-batch-answer": true,

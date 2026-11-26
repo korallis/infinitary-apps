@@ -23,6 +23,7 @@ import type { IdleLadder } from "./idleLadder";
 import type { InPlaceWork } from "./inPlaceWork";
 import type { TaskIntake } from "./intake";
 import type { IntegrationAsks } from "./integrationAsks";
+import type { LoginMoves } from "./loginMoves";
 import type { ReportIntake } from "./reportIntake";
 import type { WakeOpenReview } from "./reportWakes";
 import type { RestartWatch } from "./restartWatch";
@@ -76,6 +77,7 @@ export type CrewCore = {
   readonly intake: TaskIntake;
   readonly integrationAsks: IntegrationAsks;
   readonly ladder: IdleLadder;
+  readonly loginMoves: LoginMoves;
   readonly moves: TaskMoves;
   readonly overrides: CaptainOverrides;
   readonly placement: TaskPlacement;

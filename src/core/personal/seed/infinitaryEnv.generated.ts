@@ -913,11 +913,10 @@ declare module "@infinitary/contracts" {
   // --- the app's settings ---------------------------------------------------------
 
   /**
-   * The app settings a panel may read through \`settings.current\`, by their
-   * action catalog names, each with the value it delivers. Any other setting
-   * is unreadable: the host refuses the read, the panel's console says so, and
-   * the listener is never called. That differs from a read the manifest does
-   * not declare, which throws at the call.
+   * The app settings a panel may read through \`settings.current\`, by their action catalog names,
+   * each with the value it delivers. Any other setting is unreadable: the host refuses the read, the
+   * panel's console says so, and the listener is never called. That differs from a read the manifest
+   * does not declare, which throws at the call.
    */
   export type PanelSettingValues = {
     theme: { theme: "dark" | "light" };
@@ -934,6 +933,7 @@ declare module "@infinitary/contracts" {
     "personal-resources": { enabled: boolean };
     /** Whether the captain's own panels are on. */
     "panels-switch": { enabled: boolean };
+    "when-login-low": { choice: "wait" | "ask" | "spread" | "move" };
   };
 
   export type PanelSettingName = keyof PanelSettingValues;
@@ -1462,17 +1462,17 @@ declare module "@infinitary/contracts" {
     | "update-check"
     | "usage-unit"
     | "voice-model"
+    | "when-login-low"
     | "window-size"
     | "window-wash";
 
   /**
-   * The settings a panel that names them (\`manifest.json\` \`"actions"\`) changes,
-   * and for one from elsewhere that the captain agreed to. A change counts only
-   * while their own click or key is in this panel or card, as a task move does;
-   * it runs as theirs, through the same checks as Settings, and
-   * Activity names the panel it came from. \`value\` is what the setting's
-   * catalog line takes, such as \`{ theme: "light" }\` for \`theme\`; a refusal
-   * comes back as the app's words, with nothing changed.
+   * The settings a panel that names them (\`manifest.json\` \`"actions"\`) changes, and for one from
+   * elsewhere that the captain agreed to. A change counts only while their own click or key is in
+   * this panel or card, as a task move does; it runs as theirs, through the same checks as Settings,
+   * and Activity names the panel it came from. \`value\` is what the setting's catalog line takes,
+   * such as \`{ theme: "light" }\` for \`theme\`; a refusal comes back as the app's words, with nothing
+   * changed.
    */
   export type PanelSettingChanges = {
     change: (action: PanelChangeSetting, value: Record<string, unknown>) => Promise<PanelMoveResult>;

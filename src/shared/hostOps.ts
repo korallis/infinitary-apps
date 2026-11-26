@@ -9,7 +9,10 @@
  * use one of a Codex account's saved resets from a run-out card or the
  * spent-allowance card (`arg` = the account's key; docs/codex-client.md),
  * turn a Codex account's Use saved resets on their own on from a run-out
- * card (`arg` = the account's key; docs/quota.md),
+ * card (`arg` = the account's key; docs/quota.md), move the crew's login
+ * in use of a provider, or the first mate, to another login of the same
+ * provider (`arg` = `crew:` or `firstmate:` and the account id; docs/quota.md,
+ * "When the login in use runs low"),
  * add or turn down a plugin waiting on the captain's consent (`arg` =
  * plugin id; one plugin vehicle, Phase A, A2a), add or turn down a project
  * Firstmate proposed on the setup card (`arg` = the card's offer as JSON,
@@ -48,6 +51,7 @@ export const HOST_OPS = [
   "keep-going-on-credits",
   "use-saved-reset",
   "use-saved-resets",
+  "move-login",
   "add-plugin",
   "decline-plugin",
   "apply-project-change",

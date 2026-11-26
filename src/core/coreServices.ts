@@ -393,6 +393,11 @@ export type CoreServices = {
    * Absent in a helper or test.
    */
   notificationsSwitched?: () => void;
+  /**
+   * The choice for when the login in use runs low changed (docs/quota.md):
+   * the logins are read against it at once. Absent in a helper or test.
+   */
+  whenLoginLowChanged?: () => void;
   /** The one writer of the captain's presentation preferences; pushes every write. */
   preferences: ShellPreferencesService;
   /** The two switches (roadmap 1.4): the one writer of `sharing` and the gate on what leaves for us. */

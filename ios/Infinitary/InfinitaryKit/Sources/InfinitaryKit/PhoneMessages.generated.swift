@@ -502,6 +502,11 @@ public enum PhoneMessages {
     public static func `cardFilesSavedAll`(`folder`: String) -> String { PhoneWords.format("cardFilesSavedAll", [`folder`]) }
     public static func `cardFilesShowAll`() -> String { PhoneWords.format("cardFilesShowAll", []) }
     public static func `cardFilesShowFewer`() -> String { PhoneWords.format("cardFilesShowFewer", []) }
+    public static func `cardFirstMateKept`() -> String { PhoneWords.format("cardFirstMateKept", []) }
+    public static func `cardFirstMateMoveLogin`(`other`: String) -> String { PhoneWords.format("cardFirstMateMoveLogin", [`other`]) }
+    public static func `cardFirstMateOnCreditsBody`(`login`: String, `other`: String) -> String { PhoneWords.format("cardFirstMateOnCreditsBody", [`login`, `other`]) }
+    public static func `cardFirstMateOnCreditsTitle`() -> String { PhoneWords.format("cardFirstMateOnCreditsTitle", []) }
+    public static func `cardFirstMateStayOnCredits`(`login`: String) -> String { PhoneWords.format("cardFirstMateStayOnCredits", [`login`]) }
     public static func `cardHeadingAfter`() -> String { PhoneWords.format("cardHeadingAfter", []) }
     public static func `cardHeadingBefore`() -> String { PhoneWords.format("cardHeadingBefore", []) }
     public static func `cardHeadingWhatChanged`() -> String { PhoneWords.format("cardHeadingWhatChanged", []) }
@@ -524,6 +529,14 @@ public enum PhoneMessages {
     public static func `cardLeaveHide`() -> String { PhoneWords.format("cardLeaveHide", []) }
     public static func `cardLeaveHidePanelRest`() -> String { PhoneWords.format("cardLeaveHidePanelRest", []) }
     public static func `cardLeaveHideRest`() -> String { PhoneWords.format("cardLeaveHideRest", []) }
+    public static func `cardLoginLowLeft`(`percent`: String) -> String { PhoneWords.format("cardLoginLowLeft", [`percent`]) }
+    public static func `cardLoginLowMove`(`login`: String) -> String { PhoneWords.format("cardLoginLowMove", [`login`]) }
+    public static func `cardLoginLowOffer`(`login`: String, `other`: String, `provider`: String) -> String { PhoneWords.format("cardLoginLowOffer", [`login`, `other`, `provider`]) }
+    public static func `cardLoginLowRefills`(`when`: String) -> String { PhoneWords.format("cardLoginLowRefills", [`when`]) }
+    public static func `cardLoginLowSpreadOffer`(`login`: String, `other`: String) -> String { PhoneWords.format("cardLoginLowSpreadOffer", [`login`, `other`]) }
+    public static func `cardLoginLowTitle`(`login`: String) -> String { PhoneWords.format("cardLoginLowTitle", [`login`]) }
+    public static func `cardLoginLowWait`() -> String { PhoneWords.format("cardLoginLowWait", []) }
+    public static func `cardLoginSpentTitle`(`login`: String) -> String { PhoneWords.format("cardLoginSpentTitle", [`login`]) }
     public static func `cardNoteAnnotate`() -> String { PhoneWords.format("cardNoteAnnotate", []) }
     public static func `cardNoteCancel`() -> String { PhoneWords.format("cardNoteCancel", []) }
     public static func `cardNoteCommentLabel`() -> String { PhoneWords.format("cardNoteCommentLabel", []) }
@@ -1188,9 +1201,13 @@ public enum PhoneMessages {
     public static func `feedFinished`() -> String { PhoneWords.format("feedFinished", []) }
     public static func `feedFirstMateLoginRemoved`(`label`: String) -> String { PhoneWords.format("feedFirstMateLoginRemoved", [`label`]) }
     public static func `feedFirstMateLoginRemovedNoOther`(`label`: String) -> String { PhoneWords.format("feedFirstMateLoginRemovedNoOther", [`label`]) }
+    public static func `feedFirstMateMovedLogin`(`login`: String) -> String { PhoneWords.format("feedFirstMateMovedLogin", [`login`]) }
     public static func `feedFirstMateProblem`(`problem`: String) -> String { PhoneWords.format("feedFirstMateProblem", [`problem`]) }
     public static func `feedFirstMateSaid`(`text`: String) -> String { PhoneWords.format("feedFirstMateSaid", [`text`]) }
     public static func `feedFirstMateSet`(`text`: String) -> String { PhoneWords.format("feedFirstMateSet", [`text`]) }
+    public static func `feedLoginInUse`(`login`: String, `provider`: String) -> String { PhoneWords.format("feedLoginInUse", [`login`, `provider`]) }
+    public static func `feedLoginMoved`(`from`: String, `provider`: String, `to`: String) -> String { PhoneWords.format("feedLoginMoved", [`from`, `provider`, `to`]) }
+    public static func `feedLoginMovedLow`(`from`: String, `provider`: String, `to`: String) -> String { PhoneWords.format("feedLoginMovedLow", [`from`, `provider`, `to`]) }
     public static func `feedMerged`() -> String { PhoneWords.format("feedMerged", []) }
     public static func `feedMergesOnItsOwn`() -> String { PhoneWords.format("feedMergesOnItsOwn", []) }
     public static func `feedMoved`(`key`: String) -> String { PhoneWords.format("feedMoved", [`key`]) }
@@ -1234,6 +1251,7 @@ public enum PhoneMessages {
     public static func `feedStopped`() -> String { PhoneWords.format("feedStopped", []) }
     public static func `feedTagCheckFinished`(`count`: Int, `project`: String) -> String { PhoneWords.format("feedTagCheckFinished", [`count`, `project`]) }
     public static func `feedTagCheckFinishedMissed`(`count`: Int, `missed`: String, `project`: String) -> String { PhoneWords.format("feedTagCheckFinishedMissed", [`count`, `missed`, `project`]) }
+    public static func `feedTaskMovedLogin`(`from`: String, `task`: String, `to`: String) -> String { PhoneWords.format("feedTaskMovedLogin", [`from`, `task`, `to`]) }
     public static func `feedUndelivered`(`why`: String) -> String { PhoneWords.format("feedUndelivered", [`why`]) }
     public static func `feedUnsafeDataReaderReported`() -> String { PhoneWords.format("feedUnsafeDataReaderReported", []) }
     public static func `feedUpdated`(`text`: String) -> String { PhoneWords.format("feedUpdated", [`text`]) }
@@ -5213,6 +5231,11 @@ extension PhoneWords {
         "cardFilesSavedAll": ["folder"],
         "cardFilesShowAll": [],
         "cardFilesShowFewer": [],
+        "cardFirstMateKept": [],
+        "cardFirstMateMoveLogin": ["other"],
+        "cardFirstMateOnCreditsBody": ["login", "other"],
+        "cardFirstMateOnCreditsTitle": [],
+        "cardFirstMateStayOnCredits": ["login"],
         "cardHeadingAfter": [],
         "cardHeadingBefore": [],
         "cardHeadingWhatChanged": [],
@@ -5235,6 +5258,14 @@ extension PhoneWords {
         "cardLeaveHide": [],
         "cardLeaveHidePanelRest": [],
         "cardLeaveHideRest": [],
+        "cardLoginLowLeft": ["percent"],
+        "cardLoginLowMove": ["login"],
+        "cardLoginLowOffer": ["login", "other", "provider"],
+        "cardLoginLowRefills": ["when"],
+        "cardLoginLowSpreadOffer": ["login", "other"],
+        "cardLoginLowTitle": ["login"],
+        "cardLoginLowWait": [],
+        "cardLoginSpentTitle": ["login"],
         "cardNoteAnnotate": [],
         "cardNoteCancel": [],
         "cardNoteCommentLabel": [],
@@ -5899,9 +5930,13 @@ extension PhoneWords {
         "feedFinished": [],
         "feedFirstMateLoginRemoved": ["label"],
         "feedFirstMateLoginRemovedNoOther": ["label"],
+        "feedFirstMateMovedLogin": ["login"],
         "feedFirstMateProblem": ["problem"],
         "feedFirstMateSaid": ["text"],
         "feedFirstMateSet": ["text"],
+        "feedLoginInUse": ["login", "provider"],
+        "feedLoginMoved": ["from", "provider", "to"],
+        "feedLoginMovedLow": ["from", "provider", "to"],
         "feedMerged": [],
         "feedMergesOnItsOwn": [],
         "feedMoved": ["key"],
@@ -5945,6 +5980,7 @@ extension PhoneWords {
         "feedStopped": [],
         "feedTagCheckFinished": ["count", "project"],
         "feedTagCheckFinishedMissed": ["count", "missed", "project"],
+        "feedTaskMovedLogin": ["from", "task", "to"],
         "feedUndelivered": ["why"],
         "feedUnsafeDataReaderReported": [],
         "feedUpdated": ["text"],

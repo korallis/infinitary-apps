@@ -34,7 +34,7 @@ import { primeClaudeExecutable } from "./claude/claudeCli";
 import { claudeReportingDeps } from "./claude/claudeCostPolicy";
 import { defaultClaudeConfigDir } from "./claude/claudeQuota";
 import { claudeLoginDirs, createClaudeSessionFactory } from "./claude/session";
-import { AutoSavedResets } from "./codex/autoSavedResets";
+import { homeAutoSavedResets } from "./codex/autoSavedResets";
 import {
   SavedResets,
   savedResetReach,
@@ -118,6 +118,7 @@ import { PluginRecords } from "./plugins/pluginRecords";
 import { ShellPreferencesService } from "./preferences/shellPreferences";
 import { startProgramQuestions } from "./program/programQuestions";
 import { CreditsCards } from "./quota/creditsCards";
+import { startLowLogins } from "./quota/homeLowLogins";
 import { claudeStoreDirOf, startHomeQuota } from "./quota/homeQuota";
 import { RecordReader } from "./recordReads/recordReader";
 import { DecisionKindClassifier } from "./routing/decisionKindClassifier";
@@ -1585,25 +1586,21 @@ export async function createServices(
         "saved-reset-used",
       ),
   });
-  const autoSavedResets = new AutoSavedResets({
+  const autoSavedResets = homeAutoSavedResets({
     models: decisions,
-    switchOn: (accountId, deviceId) =>
-      deviceId
-        ? deviceSignIns
-            .lastSaid(deviceId)
-            ?.accounts.some((account) => account.id === accountId && account.useSavedResets) ===
-          true
-        : vault.usesSavedResets(accountId),
-    latest: (deviceId) =>
-      deviceId ? (deviceSignIns.lastSaid(deviceId)?.quota ?? undefined) : quota.latest(),
-    canUse: (deviceId) =>
-      deviceSignIns.canUseSavedReset(deviceId) && deviceSignIns.takesAutoSavedResets(deviceId),
-    use: (accountId, deviceId) =>
-      savedResets
-        ? savedResets.use(accountId, { ...(deviceId ? { deviceId } : {}), auto: true })
-        : Promise.reject(new Error("Infinitary is still starting.")),
+    deviceSignIns,
+    vault,
+    quota,
+    use: (accountId, options) => savedResets?.use(accountId, options),
     note: (text) => broadcastEvent({ type: "firstmate_note", text }),
-    now: Date.now,
+  });
+  const lowLogins = startLowLogins({
+    settings,
+    vault,
+    routing: homeRouting,
+    quota,
+    supervisor,
+    broadcastEvent,
   });
   onSpentAt = (piProviders, deviceId) => {
     creditsCards.spentAt(piProviders, deviceId);
@@ -1624,6 +1621,7 @@ export async function createServices(
     if (snapshot) homeQuota.syncNeedsReauthCards(snapshot, supervisor.cards);
     creditsCards.readHere(snapshot);
     autoSavedResets.read();
+    lowLogins.read();
     firstmate.onQuotaRefreshed();
     // A refresh may clear a quota-reset gate (R1).
     void supervisor.watch.sweepGates(ticker.now());
@@ -1737,6 +1735,7 @@ export async function createServices(
     timeline,
     auth,
     vault,
+    whenLoginLowChanged: () => lowLogins.read(),
     setKeepGoingOnCredits: (...args) => setKeepGoingOnCredits(...args),
     redeemSavedReset: (accountId, options) => {
       if (!savedResets) throw new Error("Infinitary is still starting.");

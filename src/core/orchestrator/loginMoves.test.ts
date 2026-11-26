@@ -1,0 +1,149 @@
+import type { FmEvent } from "@shared/events";
+import type { QuotaSnapshotView } from "@shared/quota";
+import { describe, expect, it } from "vitest";
+import { type AccountPool, AccountSelector } from "../routing/accountRouter";
+import { openInMemoryDatabase } from "../storage/db";
+import { DecisionStore } from "../storage/decisionStore";
+import { InboxStore } from "../storage/inboxStore";
+import { seedTask } from "../tasks/seedTask";
+import { TaskService } from "../tasks/taskService";
+import type { TaskRuntime } from "./crewRuntime";
+import { LoginMoves } from "./loginMoves";
+
+// The approved plan for several logins of one provider, piece 3, "A moved
+// lane": a task on the spent login moves to the new login between turns,
+// never inside one, and its conversation reopens the way a resume does.
+
+const MODEL = { provider: "openai-codex", id: "gpt-6.1-terra" };
+
+const reading: QuotaSnapshotView = {
+  generatedAt: "2026-08-17T12:00:00Z",
+  fetchedAt: Date.parse("2026-08-17T12:00:00Z"),
+  providers: [
+    { accountId: "personal", percent: 0 },
+    { accountId: "work", percent: 60 },
+  ].map((row) => ({
+    provider: "codex",
+    label: "Codex",
+    accountId: row.accountId,
+    accountLabel: row.accountId,
+    status: "ok" as const,
+    stale: false,
+    windows: [{ id: "weekly", label: "weekly", percentRemaining: row.percent }],
+  })),
+};
+
+function crew(start: { busy?: boolean; machine?: string } = {}) {
+  const db = openInMemoryDatabase();
+  const tasks = new TaskService({ db, strict: true });
+  const inbox = new InboxStore(db);
+  const events: FmEvent[] = [];
+  const steps: string[] = [];
+  const pool: AccountPool = {
+    list: () =>
+      [
+        { id: "personal", label: "Personal" },
+        { id: "work", label: "Work" },
+      ].map((login) => ({ ...login, providerId: "openai-codex", enabled: true })),
+    // The click already moved the login in use to Work.
+    pinnedAccount: () => "work",
+    connectedSync: () => true,
+    withheldReason: () => undefined,
+    markSelected: (accountId) => {
+      steps.push(`selected ${accountId}`);
+    },
+  };
+  const accounts = new AccountSelector({
+    pool,
+    quota: { latest: () => reading },
+    flagshipAccountId: () => null,
+    decisions: new DecisionStore(db),
+    loginInUse: { whenLow: () => "ask", pin: () => {} },
+  });
+  seedTask(tasks, {
+    id: "task-1",
+    title: "Fix the login form",
+    status: "idle",
+    accountId: "personal",
+    model: MODEL,
+  });
+  const runtime = { id: "task-1", turn: { busy: start.busy ?? false } } as unknown as TaskRuntime;
+  const live = new Map<string, TaskRuntime>([["task-1", runtime]]);
+  const moves = new LoginMoves(
+    { tasks, inbox, accounts, broadcastEvent: (event) => events.push(event) },
+    {
+      runtime: (taskId) => live.get(taskId),
+      releaseSession: (task) => {
+        steps.push(`released ${task.id}`);
+      },
+      forgetRuntime: (taskId) => {
+        live.delete(taskId);
+      },
+      resumeTask: async (taskId) => {
+        steps.push(`resumed ${taskId} on ${tasks.get(taskId)?.accountId}`);
+        return runtime;
+      },
+      deliverPendingToTask: (task) => {
+        steps.push(`delivered ${task.id}`);
+      },
+      deliverLane: (taskId) => {
+        steps.push(`lane ${taskId}`);
+      },
+      machineOf: () => start.machine ?? "local",
+      disposed: () => false,
+    },
+  );
+  return { moves, tasks, events, steps, live, db };
+}
+
+describe("a started task's move to another login", () => {
+  it("lets go of its conversation, names the new login on its record and reopens it there", async () => {
+    const t = crew();
+    expect(t.moves.tasksOn("personal")).toEqual(["task-1"]);
+    await t.moves.moveOff("personal");
+    expect(t.tasks.get("task-1")?.accountId).toBe("work");
+    expect(t.steps).toEqual([
+      "released task-1",
+      "selected work",
+      "resumed task-1 on work",
+      "delivered task-1",
+    ]);
+    expect(t.events).toEqual([
+      {
+        type: "firstmate_note",
+        text: "Fix the login form moved from Personal to Work.",
+        said: {
+          m: "feedTaskMovedLogin",
+          a: { task: "Fix the login form", from: "Personal", to: "Work" },
+        },
+        taskId: "task-1",
+      },
+    ]);
+    const decision = t.db
+      .prepare("SELECT account_id FROM account_decisions WHERE task_id = ?")
+      .get("task-1") as { account_id: string };
+    expect(decision.account_id).toBe("work");
+    expect(t.moves.tasksOn("personal")).toEqual([]);
+  });
+
+  it("leaves a task that is inside a turn where it is", async () => {
+    const t = crew({ busy: true });
+    await t.moves.moveOff("personal");
+    expect(t.tasks.get("task-1")?.accountId).toBe("personal");
+    expect(t.steps).toEqual([]);
+    expect(t.events).toEqual([]);
+  });
+
+  it("delivers the lane of a task with no open conversation, without opening one first", async () => {
+    const t = crew();
+    t.live.clear();
+    await t.moves.moveOff("personal");
+    expect(t.tasks.get("task-1")?.accountId).toBe("work");
+    expect(t.steps).toEqual(["selected work", "lane task-1"]);
+  });
+
+  it("counts no task that runs on another computer", () => {
+    const t = crew({ machine: "device-1" });
+    expect(t.moves.tasksOn("personal")).toEqual([]);
+  });
+});

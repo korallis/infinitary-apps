@@ -26,6 +26,7 @@ import {
   usageConnectionSaveSchema,
   usageConnectionViewSchema,
 } from "../usageConnection";
+import { whenLoginLowSchema } from "../whenLoginLow";
 import { type ChannelDeclaration, okSchema } from "./common";
 
 /** Projects and the window's settings: look, layout, panels, sharing, dictation, runbooks and notifications. */
@@ -295,5 +296,20 @@ export const settingsChannels = {
     reach: "views",
     request: z.tuple([z.boolean()]),
     response: z.boolean(),
+  },
+  // What happens when the login in use runs low (docs/quota.md).
+  "inf:settings:when-login-low:get": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: whenLoginLowSchema,
+  },
+  "inf:settings:when-login-low:set": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([whenLoginLowSchema]),
+    response: whenLoginLowSchema,
   },
 } as const satisfies Record<string, ChannelDeclaration>;

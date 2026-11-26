@@ -18,6 +18,7 @@ import {
 import { cardWordsMark, englishOf, type Said, said, saidMark } from "@shared/i18n/said";
 import { INTEGRATIONS_WORDS } from "@shared/integrations";
 import { SAVED_RESETS_PAGE } from "@shared/quota";
+import { moveLoginAction } from "./loginMove";
 import type { SeatPauseClass } from "./seat";
 
 /**
@@ -57,6 +58,12 @@ export type FirstmatePauseCard = {
   providerName: string;
   /** Rung 2: where the seat could move, asked on the card. */
   move?: { providerId: string; providerName: string };
+  /**
+   * Another login of the same provider has room and the choice for a low
+   * login asks (docs/quota.md, "When the login in use runs low"): the card
+   * offers the move the ladder would otherwise make on its own.
+   */
+  login?: { accountId: string; label: string };
   /** A spent allowance is being read again: no second recheck is offered. */
   checking?: boolean;
   /**
@@ -106,6 +113,9 @@ export function spentAttemptOf(arg: string): string | undefined {
 
 /** The spent-allowance card's way back: read the allowance again. */
 export const RECHECK_ALLOWANCE_LABEL = "Recheck allowance";
+
+/** The meta line of a card about the crew's allowance, where a task's card names its task. */
+export const CREW_WORK_META = "Crew work";
 
 /** A run-out card's offer to spend the account's credits (docs/quota.md). */
 export const KEEP_GOING_ON_CREDITS_LABEL = "Keep going on credits";
@@ -257,14 +267,18 @@ function firstmatePauseActions(input: FirstmatePauseCard): CardAction[] {
   if (input.pause === "no_headroom" && input.accountId && !input.checking) {
     // Credits the account already has come first: one click keeps it going.
     const credits = input.credits !== undefined;
+    const login = input.login;
     return [
-      ...(credits ? [keepGoingAction(input.accountId, true)] : []),
+      ...(login
+        ? [moveLoginAction({ who: "firstmate", accountId: login.accountId }, login.label, true)]
+        : []),
+      ...(credits ? [keepGoingAction(input.accountId, !login)] : []),
       ...(input.savedResets ? [redeemSavedResetAction(input.accountId, false)] : []),
       {
         id: "recheck-allowance",
         label: RECHECK_ALLOWANCE_LABEL,
-        variant: credits ? "secondary" : "primary",
-        ...(credits ? {} : { default: true }),
+        variant: credits || login ? "secondary" : "primary",
+        ...(credits || login ? {} : { default: true }),
         effect: { kind: "host", op: "try-again", arg: input.accountId },
       },
       ...(input.attempt
@@ -429,7 +443,7 @@ export function creditsOfferCard(input: {
     title: computer
       ? `${input.name} ${computer.where} has used up its allowance${until}`
       : `${input.name} has used up its allowance${until}`,
-    meta: "Crew work",
+    meta: CREW_WORK_META,
     body: !credits
       ? `${waits}${resets}`
       : computer

@@ -146,6 +146,8 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
         { id: "acct_b", providerId: "openai-codex", label: "Work #2", enabled: true },
       ],
     });
+    // The `move` choice for a low login: the sibling is taken without a click.
+    t.settings.setWhenLoginLow("move");
     t.setHeadroom("acct_a", 60);
     t.setHeadroom("acct_b", 40);
     await t.agent.converse("first");
@@ -183,6 +185,8 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
         { id: "acct_b", providerId: "openai-codex", label: "Work #2", enabled: true },
       ],
     });
+    // The `move` choice for a low login: the sibling is taken without a click.
+    t.settings.setWhenLoginLow("move");
     t.setHeadroom("acct_a", 60);
     t.setHeadroom("acct_b", 0);
     await t.agent.converse("first");
@@ -241,6 +245,8 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
       ],
       savedResetsSpent: (accountId) => weighed.push(accountId),
     });
+    // The `move` choice for a low login: the sibling is taken without a click.
+    t.settings.setWhenLoginLow("move");
     t.setHeadroom("acct_a", 60);
     t.setHeadroom("acct_b", 0);
     await t.agent.converse("first");

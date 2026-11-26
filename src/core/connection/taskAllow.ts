@@ -16,6 +16,9 @@ const AUTO_SAVED_RESETS = contractChange("auto-saved-resets");
 /** The event screen's offer card's Turn on (`event-screen-offer.md`). */
 const EVENT_SCREEN_OFFER = contractChange("event-screen-offer");
 
+/** A low login's Move to another login (`when-login-runs-low.md`). */
+const WHEN_LOGIN_RUNS_LOW = contractChange("when-login-runs-low");
+
 /** Major 15 includes this button; older read-only views still need its historical name. */
 export function readsTaskAllow(version: string, changes?: readonly string[]): boolean {
   return speaksSince(version, "15.0.0") || (changes?.includes("integration-task-allow") ?? false);
@@ -81,6 +84,16 @@ export function readsAutoSavedResets(changes?: readonly string[]): boolean {
   return listsChange(changes, AUTO_SAVED_RESETS);
 }
 
+/**
+ * Whether a view reads a card's Move to another login
+ * (`when-login-runs-low.md`): a desktop view that lists the change; the phone
+ * reads a host effect's operation as text. One without it gets the card with
+ * its other buttons alone.
+ */
+export function readsMoveLogin(changes?: readonly string[], system?: string): boolean {
+  return system === "ios" || listsChange(changes, WHEN_LOGIN_RUNS_LOW);
+}
+
 /** Which card buttons an older view reads strictly, and so must not be sent. */
 export interface ActionReads {
   /** Allow for the rest of this task (`readsTaskAllow`). */
@@ -97,6 +110,8 @@ export interface ActionReads {
   savedReset?: boolean;
   /** Use saved resets on their own on a run-out card (`readsAutoSavedResets`); absent reads as true. */
   autoSavedResets?: boolean;
+  /** Move to another login on a low-login or pause card (`readsMoveLogin`); absent reads as true. */
+  moveLogin?: boolean;
 }
 
 /** The markers only a frame carrying one of those buttons holds, so most frames pass as they are. */
@@ -107,6 +122,7 @@ const EVENT_SCREEN_MARK = '"op":"turn-on-event-screen"';
 const SECRET_BRING_MARK = '"op":"secrets-bring"';
 const SAVED_RESET_MARK = '"op":"use-saved-reset"';
 const AUTO_SAVED_RESETS_MARK = '"op":"use-saved-resets"';
+const MOVE_LOGIN_MARK = '"op":"move-login"';
 
 function effectOf(action: unknown): { kind?: unknown; integration?: unknown; op?: unknown } {
   return (action as { effect?: { kind?: unknown } } | null)?.effect ?? {};
@@ -126,6 +142,8 @@ function unread(action: unknown, reads: ActionReads): boolean {
     return true;
   if (reads.autoSavedResets === false && effect.kind === "host" && effect.op === "use-saved-resets")
     return true;
+  if (reads.moveLogin === false && effect.kind === "host" && effect.op === "move-login")
+    return true;
   return !reads.keepGoing && effect.kind === "host" && effect.op === "keep-going-on-credits";
 }
 
@@ -137,7 +155,8 @@ export function withoutUnreadActions(value: unknown, reads: ActionReads): unknow
     reads.eventScreen !== false &&
     reads.secretBring !== false &&
     reads.savedReset !== false &&
-    reads.autoSavedResets !== false
+    reads.autoSavedResets !== false &&
+    reads.moveLogin !== false
   )
     return value;
   if (Array.isArray(value)) return value.map((entry) => withoutUnreadActions(entry, reads));
@@ -172,7 +191,8 @@ export function frameWithoutUnreadActions(text: string, reads: ActionReads): str
     (reads.eventScreen === false && text.includes(EVENT_SCREEN_MARK)) ||
     (reads.secretBring === false && text.includes(SECRET_BRING_MARK)) ||
     (reads.savedReset === false && text.includes(SAVED_RESET_MARK)) ||
-    (reads.autoSavedResets === false && text.includes(AUTO_SAVED_RESETS_MARK));
+    (reads.autoSavedResets === false && text.includes(AUTO_SAVED_RESETS_MARK)) ||
+    (reads.moveLogin === false && text.includes(MOVE_LOGIN_MARK));
   return carries ? JSON.stringify(withoutUnreadActions(JSON.parse(text), reads)) : text;
 }
 

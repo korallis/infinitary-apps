@@ -79,6 +79,7 @@ import { showLines } from "./showActions";
 import { type DeviceSignIns, signInPlace } from "./signIns";
 import { tagLines } from "./tagActions";
 import type { ProjectView } from "./tasks";
+import { whenLoginLowLines } from "./whenLoginLowAction";
 import { signInsUnansweredInEnglish, workSetupWordsInEnglish } from "./workSetupWords";
 
 /**
@@ -1447,6 +1448,7 @@ const actionLines = {
     done: (v) => `account ${v.accountId} ${v.on ? "keeps going" : "stops"} on credits`,
   },
   ...savedResetLines,
+  ...whenLoginLowLines,
   "account-disconnect": {
     area: "intelligence",
     tier: "own-words",

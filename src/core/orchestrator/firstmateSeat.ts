@@ -4,6 +4,7 @@ import { isAuthFailureMessage } from "@shared/authFailure";
 import { CLAUDE_ACCESS_RENEW_WORDS, claudeAccessRefusedText } from "@shared/claudeAccess";
 import { isCustomApiProvider } from "@shared/customApi";
 import * as m from "@shared/i18n/messages.generated";
+import { cardWordsMark, said, saidLine } from "@shared/i18n/said";
 import { isRunawayProviderError } from "@shared/plainProblem";
 import { backendForProvider, catalogEntry } from "@shared/providers";
 import { clockTime, type QuotaSnapshotView } from "@shared/quota";
@@ -32,6 +33,8 @@ import {
   spentAttemptOf,
 } from "./hostCards";
 import type { LocalOrchestratorSeat } from "./localOrchestrator";
+import { FIRSTMATE_ON_CREDITS_CARD_ID, firstmateOnCreditsCard } from "./loginCards";
+import { moveLoginSaid } from "./loginMove";
 import type { SeatMoveReason, WakeSeat } from "./noticeWakes";
 import {
   ALLOWANCE_CHECKING_WORDS,
@@ -138,6 +141,8 @@ export class FirstmateSeat {
   set paused(paused: FirstmatePaused | undefined) {
     this.options.settings.setFirstmatePaused(paused ?? null);
   }
+  /** The on-credits card's question, `<account>><sibling>`, while it stands or was answered. */
+  private creditsAsked: string | undefined;
   /** Sign-ins and sign-outs rewriting an account's store, which hold the seat off it. */
   private readonly storeHolds = new Map<string, number>();
   /** The attached seat: its session's identity on the digest, provider and model. */
@@ -635,7 +640,15 @@ export class FirstmateSeat {
       const sibling = flagship.onCredits(accountId)
         ? flagship.sibling(accountId, "measured")
         : undefined;
-      if (sibling) {
+      // Only `move` takes the sibling without a click (docs/quota.md,
+      // "When the login in use runs low"): `ask` and `spread` ask once on a
+      // card while the seat keeps answering, and `wait` stays.
+      const whenLow = this.options.settings.getWhenLoginLow();
+      this.askOffCredits(
+        accountId,
+        whenLow === "ask" || whenLow === "spread" ? sibling : undefined,
+      );
+      if (sibling && whenLow === "move") {
         const label = flagship.labelOf(accountId) ?? accountId;
         flagship.record("rebound", sibling.id, [
           `${label}: on credits`,
@@ -647,7 +660,9 @@ export class FirstmateSeat {
         );
       }
       // A saved reset is weighed now, when its switch is on; credits serve this turn until it lands.
-      if (flagship.onCredits(accountId)) this.options.savedResetsSpent?.(accountId);
+      // None is weighed while the captain is asked to move to a login with allowance left.
+      if (flagship.onCredits(accountId) && !(sibling && whenLow !== "wait"))
+        this.options.savedResetsSpent?.(accountId);
       this.servesAgain();
       return session;
     }
@@ -676,7 +691,14 @@ export class FirstmateSeat {
     const sibling =
       flagship.sibling(accountId) ??
       (derived ? { id: derived, label: flagship.labelOf(derived) ?? derived } : undefined);
-    if (sibling) {
+    // A spent allowance follows the choice for a low login (docs/quota.md):
+    // only `move` takes the sibling without a click; the pause card offers
+    // it under `ask` and `spread`, and `wait` leaves it out.
+    const asks =
+      pause.class === "no_headroom" &&
+      label !== undefined &&
+      this.options.settings.getWhenLoginLow() !== "move";
+    if (sibling && !asks) {
       flagship.record("rebound", sibling.id, [
         `${label ?? accountId}: ${pause.class}`,
         `picked ${sibling.label}: an account of the same provider that can serve`,
@@ -707,17 +729,20 @@ export class FirstmateSeat {
       flagship.providerOf(accountId) ?? this.options.settings.getFirstmateModel()?.provider;
     const providerName = providerId ? flagship.providerNameOf(providerId) : "its provider";
     const other = providerId ? flagship.otherProviderOption(providerId) : undefined;
+    const login = this.loginOffer(accountId, pause);
     const previous = this.paused;
     const fresh =
       previous?.accountId !== accountId ||
       previous.class !== pause.class ||
-      previous.move !== other?.providerId;
+      previous.move !== other?.providerId ||
+      previous.login !== login?.id;
     if (fresh) {
       this.attemptOffered = undefined;
       this.paused = {
         accountId,
         class: pause.class,
         ...(other ? { move: other.providerId } : {}),
+        ...(login ? { login: login.id } : {}),
       };
     }
     void this.session?.detach();
@@ -740,9 +765,95 @@ export class FirstmateSeat {
     });
     flagship.record(other ? "move-offered" : "paused", accountId, [
       `${flagship.labelOf(accountId) ?? accountId}: ${pause.class}`,
-      ...(other ? [`offered ${other.providerName}: it has headroom`] : ["nothing else can serve"]),
+      // i18n-exempt: a reason on the account ledger, read in diagnostics
+      ...(login ? [`offered ${login.label}: a login of the same provider with room`] : []),
+      ...(other
+        ? [`offered ${other.providerName}: it has headroom`]
+        : login
+          ? []
+          : ["nothing else can serve"]),
     ]);
     this.options.supervisor.cards.hostCards.addFirstmatePauseCard(card);
+  }
+
+  /**
+   * The login of the same provider a spent seat's pause card offers
+   * (docs/quota.md, "When the login in use runs low"): one that can serve,
+   * under `ask` and `spread`. `move` has already taken it, and `wait` and a
+   * removed account offer none.
+   */
+  private loginOffer(
+    accountId: string,
+    pause: SeatPause,
+  ): { id: string; label: string } | undefined {
+    const flagship = this.options.flagship;
+    if (pause.class !== "no_headroom" || !flagship?.labelOf(accountId)) return undefined;
+    const whenLow = this.options.settings.getWhenLoginLow();
+    return whenLow === "ask" || whenLow === "spread" ? flagship.sibling(accountId) : undefined;
+  }
+
+  /**
+   * A seat on credits whose sibling still has included allowance: the move
+   * asked once on a card, while the seat keeps answering. With no sibling
+   * to offer, the card comes down and the next one may ask again.
+   */
+  private askOffCredits(
+    accountId: string,
+    sibling: { id: string; label: string } | undefined,
+  ): void {
+    const hostCards = this.options.supervisor.cards.hostCards;
+    const asking = sibling ? `${accountId}>${sibling.id}` : undefined;
+    if (asking === this.creditsAsked) return;
+    if (this.creditsAsked) hostCards.withdrawHostCard(FIRSTMATE_ON_CREDITS_CARD_ID, "superseded");
+    this.creditsAsked = asking;
+    if (!sibling) return;
+    hostCards.raiseHostCard(
+      firstmateOnCreditsCard({
+        login: this.options.flagship?.labelOf(accountId) ?? accountId,
+        other: { accountId: sibling.id, label: sibling.label },
+      }),
+    );
+  }
+
+  /**
+   * A card's Move to another login, on the captain's click: the seat moves
+   * to that login of its own provider, the pause ends, and what waited is
+   * due on the new login - at once when idle, else at the next idle
+   * boundary, where admission applies the saved account. A login of another
+   * provider, or one that cannot serve, is left alone.
+   */
+  async moveLogin(accountId: string): Promise<void> {
+    const flagship = this.options.flagship;
+    const from = this.seatAccount();
+    if (!flagship?.isEligible(accountId) || from === accountId) return;
+    if (
+      from &&
+      flagship.labelOf(from) &&
+      flagship.providerOf(from) !== flagship.providerOf(accountId)
+    )
+      return;
+    const label = flagship.labelOf(accountId) ?? accountId;
+    flagship.record("rebound", accountId, [
+      // i18n-exempt: reasons on the account ledger, read in diagnostics
+      `from ${(from && flagship.labelOf(from)) ?? "no account"}`,
+      // i18n-exempt: a reason on the account ledger, read in diagnostics
+      `picked ${label}: the captain chose it on the card`,
+    ]);
+    const hostCards = this.options.supervisor.cards.hostCards;
+    this.paused = undefined;
+    this.creditsAsked = undefined;
+    hostCards.withdrawFirstmatePauseCards("moved");
+    hostCards.withdrawHostCard(FIRSTMATE_ON_CREDITS_CARD_ID, "moved");
+    this.options.settings.setFirstmateAccount(accountId);
+    // Rows held for the login the seat leaves are due on the one it goes to.
+    this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
+    this.options.broadcastEvent({
+      type: "firstmate_note",
+      ...saidLine(said("feedFirstMateMovedLogin", { login: label })),
+    });
+    if (this.host.running() || this.session?.isStreaming()) return;
+    const session = await this.rebind(accountId);
+    if (session) void this.host.drain();
   }
 
   private pauseCard(accountId: string, pause: SeatPause): FirstmatePauseCard {
@@ -754,10 +865,12 @@ export class FirstmateSeat {
     const other = providerId ? flagship?.otherProviderOption(providerId) : undefined;
     const access = flagship?.accessOf(accountId);
     const credits = pause.class === "no_headroom" ? flagship?.creditsOffer(accountId) : undefined;
+    const login = this.loginOffer(accountId, pause);
     return {
       pause: pause.class,
       ...(access ? { access } : {}),
-      body: this.pauseCardBody(accountId, pause, providerName, other?.providerName),
+      body: this.pauseCardBody(accountId, pause, providerName, other?.providerName, login?.label),
+      ...(login ? { login: { accountId: login.id, label: login.label } } : {}),
       ...(flagship?.labelOf(accountId) ? { accountId } : {}),
       providerName,
       ...(other ? { move: other } : {}),
@@ -776,6 +889,7 @@ export class FirstmateSeat {
     pause: SeatPause,
     providerName: string,
     moveTo: string | undefined,
+    moveLogin?: string,
   ): string {
     const flagship = this.options.flagship;
     if (!flagship) return "";
@@ -784,7 +898,7 @@ export class FirstmateSeat {
       const summary = providerId ? flagship.exhaustionSummary(providerId) : undefined;
       // One account (Claude has one login ever) is named, never counted.
       const spent =
-        providerId && flagship.accountCount(providerId) > 1
+        providerId && flagship.accountCount(providerId) > 1 && !flagship.sibling(accountId)
           ? `Your first mate's ${providerName} accounts have used up their allowance (${summary}).`
           : flagship.pauseSentence(accountId, pause);
       const checked = `${this.allowanceCheckWords(accountId)}${
@@ -794,8 +908,14 @@ export class FirstmateSeat {
       }`;
       const resets = this.savedResetsWords(accountId, providerName);
       const offer = flagship.creditsOffer(accountId);
+      // The button's words are carried with the card, so each view words them.
+      if (moveLogin)
+        return `${spent} ${m.cardFirstMateKept()}${checked}${resets} ${m.cardFirstMateMoveLogin({ other: moveLogin })}${cardWordsMark([moveLoginSaid(moveLogin)])}`;
       if (offer)
         return `${spent} ${creditsOfferSentence(offer)} Your messages are kept, and your first mate and crew wait until then unless you keep going on credits.${checked}${resets}`;
+      // Under `wait` another login may have room, so the card speaks only for the seat's own.
+      if (!moveTo && flagship.sibling(accountId))
+        return `${spent} ${m.cardFirstMateKept()}${checked}${resets}`;
       return moveTo
         ? `${spent} Your messages are kept.${checked}${resets} Move your first mate to ${moveTo} until then?`
         : `No connected account has allowance left for your first mate right now${
