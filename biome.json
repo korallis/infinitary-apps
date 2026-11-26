@@ -543,6 +543,7 @@
         "!tests/generate-self-source.test.ts",
         "!tests/install-clones.test.ts",
         "!tests/bundled-git-step.test.ts",
+        "!tests/node-headers-action.test.ts",
         "!tests/mac-app-launcher.test.ts",
         "!tests/local-codesign.test.ts",
         "!tests/mac-check-lock.test.ts",

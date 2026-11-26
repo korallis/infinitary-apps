@@ -3,7 +3,7 @@
   "exclusions": [
     {
       "id": "install-without-build-tools",
-      "reason": "Lets a fresh working copy install on a Windows PC without Visual Studio's build tools: the package install no longer starts a native build of the database module that compiled nothing, and a Mac-only install step no longer crashes there, with a test holding each; nothing in the app changes."
+      "reason": "Lets a fresh working copy install on a Windows PC without Visual Studio's build tools: the package install no longer starts a native build of the database module that compiled nothing, and a Mac-only install step no longer crashes there, with a test holding each; the Linux installs of the checks no longer ask for Node headers that no build reads; nothing in the app changes."
     }
   ]
 }

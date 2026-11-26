@@ -451,6 +451,8 @@ jobs:
           cache: ${{ matrix.lane == 'linux-checks' && runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - uses: ./Application Support/firstmate/.github/actions/node-headers
+        with:
+          working-directory: Application Support/firstmate
       - uses: ./Application Support/firstmate/.github/actions/electron-download
         with:
           working-directory: Application Support/firstmate
@@ -916,6 +918,8 @@ jobs:
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - uses: ./Application Support/firstmate/.github/actions/node-headers
+        with:
+          working-directory: Application Support/firstmate
       - uses: ./Application Support/firstmate/.github/actions/electron-download
         with:
           working-directory: Application Support/firstmate

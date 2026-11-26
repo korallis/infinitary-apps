@@ -378,11 +378,13 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   The gate job a request starts takes the variable's label with `-gate` (DOP-157's plan): `journeys.yml`'s `choose-journeys` and `phone.yml`'s `request`.
   The placement service's runners on that label take only these jobs and go first in the PC's line, so the Mac job waiting on it starts within minutes; hosted, it runs on `ubuntu-24.04`.
   Main and release Linux jobs run on GitHub's hosted Ubuntu instead, except a publishing release's packages when its release queue is configured ("A release's hosted machines").
-  Linux dependency installs use `.github/actions/node-headers`, which finds the running Node archive's `include/node` headers and refuses an image missing them; only the install receives that root as `NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR`.
+  An install of the current source starts no node-gyp build and needs no Node headers: `pnpm-workspace.yaml` keeps better-sqlite3's build off, since its package carries a build for each system (`tests/install-native-builds.test.ts`).
+  A workflow that installs the version it runs from (`ci.yml`, `journeys.yml`, `prompt-budget.yml`, `replay.yml` and a batch's confirming rounds, `.github/actions/batch-confirm`) sets nothing up for them.
+  A workflow given its source by a ref of its own (`batch-checks.yml`, `verify.yml`, `source-journeys.yml`, `linux-packages.yml`) can be handed a source from before that setting, whose install still builds the module, so its Linux installs keep `.github/actions/node-headers`.
+  For a source whose `pnpm-workspace.yaml` keeps the build off that action does nothing; for any other it finds the running Node archive's `include/node` headers and refuses an image missing them, and only the install receives that root as `NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR` (`tests/node-headers-action.test.ts`).
   Uppercase preserves the setting through pnpm's lifecycle environment filter.
   That setting belongs only to the install, so later Electron rebuilds keep their own headers.
-  An install starts no node-gyp build: `pnpm-workspace.yaml` keeps better-sqlite3's off, since its package carries a build for each system (`tests/install-native-builds.test.ts`), so nothing in the install reads that root.
-  `ci.yml` also forces a better-sqlite3 source build with an empty header cache and an unreachable header server, then writes and reads a database.
+  `verify.yml`'s `linux-checks` lane also proves the module still builds from source (`.github/actions/prove-node-headers`): it finds the same headers itself, forces a better-sqlite3 source build with an empty header cache and an unreachable header server, then writes and reads a database.
   The same workflow contract test evaluates the cache input for both runners.
   Every install restores what it downloads from GitHub's release server from the Actions cache first, and every package step restores electron-builder's tools ("Downloads from GitHub's release server").
   A new test file joins its cohort's job on its own; a new kind of check joins one of the jobs, never a step with a condition.

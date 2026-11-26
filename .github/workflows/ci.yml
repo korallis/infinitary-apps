@@ -162,15 +162,10 @@ jobs:
       - name: Phone contract flag
         if: ${{ github.event_name != 'workflow_dispatch' && steps.base.outputs.batch == '' }}
         run: node scripts/phone-contract-flag.ts --base "$CHANGE_BASE"
-      - uses: ./.github/actions/node-headers
-        if: ${{ steps.base.outputs.batch == '' }}
       - uses: ./.github/actions/electron-download
         if: ${{ steps.base.outputs.batch == '' }}
       - run: pnpm install --frozen-lockfile
         if: ${{ steps.base.outputs.batch == '' }}
-        # Scope Node headers to this install, never to Electron rebuilds.
-        env:
-          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       # How many parts the tests this change reaches take, each at most 900
       # measured seconds (scripts/unit-repeats.ts, REACH_PART_SECONDS), so a
       # wide change's reader step ends inside its limit on a slow machine as
@@ -225,15 +220,10 @@ jobs:
         id: paths
         if: ${{ steps.base.outputs.batch == '' }}
         run: node scripts/pr-paths.ts --base "$CHANGE_BASE"
-      - uses: ./.github/actions/node-headers
-        if: ${{ steps.base.outputs.batch == '' }}
       - uses: ./.github/actions/electron-download
         if: ${{ steps.base.outputs.batch == '' }}
       - run: pnpm install --frozen-lockfile
         if: ${{ steps.base.outputs.batch == '' }}
-        # Scope Node headers to this install, never to Electron rebuilds.
-        env:
-          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       # Chromium, about 15 seconds, for the browser step, for a browser test
       # the next step runs and for an integration file it runs that starts
       # one, such as tests/run-temp-root.test.ts (the integration groups
@@ -307,15 +297,10 @@ jobs:
         with:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
-      - uses: ./.github/actions/node-headers
-        if: ${{ steps.base.outputs.batch == '' }}
       - uses: ./.github/actions/electron-download
         if: ${{ steps.base.outputs.batch == '' }}
       - run: pnpm install --frozen-lockfile
         if: ${{ steps.base.outputs.batch == '' }}
-        # Scope Node headers to this install, never to Electron rebuilds.
-        env:
-          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       # As reached-tests installs them, for the browser and integration
       # files a part runs.
       - uses: ./.github/actions/browser-chromium
@@ -363,15 +348,10 @@ jobs:
         id: paths
         if: ${{ github.event_name != 'workflow_dispatch' && steps.base.outputs.batch == '' }}
         run: node scripts/pr-paths.ts --base "$CHANGE_BASE"
-      - uses: ./.github/actions/node-headers
-        if: ${{ steps.base.outputs.batch == '' }}
       - uses: ./.github/actions/electron-download
         if: ${{ steps.base.outputs.batch == '' }}
       - run: pnpm install --frozen-lockfile
         if: ${{ steps.base.outputs.batch == '' }}
-        # Scope Node headers to this install, never to Electron rebuilds.
-        env:
-          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       - run: pnpm build
         if: ${{ github.event_name == 'workflow_dispatch' || steps.paths.outputs.build == 'true' }}
       # The critical path (INF-2480's plan, captain: "path six-steps (launch,
@@ -443,12 +423,8 @@ jobs:
         with:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
-      - uses: ./.github/actions/node-headers
       - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
-        # Scope Node headers to this install, never to Electron rebuilds.
-        env:
-          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       # The browser layer (docs/testing.md, "The browser layer").
       - uses: ./.github/actions/browser-chromium
       - run: pnpm test --project pure --project unit --project unit-isolated --project browser
@@ -472,12 +448,8 @@ jobs:
         with:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
-      - uses: ./.github/actions/node-headers
       - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
-        # Scope Node headers to this install, never to Electron rebuilds.
-        env:
-          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       # The run-root regression starts real Vitest Chromium too.
       - uses: ./.github/actions/browser-chromium
       - uses: ./.github/actions/linux-test-tools
@@ -500,11 +472,7 @@ jobs:
         with:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
-      - uses: ./.github/actions/node-headers
       - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
-        # Scope Node headers to this install, never to Electron rebuilds.
-        env:
-          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       - run: pnpm test --project probe
         timeout-minutes: 30

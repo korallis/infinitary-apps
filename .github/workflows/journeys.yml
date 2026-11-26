@@ -204,14 +204,10 @@ jobs:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
-      - uses: ./Application Support/firstmate/.github/actions/node-headers
       - uses: ./Application Support/firstmate/.github/actions/electron-download
         with:
           working-directory: Application Support/firstmate
       - run: pnpm install --frozen-lockfile
-        # Scope Node headers to this install, never to Electron rebuilds.
-        env:
-          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       # INF-850: GitHub's search by result has answered no verify.yml run
       # while its plain list held passing ones, so the chooser reads the
       # plain list, newest first, and takes the first passing run with times.

@@ -204,17 +204,15 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     // (the case after next), which every other change runs.
     const setup = gate.filter(
       (step) =>
-        [
-          "./.github/actions/pnpm",
-          "./.github/actions/node-headers",
-          "./.github/actions/electron-download",
-        ].includes(step.uses ?? "") ||
+        ["./.github/actions/pnpm", "./.github/actions/electron-download"].includes(
+          step.uses ?? "",
+        ) ||
         step.uses?.startsWith("actions/setup-node@") ||
         ["pnpm install --frozen-lockfile", "pnpm typecheck", "pnpm check"].includes(step.run ?? ""),
     );
     // Each job sets up and installs on its own; the code checks job alone
     // runs the typecheck and the lint.
-    expect(setup).toHaveLength(5 * (BRANCH_CHECK.length + 1) + 2);
+    expect(setup).toHaveLength(4 * (BRANCH_CHECK.length + 1) + 2);
     gated.push(...setup);
     for (const [id, job] of Object.entries(ci.jobs)) {
       // INF-5493: the later parts alone wait, for the code checks' count of

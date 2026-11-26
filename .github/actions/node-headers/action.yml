@@ -1,19 +1,25 @@
 name: Local Node headers
-description: Find the headers shipped beside Node for Linux dependency installs.
+description: Find the headers shipped beside Node for a Linux install of a source that still builds the database module as it installs.
+inputs:
+  working-directory:
+    description: Checkout about to be installed.
+    default: .
 runs:
   using: composite
   steps:
     - shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         # pnpm filters lowercase npm_* from lifecycle scripts; callers use
         # node-gyp's case-insensitive NPM_PACKAGE_CONFIG_NODE_GYP_* settings.
-        if [[ "$RUNNER_OS" == Linux ]]; then
-          # setup-node's archive (including the shell PC's preinstalled copy)
-          # already has matching headers. Fail here if an image omits them;
-          # do not fall back to node-gyp's network download.
-          node_root="$(node -p 'require("node:path").dirname(require("node:path").dirname(require("node:fs").realpathSync(process.execPath)))')"
-          test -f "$node_root/include/node/node.h"
-          test -f "$node_root/include/node/common.gypi"
-          test -f "$node_root/include/node/config.gypi"
+        #
+        # A workflow given its source by a ref of its own can be handed a
+        # release from before pnpm-workspace.yaml kept better-sqlite3's build
+        # off. Such a source starts node-gyp as it installs and must find the
+        # headers here; one that keeps the build off compiles nothing and
+        # needs none. Anything but that exact setting counts as still building.
+        if [[ "$RUNNER_OS" == Linux ]] &&
+          ! grep -Eqs "^[[:space:]]+['\"]?better-sqlite3['\"]?:[[:space:]]*false[[:space:]]*(#.*)?\$" pnpm-workspace.yaml; then
+          node_root="$(bash "$GITHUB_ACTION_PATH/root.sh")"
           printf 'INFINITARY_NODE_HEADERS=%s\n' "$node_root" >> "$GITHUB_ENV"
         fi

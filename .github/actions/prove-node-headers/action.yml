@@ -10,9 +10,11 @@ runs:
     - name: Prove database source build without header downloads
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      env:
-        NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       run: |
+        # The install compiles nothing, so this build is the headers' one
+        # reader and finds them itself.
+        headers="$(bash "$GITHUB_ACTION_PATH/../node-headers/root.sh")"
+        export NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR="$headers"
         # node-addon-api puts its absolute include path in a make argument.
         # Build a disposable copy outside the spaced checkout used by verify.
         proof="$(mktemp -d "$RUNNER_TEMP/node-headers-proof.XXXXXX")"
