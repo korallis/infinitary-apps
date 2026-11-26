@@ -1164,6 +1164,8 @@ export class CrewTurns {
       this.core.tasks.delete(taskId);
     }
     try {
+      // A task bound to another login restarts there, never where it was (`LoginMoves`).
+      await this.core.loginMoves.beforeRestart(taskId);
       const resumed = await this.core.sessions.resumeTask(taskId, undefined, {
         from,
         changed: "refused",
@@ -1278,6 +1280,8 @@ export class CrewTurns {
     this.core.tasks.delete(task.id);
     try {
       if (!from) throw new Error("its earlier conversation is not on its record");
+      // A task bound to another login restarts there, never where it was (`LoginMoves`).
+      await this.core.loginMoves.beforeRestart(task.id);
       const resumed = await this.core.sessions.resumeTask(task.id, undefined, {
         from,
         changed: "context",

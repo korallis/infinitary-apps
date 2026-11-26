@@ -588,6 +588,8 @@ export class CrewSteer {
         if (sentByHost) this.tellBacklogNews(taskId, message);
         return "recorded-held";
       }
+      const moved = this.steerThroughMove(taskId, message, source, pending, behind);
+      if (moved) return moved;
       this.recordSteer(taskId, message, source, "mid-turn", pending);
       this.core.turns.deliverPendingToTask(task, { sent: true });
       return "mid-turn";
@@ -606,20 +608,8 @@ export class CrewSteer {
       if (sentByHost) this.tellBacklogNews(taskId, message);
       return "recorded-held";
     }
-    // A task bound to another login reopens there, never where it was
-    // (`LoginMoves`); the row is durable when the move hands nothing on.
-    const moved = this.core.loginMoves
-      .takes(taskId, (open) => this.core.turns.deliverPendingToTask(open, { sent: true }), true)
-      ?.then((handed): SteerDelivery => {
-        const outcome = handed ? "mid-turn" : "recorded-retrying";
-        this.recordSteer(taskId, message, source, outcome, resumeId);
-        return outcome;
-      });
-    if (moved) {
-      if (!behind) return moved;
-      void moved;
-      return "recorded-sending";
-    }
+    const moved = this.steerThroughMove(taskId, message, source, resumeId, behind);
+    if (moved) return moved;
     const resumed = this.core.sessions
       .resumeTask(record.id)
       .then((runtime): SteerDelivery => {
@@ -634,6 +624,31 @@ export class CrewSteer {
       });
     if (!behind) return resumed;
     void resumed;
+    return "recorded-sending";
+  }
+
+  /**
+   * A message sent to a task bound to another login: it is read on the
+   * login the task ends up with, never where it was (`LoginMoves`), and
+   * answered once the move is over; the row is durable when the move hands
+   * nothing on. Undefined when no move binds the task.
+   */
+  private steerThroughMove(
+    taskId: string,
+    message: string,
+    source: SteerSource,
+    id: number,
+    behind: boolean,
+  ): Promise<SteerDelivery> | SteerDelivery | undefined {
+    const moved = this.core.loginMoves
+      .takes(taskId, (open) => this.core.turns.deliverPendingToTask(open, { sent: true }), true)
+      ?.then((handed): SteerDelivery => {
+        const outcome = handed ? "mid-turn" : "recorded-retrying";
+        this.recordSteer(taskId, message, source, outcome, id);
+        return outcome;
+      });
+    if (!moved || !behind) return moved;
+    void moved;
     return "recorded-sending";
   }
 
