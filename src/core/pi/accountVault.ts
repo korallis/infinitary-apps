@@ -889,6 +889,8 @@ export class AccountVault {
       ) {
         account.cutOff = { ...account.cutOff, resetsAt: cutOff.resetsAt };
         this.saveRegistry();
+        // When the allowance returns moved: whoever waits on it waits anew.
+        this.cutOffChanged(accountId);
       }
       return;
     }

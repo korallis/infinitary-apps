@@ -59,9 +59,14 @@ export type QuotaServiceOptions = {
    * The pools of the person's own logins over a snapshot's rows
    * (`QuotaSnapshotView.pools`, docs/quota.md "A pool of your own logins"),
    * folded on every snapshot, on `restamp` and when a login's reading is
-   * forgotten: none leaves the snapshot without the field.
+   * forgotten: none leaves the snapshot without the field. With
+   * `refusedUntil`, the fold is the served one, in which a refused login is
+   * back when its refusal ends; without, it is the measurement's.
    */
-  pools?: (snapshot: QuotaSnapshotView) => QuotaProviderView[];
+  pools?: (
+    snapshot: QuotaSnapshotView,
+    refusedUntil?: (accountId: string) => number | undefined,
+  ) => QuotaProviderView[];
   /**
    * Until when the provider's own refusal of an account's spent allowance
    * stands, when one does (the vault's cut-off): a pooled login's used-up
@@ -126,10 +131,20 @@ export class QuotaService {
 
   /** Takes `snapshot` as the measurement and lays the served view over it. */
   private take(snapshot: QuotaSnapshotView): QuotaSnapshotView {
-    const { measured, served } = this.laid(snapshot);
-    this.measured = measured;
-    this.latestSnapshot = served;
-    return served;
+    return this.adopt(this.laid(snapshot));
+  }
+
+  /**
+   * Makes a lay the one readers are served, and waits on its next reset. A
+   * lay that is not adopted leaves the wait as it was, so a reset already
+   * due is still settled.
+   */
+  private adopt(lay: ReturnType<QuotaService["laid"]>): QuotaSnapshotView {
+    this.measured = lay.measured;
+    this.latestSnapshot = lay.served;
+    this.settleAtMs = lay.settleAtMs;
+    this.arm();
+    return lay.served;
   }
 
   /**
@@ -139,11 +154,13 @@ export class QuotaService {
    * is saved; `served` is what readers get, in which a pooled login's
    * used-up window that has reset since the reading is gone from its row
    * before the pool is folded (`settlePoolResets`). A login that leaves its
-   * pool is therefore served its measured row again.
+   * pool is therefore served its measured row again. `settleAtMs` is when
+   * the served view next changes with no reading.
    */
   private laid(snapshot: QuotaSnapshotView): {
     measured: QuotaSnapshotView;
     served: QuotaSnapshotView;
+    settleAtMs: number | undefined;
   } {
     this.laying = true;
     try {
@@ -157,12 +174,12 @@ export class QuotaService {
         this.now(),
         this.options.refusedUntil,
       );
-      this.settleAtMs = settled.nextAtMs;
-      this.arm();
-      if (!fold || !settled.changed) return { measured, served: measured };
+      const settleAtMs = settled.nextAtMs;
+      if (!fold || read.length === 0) return { measured, served: measured, settleAtMs };
       const standing = { ...stamped, providers: settled.providers };
-      const pools = fold(standing);
-      return { measured, served: pools.length > 0 ? { ...standing, pools } : standing };
+      const pools = fold(standing, this.options.refusedUntil);
+      const served = pools.length > 0 ? { ...standing, pools } : standing;
+      return { measured, served, settleAtMs };
     } finally {
       this.laying = false;
     }
@@ -311,8 +328,7 @@ export class QuotaService {
       const merged = mergeStaleProviders(rewrite(latest), latest, this.now());
       const next = this.laid(merged);
       if (JSON.stringify(next.measured.providers) === JSON.stringify(latest.providers)) return;
-      this.measured = next.measured;
-      this.latestSnapshot = next.served;
+      this.adopt(next);
       this.recatalog();
     } catch {
       // A local reading that failed leaves the last snapshot as it was.

@@ -377,6 +377,59 @@ describe("QuotaService", () => {
     ]);
   });
 
+  // The review's finding: a local reading that changes nothing, landing
+  // after a reset is due and before its timer, must not swallow the reset.
+  it("still settles a due reset after a local reading that changed nothing", async () => {
+    const login = (accountId: string) => ({
+      provider: "claude",
+      label: "Claude",
+      accountId,
+      status: "ok" as const,
+      stale: false,
+      windows: [
+        { id: "session", label: "session", percentRemaining: 0, resetsAtMs: 9000 },
+        { id: "weekly", label: "weekly", percentRemaining: 40, resetsAtMs: 20000 },
+      ],
+    });
+    const pool = {
+      ...login("pool"),
+      accountId: undefined,
+      pool: {
+        kind: "claude" as const,
+        logins: 2,
+        read: 0,
+        unread: 0,
+        spent: 2,
+        switchedOff: 0,
+        signInEnded: 0,
+        signInSoon: 0,
+        source: "accounts" as const,
+        accounts: ["personal", "work"],
+      },
+    };
+    let now = 5000;
+    const service = new QuotaService({
+      refresh: vi.fn(async () => ({
+        snapshot: { ...SNAPSHOT, providers: [login("personal"), login("work")] },
+        catalog: CATALOG,
+      })),
+      db: openInMemoryDatabase(),
+      broadcast: vi.fn(),
+      now: () => now,
+      pools: () => [pool],
+      localReading: { everyMs: 60_000, run: async () => (snapshot) => snapshot },
+    });
+    await service.refresh("demand");
+    service.stop();
+
+    now = 9000;
+    await service.readLocal();
+    expect(service.latest()?.providers.map((row) => row.windows.map((w) => w.id))).toEqual([
+      ["weekly"],
+      ["weekly"],
+    ]);
+  });
+
   // The meters are pushed, never polled: the service tells every surface
   // itself at the moment a pooled login's used-up window resets.
   it("pushes the snapshot at a pooled login's reset with nothing reading it", async () => {

@@ -786,11 +786,15 @@ describe("a spent pool of two logins, across its resets", () => {
   // One reading for the two clock-only cases below. A's session resets in 1
   // hour and its week in 72; B's session in 2 hours.
   const rows = [login("a", [0, T + HOUR], [0, week]), login("b", [0, T + 2 * HOUR], [50, week])];
-  const pools = (snapshot: QuotaSnapshotView) =>
+  const pools = (
+    snapshot: QuotaSnapshotView,
+    refusedUntil?: (accountId: string) => number | undefined,
+  ) =>
     accountPools(
       snapshot.providers,
       rows.map((row) => ({ accountId: row.accountId, provider: row.provider })),
       snapshot.fetchedAt,
+      refusedUntil,
     );
   const held = {
     provider: false,
@@ -868,11 +872,17 @@ describe("a spent pool of two logins, across its resets", () => {
     });
     await service.refresh("demand");
     service.stop();
-    expect(standingOn(service, refusedB)).toEqual(held);
+    // The pool is back when B's refusal ends, not at B's session reset, and
+    // each of its meters names that same time.
+    const refused = { ...held, poolBackAt: T + 3 * HOUR };
+    const meterResets = () => service.latest()?.pools?.[0]?.windows.map((w) => w.resetsAtMs);
+    expect(standingOn(service, refusedB)).toEqual(refused);
+    expect(meterResets()).toEqual([T + 3 * HOUR, T + 3 * HOUR]);
 
     // B's session has reset, and its provider still refuses it.
     now = T + 2.1 * HOUR;
-    expect(standingOn(service, refusedB)).toEqual(held);
+    expect(standingOn(service, refusedB)).toEqual(refused);
+    expect(meterResets()).toEqual([T + 3 * HOUR, T + 3 * HOUR]);
 
     // The refusal has ended: B serves.
     now = T + 3.1 * HOUR;

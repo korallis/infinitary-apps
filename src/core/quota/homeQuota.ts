@@ -471,7 +471,7 @@ export function startHomeQuota(options: {
     stamp: (snapshot) => stampSnapshot(snapshot, keepsGoing),
     // Every enabled login here is a pool member; the fold keeps a provider
     // with fewer than two, and every provider but Claude and ChatGPT, out.
-    pools: (snapshot) =>
+    pools: (snapshot, refusedUntil) =>
       accountPools(
         snapshot.providers,
         vault.list().flatMap((account) => {
@@ -479,6 +479,7 @@ export function startHomeQuota(options: {
           return account.enabled && quotaId ? [{ accountId: account.id, provider: quotaId }] : [];
         }),
         snapshot.fetchedAt,
+        refusedUntil,
       ),
     refusedUntil: (accountId) => {
       const standing = vault.cutOff(accountId);

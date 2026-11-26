@@ -17,9 +17,14 @@ export type PoolMember = { accountId: string; provider: string };
  * ended cannot serve; a reading with an account-wide window used up is
  * spent until every such window has reset - the last of them, since one
  * that resets earlier leaves the login blocked by the other - and serves
- * again from then.
+ * again from then, or from the end of its provider's refusal of it
+ * (`refusedUntilMs`) when that is later.
  */
-function loginOfRow(row: QuotaProviderView | undefined, nowMs: number): PoolLogin {
+function loginOfRow(
+  row: QuotaProviderView | undefined,
+  nowMs: number,
+  refusedUntilMs = 0,
+): PoolLogin {
   if (row?.status === "auth_required") return { state: "sign_in_ended" };
   if (row?.status !== "ok" || row.stale) return { state: "serving" };
   const windows = row.windows.flatMap((window) =>
@@ -41,12 +46,14 @@ function loginOfRow(row: QuotaProviderView | undefined, nowMs: number): PoolLogi
         (window) =>
           typeof window.percentRemaining === "number" &&
           window.percentRemaining <= 0 &&
-          (window.resetsAtMs === undefined || window.resetsAtMs > nowMs),
+          (window.resetsAtMs === undefined || Math.max(window.resetsAtMs, refusedUntilMs) > nowMs),
       )
     : [];
   if (blocking.length === 0) return { state: "serving", windows };
   const resets = blocking.map((window) => window.resetsAtMs);
-  const backAtMs = resets.every((at) => at !== undefined) ? Math.max(...resets) : undefined;
+  const backAtMs = resets.every((at) => at !== undefined)
+    ? Math.max(...resets, refusedUntilMs)
+    : undefined;
   return { state: "spent", windows, ...(backAtMs !== undefined ? { backAtMs } : {}) };
 }
 
@@ -60,12 +67,16 @@ function loginOfRow(row: QuotaProviderView | undefined, nowMs: number): PoolLogi
  * them, never an allowance of its own. `nowMs` is when the rows were read
  * (the snapshot's own time), not when the pool is looked at: the pool
  * agrees with the rows it is given, and a reset that passes between
- * readings reaches it through those rows (`settlePoolResets`).
+ * readings reaches it through those rows (`settlePoolResets`). With
+ * `refusedUntilMs`, a spent login its provider refused until later is back
+ * at that time, as `settlePoolResets` holds it, so the pool names the same
+ * return as the wait for it.
  */
 export function accountPools(
   providers: readonly QuotaProviderView[],
   members: readonly PoolMember[],
   nowMs: number,
+  refusedUntilMs?: (accountId: string) => number | undefined,
 ): QuotaProviderView[] {
   const pools: QuotaProviderView[] = [];
   for (const kind of QUOTA_POOL_KINDS) {
@@ -82,7 +93,9 @@ export function accountPools(
     });
     if (ids.length < 2) continue;
     const rows = ids.map(rowOf);
-    const logins = rows.map((row) => loginOfRow(row, nowMs));
+    const logins = ids.map((accountId) =>
+      loginOfRow(rowOf(accountId), nowMs, refusedUntilMs?.(accountId) ?? 0),
+    );
     const fallback = logins.find((login) => login.state === "spent")?.windows?.[0];
     const pooled = poolReading(kind, logins, nowMs, {
       id: fallback?.id ?? "weekly",
