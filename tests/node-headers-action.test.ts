@@ -28,9 +28,13 @@ import { scratchDir } from "./helpers/scratchDirs";
  * kinds of source apart from the settings file's lines. Only the top-level
  * allowBuilds list speaks for the install: a line reading the same under
  * another key or in a block of text does not, and neither does the list once
- * it names the module twice or another setting allows every build. A source
- * the step took for one that builds nothing would start node-gyp with no
- * headers set up for it.
+ * it names the module twice or another setting allows every build. YAML can
+ * also write that setting's name where a line reader does not see it - behind
+ * an escape in a quoted key, as a `? name` key, after a bare carriage return,
+ * behind a byte order mark - so a file speaks for nothing either unless every
+ * line ends in a line feed and every top-level line is a plain `name:` key. A
+ * source the step took for one that builds nothing would start node-gyp with
+ * no headers set up for it.
  *
  * These run the action's own shell step as a runner does, in a source's
  * folder, with a copy of this Node in a folder that has, or lacks, the headers
@@ -64,6 +68,10 @@ describe(".github/actions/node-headers", () => {
   let offButAllowsAll: string;
   let namedTwice: string;
   let listIsText: string;
+  let allowsAllByEscape: string;
+  let allowsAllByQuestionKey: string;
+  let allowsAllAfterBareReturn: string;
+  let allowsAllBehindMark: string;
 
   function nodeRoot(name: string, headers: boolean): string {
     const root = join(folder, name);
@@ -113,6 +121,27 @@ describe(".github/actions/node-headers", () => {
     const opens = "\nallowBuilds:\n";
     expect(settings).toContain(opens);
     listIsText = source("list-is-text", settings.replace(opens, `${opens}  |\n`));
+    // YAML reads each of these as the top-level setting that allows every
+    // build, and pnpm 11 obeys it, though no line of the file starts with
+    // that setting's name.
+    allowsAllByEscape = source(
+      "allows-all-by-escape",
+      `"dangerouslyAllowAllBuild\\u0073": true\n${settings}`,
+    );
+    allowsAllByQuestionKey = source(
+      "allows-all-by-question-key",
+      `? dangerouslyAllowAllBuilds\n: true\n${settings}`,
+    );
+    // A bare carriage return ends a YAML line, so the setting follows the comment.
+    allowsAllAfterBareReturn = source(
+      "allows-all-after-bare-return",
+      `# settings\rdangerouslyAllowAllBuilds: true\n${settings}`,
+    );
+    // YAML drops a byte order mark from before the first key.
+    allowsAllBehindMark = source(
+      "allows-all-behind-mark",
+      `\uFEFFdangerouslyAllowAllBuilds: true\n${settings}`,
+    );
   });
 
   afterAll(() => {
@@ -160,6 +189,10 @@ describe(".github/actions/node-headers", () => {
     ["keeps the build off in the list but allows every build", () => offButAllowsAll],
     ["names the module twice in the list", () => namedTwice],
     ["writes the list as a block of text that reads as off", () => listIsText],
+    ["allows every build under a quoted key spelled with an escape", () => allowsAllByEscape],
+    ["allows every build under a key written as `? name`", () => allowsAllByQuestionKey],
+    ["allows every build on a line after a bare carriage return", () => allowsAllAfterBareReturn],
+    ["allows every build on a first line behind a byte order mark", () => allowsAllBehindMark],
   ])("gives the headers beside Node to a source that %s", (_, checkout) => {
     expect(runStep(checkout(), withHeaders)).toEqual({
       error: undefined,
