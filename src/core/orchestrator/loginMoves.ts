@@ -92,17 +92,21 @@ export class LoginMoves {
   /**
    * A lane's delivery to a task still to move: the move takes it, and
    * `deliver` hands the lane to the conversation the task ends up with.
-   * False when the task is bound to no move.
+   * False when the task is bound to no move. With `reopen`, a task with no
+   * open conversation is opened for `deliver` on the login it ends up with,
+   * as a message someone sent opens one; without it, its lane's own sweep
+   * does, which leaves a task in the backlog alone.
    */
-  takes(taskId: string, deliver: (task: TaskRuntime) => void): boolean {
+  takes(taskId: string, deliver: (task: TaskRuntime) => void, reopen = false): boolean {
     if (!this.bound.has(taskId)) return false;
-    void this.move(taskId, deliver);
+    void this.move(taskId, deliver, reopen);
     return true;
   }
 
   private async move(
     taskId: string,
     deliver: (task: TaskRuntime) => void = (task) => this.host.deliverPendingToTask(task),
+    reopen = false,
   ): Promise<void> {
     const accounts = this.options.accounts;
     const move = this.bound.get(taskId);
@@ -113,6 +117,12 @@ export class LoginMoves {
       this.bound.delete(taskId);
       const open = this.host.runtime(taskId);
       if (open) deliver(open);
+      // The rows are durable: a reopening that fails leaves them to the next message or Start.
+      else if (reopen)
+        void this.host
+          .resumeTask(taskId)
+          .then(deliver)
+          .catch(() => {});
     };
     this.moving.add(taskId);
     try {
@@ -164,7 +174,7 @@ export class LoginMoves {
       });
       // What waited on the login it left is due on the one it goes to.
       this.options.inbox.movedProvider(taskId);
-      if (!runtime) {
+      if (!runtime && !reopen) {
         this.host.deliverLane(taskId);
         return;
       }

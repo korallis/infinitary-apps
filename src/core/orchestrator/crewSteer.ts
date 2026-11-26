@@ -277,6 +277,15 @@ export class CrewSteer {
       record.sessionFile &&
       !this.core.facts.laneHeld(taskId)
     ) {
+      // A task bound to another login is resumed there, never where it was (`LoginMoves`).
+      if (
+        this.core.loginMoves.takes(
+          taskId,
+          (open) => this.core.turns.deliverPendingToTask(open, { sent: true }),
+          true,
+        )
+      )
+        return;
       void this.core.sessions
         .resumeTask(taskId)
         .then((resumed) => this.core.turns.deliverPendingToTask(resumed, { sent: true }))
@@ -599,8 +608,10 @@ export class CrewSteer {
     }
     // A task bound to another login reopens there, never where it was (`LoginMoves`).
     if (
-      this.core.loginMoves.takes(taskId, (open) =>
-        this.core.turns.deliverPendingToTask(open, { sent: true }),
+      this.core.loginMoves.takes(
+        taskId,
+        (open) => this.core.turns.deliverPendingToTask(open, { sent: true }),
+        true,
       )
     ) {
       this.recordSteer(taskId, message, source, "mid-turn", resumeId);

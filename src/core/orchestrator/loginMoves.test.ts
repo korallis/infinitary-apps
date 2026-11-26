@@ -183,6 +183,17 @@ describe("a started task's move to another login", () => {
     expect(t.steps).toEqual(["released task-1", "selected work", "resumed task-1 on work"]);
   });
 
+  it("opens a task with no open conversation on the named login for a sent message, and not through its lane's sweep", async () => {
+    const t = crew({ held: true });
+    t.live.delete("task-1");
+    await t.moves.moveOff("personal", "work");
+    t.hold.held = false;
+    const delivered: string[] = [];
+    expect(t.moves.takes("task-1", (task) => delivered.push(task.id), true)).toBe(true);
+    await expect.poll(() => delivered).toEqual(["task-1"]);
+    expect(t.steps).toEqual(["selected work", "resumed task-1 on work"]);
+  });
+
   it("takes no delivery of a task bound to no move, or one whose login has room again", async () => {
     const t = crew({ busy: true });
     expect(t.moves.takes("task-1", () => {})).toBe(false);
