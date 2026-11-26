@@ -127,6 +127,32 @@ export function adherenceStep(renderer: string[]): Step | undefined {
   };
 }
 
+/**
+ * The most characters of file names one run of a lint is handed. Windows
+ * starts a program with a command line of at most 32,767 characters and
+ * answers `spawn ENAMETOOLONG` past it, which about 650 of this project's
+ * file names reach; Linux and macOS hold a megabyte or more. The rest of
+ * that line is left to the program and its flags.
+ */
+export const RUN_NAME_CHARACTERS = 24_000;
+
+/** The files in the runs that hold them: every name once, in order. */
+export function runsOf(files: readonly string[]): string[][] {
+  const runs: string[][] = [];
+  let room = 0;
+  for (const file of files) {
+    // A name takes its own length, the space before it and a pair of quotes.
+    const size = file.length + 3;
+    if (!runs.length || size > room) {
+      runs.push([]);
+      room = RUN_NAME_CHARACTERS;
+    }
+    runs.at(-1)?.push(file);
+    room -= size;
+  }
+  return runs;
+}
+
 function run(step: Step): Promise<{ step: Step; ok: boolean; output: string }> {
   return new Promise((done) => {
     const child = spawn(step.command, step.args, { stdio: ["ignore", "pipe", "pipe"] });
@@ -193,10 +219,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   console.log(`check:changed: ${files.length} changed file(s)`);
   writeCompiledMessages();
   const steps: Step[] = [];
-  const biome = biomeStep(files);
-  if (biome) steps.push(biome);
-  const adherence = adherenceStep(renderer);
-  if (adherence) steps.push(adherence);
+  steps.push(...runsOf(files).flatMap((some) => biomeStep(some) ?? []));
+  steps.push(...runsOf(renderer).flatMap((some) => adherenceStep(some) ?? []));
   for (const args of checkScripts(scripts.check ?? ""))
     steps.push({ label: args.join(" "), command: "node", args });
   // The pull request's first step. It reads commits, so it waits for the

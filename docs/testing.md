@@ -611,6 +611,7 @@ A step that loads the app through a Vite module runner holds about 0.9 GB, so co
 Started all at once they hold more memory than the two-processor Linux runner has beside the tests it runs.
 Biome is handed every changed file and its own configuration picks which of them it checks, as in the full lint, so the quick check keeps no list of file kinds of its own.
 It starts Biome and ESLint itself, as the Node script each package names under `bin` (`packageProgram`), never through pnpm or a shell: on a Windows PC pnpm is a `.cmd` file, which Node starts only through a shell, and a shell would read a changed file's name as its own words.
+A long list of changed files goes to each lint in several runs (`runsOf`), because Windows starts a program with a command line of at most 32,767 characters.
 A checkout with no main branch to compare with, such as main's own check of a push, counts as having nothing committed since main, so its release-notes check waits.
 It is not gated by CI mode, takes seconds, and prints every error; the full lint and the typecheck stay in the branch check's `code-checks` job as INF-2074 set it, so this narrows INF-2074's choice that the typecheck runs only in CI.
 Crewmates start each route the way they start a full verification: `github_write` to `POST /repos/{owner}/{repo}/actions/workflows/<workflow>/dispatches` with `{"ref":"<branch>"}` and the route's inputs (`docs/forge.md`, "Verification workflow requests").

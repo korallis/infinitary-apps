@@ -10,6 +10,7 @@ import {
   LANE_MEMORY_BYTES,
   packageProgram,
   quickCheckLanes,
+  runsOf,
   sideBySide,
 } from "../scripts/check-changed.ts";
 import { ciModeRefusal } from "../scripts/checks-mode.ts";
@@ -198,6 +199,23 @@ describe("where the heavy checks run", () => {
       relative(process.cwd(), filePath).split(sep).join("/"),
     );
     expect(judged).toEqual([file]);
+  });
+
+  // The bug a wide change meets on a Windows PC: Windows starts a program with
+  // a command line of at most 32,767 characters, and Biome was handed every
+  // changed file in one, so past about 650 files it answered
+  // `spawn ENAMETOOLONG`. Every file of the project stands in for the change.
+  it("hands a lint only as many changed files at once as a Windows command line holds", () => {
+    const files = execFileSync("git", ["ls-files"], { encoding: "utf8", maxBuffer: 64 * 1024 ** 2 })
+      .split("\n")
+      .filter(Boolean);
+    const runs = runsOf(files);
+    expect(runs.flat()).toEqual(files);
+    for (const some of runs) {
+      const step = biomeStep(some);
+      const line = [step?.command, ...(step?.args ?? [])].map((word) => `"${word}"`).join(" ");
+      expect(line.length).toBeLessThan(32_767);
+    }
   });
 
   // The bug a main check found: its push checkout holds one commit and no main
