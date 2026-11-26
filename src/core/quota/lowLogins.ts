@@ -46,8 +46,12 @@ export type LowLoginsOptions = {
    * work `spread` still asks about. A click already named the rest's login.
    */
   unnamedOn?: (accountId: string) => string[];
-  /** Binds each of them to the named login, where it moves between turns (`LoginMoves.moveOff`). */
-  moveOff: (from: string, to: string) => unknown;
+  /**
+   * Binds each of them to the named login, where it moves between turns
+   * (`LoginMoves.moveOff`); with `unnamedOnly`, only those no other login
+   * is named for.
+   */
+  moveOff: (from: string, to: string, unnamedOnly?: boolean) => unknown;
   /**
    * The tasks still to move off a login stay on it; with `to`, only those
    * named for that login (`LoginMoves.forget`).
@@ -170,7 +174,8 @@ export class LowLogins {
     const inUse = choice !== "ask" || pin === from || pin === accountId;
     const moves = asks && inUse && low && runsLow(low) && to && hasRoom(to);
     if (moves) {
-      void this.options.moveOff(from, accountId);
+      // `spread` asked only about work no login was named for (`ask`).
+      void this.options.moveOff(from, accountId, choice === "spread");
       // The pin moves only when it is the low login: under `spread` new work is not bound to it.
       if (pin === from) {
         this.options.setPin(provider.id, accountId);

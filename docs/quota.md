@@ -288,7 +288,11 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   Until that launch has checked the click, each started task on the login the click left waits, whether its own move was saved before the quit or not: its lane is held (`LoginMoves.awaitsCheck`, read from the saved card and the record of ended answers, so it holds from the supervisor's first wake), and it neither moves nor takes a delivery on that login.
   While the login the click left is not read yet the click is neither accepted nor refused: the answer stands and no other question replaces its card, under `ask` and `spread` alike; once the choice no longer asks, the click is refused without waiting for the reading.
   A quit after the login in use was saved leaves the named login in use: the check accepts it as the same click and keeps the tasks' moves.
-  A message someone sends such a task meanwhile, or files whose crossing ends meanwhile, stays on its lane and is remembered as sent (`LoginMoves.keepsSent`): once the click is accepted it is delivered as sent on the named login, and once it is refused, where the task is, so a task in the backlog reads it with no second message and no Start.
+  A message the captain or the first mate sends such a task meanwhile, or files whose crossing ends meanwhile, stays on its lane and is remembered as sent (`LoginMoves.keepsSent`), whether the task's conversation is open or not.
+  It is delivered as sent on the named login once the click is accepted, and where the task is once it is refused, so a task in the backlog reads it with no second message and no Start.
+  It stays remembered until a delivery takes the lane: while another hold stands, after a conversation that did not open, which backs off as any refused delivery does, or after a delivery a hold kept back, the lane's next sweep delivers it (`LoginMoves.paySent`, from `CrewWatch.sweepTaskLane`).
+  The host's own notice is never remembered so: in the backlog it waits for a Start (`docs/inbox.md`).
+  What is remembered is kept in memory only, so after another relaunch such a message waits for the next message or Start.
   A login in use that could not be saved is not the login in use (`AccountVault.setPin` puts the pin back), so the answer stands and the next reading saves it.
   The vault writes its registry whole to a file beside it, with its permissions, and puts that file in place in one step, so a save that fails leaves the registry on disk as it was and the pin in memory agrees with it.
   A click that is refused leaves no task named for its login, and the tasks carry on where they are.
@@ -305,7 +309,7 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   The same without the card: the pin moves to the login with the most room with one feed line naming both logins, and each task on the low login is bound to that login and writes its own line as it moves.
 - **`spread`.**
   New work already runs across the logins, so only started work is asked about: the card names a low login that tasks run on, and its click moves those tasks and leaves a pin on another login alone.
-  A task a click already named a login for is not asked about again while it has still to move (`LoginMoves.unnamedOn`).
+  A task a click already named a login for is not asked about again while it has still to move (`LoginMoves.unnamedOn`), and a later click on the card moves only the tasks no login is named for: the named one keeps its login (`moveOff` with `unnamedOnly`).
 - **`wait`.**
   Nothing is asked and nothing moves; work on the low login waits for its refill.
 - **A moved task.**

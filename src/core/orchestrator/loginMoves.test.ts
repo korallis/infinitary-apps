@@ -188,6 +188,26 @@ describe("a started task's move to another login", () => {
     expect(t.steps).toEqual(["released task-1", "selected work", "resumed task-1 on work"]);
   });
 
+  // INA-9: a task's next delivery is on the login its own click named.
+  it("leaves a task another login is already named for on that login, when a later click asks only about work no login is named for", async () => {
+    const t = crew({ held: true });
+    await t.moves.moveOff("personal", "work");
+    seedTask(t.tasks, {
+      id: "task-2",
+      title: "Fix the footer",
+      status: "idle",
+      accountId: "personal",
+      model: MODEL,
+    });
+    expect(t.moves.unnamedOn("personal")).toEqual(["task-2"]);
+    await t.moves.moveOff("personal", "spare", true);
+    t.hold.held = false;
+    await t.moves.takes("task-1", () => true);
+    await t.moves.takes("task-2", () => true);
+    expect(t.tasks.get("task-1")?.accountId).toBe("work");
+    expect(t.tasks.get("task-2")?.accountId).toBe("spare");
+  });
+
   it("opens a task with no open conversation on the named login for a sent message, and not through its lane's sweep", async () => {
     const t = crew({ held: true });
     t.live.delete("task-1");

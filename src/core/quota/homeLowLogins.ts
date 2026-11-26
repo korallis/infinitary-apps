@@ -136,7 +136,7 @@ export function startLowLogins(options: {
       loginLowAnswer({ cards: supervisor.cards, settings, vault }, providerId),
     tasksOn: (accountId) => supervisor.loginMoves.tasksOn(accountId),
     unnamedOn: (accountId) => supervisor.loginMoves.unnamedOn(accountId),
-    moveOff: (from, to) => supervisor.loginMoves.moveOff(from, to),
+    moveOff: (from, to, unnamedOnly) => supervisor.loginMoves.moveOff(from, to, unnamedOnly),
     forget: (from, to) => supervisor.loginMoves.forget(from, to),
     openOffers: () =>
       PROVIDER_CATALOG.flatMap((entry) => {
