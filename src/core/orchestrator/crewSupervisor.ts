@@ -36,7 +36,7 @@ import { LOCAL_MACHINE_ID } from "../session/session";
 import { bindTools, type EmittedCardInput } from "../session/tools";
 import type { DuplicateResult } from "../storage/cardStore";
 import { currentChange, currentReceipt, mergingClose } from "../storage/changeProjection";
-import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
+import { FIRSTMATE_RECIPIENT, INBOX_ATTEMPT_MAX } from "../storage/inboxStore";
 import type { CompletionOffer, TaskRecord } from "../storage/taskRecords";
 import { carryOnWords } from "../tasks/recordActivity";
 import { TaskService } from "../tasks/taskService";
@@ -469,6 +469,11 @@ export class CrewSupervisor {
       laneHeld: (taskId) => this.facts.laneHeld(taskId),
       disposed: () => this.disposed,
       dueRows: (taskId) => this.facts.deliverableRows(taskId, this.now()).map((row) => row.id),
+      sentDue: (taskId, rowIds) =>
+        // SQLite reads a negative limit as none.
+        options.inbox
+          .pending(taskId, this.now(), { maxAttempts: INBOX_ATTEMPT_MAX, limit: -1 })
+          .some((row) => rowIds.has(row.id)),
       openingFailed: (rowIds, caught) => this.watch.openingFailed(rowIds, caught),
     });
     const runbooks = options.runbooks;
