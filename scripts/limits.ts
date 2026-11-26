@@ -510,6 +510,16 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     MAX_DEMO_LONG_SIDE: physical("refused in words naming 1920 by 1080; scale it down"),
     MAX_DEMO_SHORT_SIDE: physical("refused in words naming 1920 by 1080; scale it down"),
   },
+  "src/core/windowsTree.ts": {
+    TASKKILL_LIMIT_MS: physical(
+      "taskkill is ended and the caller ends the program at the top itself; what that program started may run on",
+    ),
+  },
+  "src/core/workspace/installProcess.ts": {
+    END_LIMIT_MS: physical(
+      "the install fails with the reason it was stopped for and starts no second attempt; the task starts without its packages and its note names the failed install",
+    ),
+  },
   "src/core/workspace/projectLocator.ts": {
     MAX_RESULTS: physical("the rest drop unnamed; a fuller name narrows the search"),
   },
