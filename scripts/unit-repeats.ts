@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { changedPaths, PROBE_FILES } from "./affected-probes.ts";
+import { packageProgram } from "./check-changed.ts";
 import { MAC_UNIT_FILES } from "./mac-unit-tests.ts";
 import { prRuns } from "./pr-paths.ts";
 import {
@@ -374,8 +375,8 @@ export function runLocalUnits(
  * starts only through a shell: without one the round never starts
  * (`spawnSync pnpm ENOENT`) and reads as a failed round, and a shell would
  * read a test file's name as its own words. So on Windows a round starts the
- * program `pnpm exec vitest` names, the Node script Vitest's package lists
- * under `bin`, through Node itself with the same Vitest arguments.
+ * program `pnpm exec vitest` names (`packageProgram`) through Node itself,
+ * with the same Vitest arguments.
  */
 export function roundStart(
   args: readonly string[],
@@ -383,15 +384,9 @@ export function roundStart(
   root = ROOT,
 ): { command: string; args: string[] } {
   if (platform !== "win32") return { command: "pnpm", args: [...args] };
-  const folder = join(root, "node_modules", "vitest");
-  const { bin } = JSON.parse(readFileSync(join(folder, "package.json"), "utf8")) as {
-    bin?: string | Record<string, string>;
-  };
-  const script = typeof bin === "string" ? bin : bin?.vitest;
-  if (!script) throw new Error("The installed vitest package names no program to start.");
   return {
     command: process.execPath,
-    args: [join(folder, script), ...args.slice(PNPM_VITEST.length)],
+    args: [packageProgram("vitest", "vitest", root), ...args.slice(PNPM_VITEST.length)],
   };
 }
 

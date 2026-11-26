@@ -74,14 +74,16 @@ export interface Step {
 }
 
 /**
- * A lint's own program: the Node script its package names under `bin`, the
- * file `pnpm exec` starts. The lint steps start it through Node themselves.
+ * A package's own program: the Node script the package names under `bin`, the
+ * file `pnpm exec` starts, in the project at `root` or, with none given, the
+ * working directory. The lint steps here and the test rounds of
+ * unit-repeats.ts start it through Node themselves.
  * On Windows pnpm and the programs it links are .cmd files, which Node starts
  * only through a shell (`spawn pnpm ENOENT` without one), and a shell would
  * read a changed file's name as its own words.
  */
-export function packageProgram(name: string, program = name): string {
-  const folder = join("node_modules", name);
+export function packageProgram(name: string, program = name, root = ""): string {
+  const folder = join(root, "node_modules", name);
   const { bin } = JSON.parse(readFileSync(join(folder, "package.json"), "utf8")) as {
     bin?: string | Record<string, string>;
   };
