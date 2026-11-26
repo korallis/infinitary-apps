@@ -25,6 +25,14 @@ export type LoginMovesHost = {
   disposed(): boolean;
 };
 
+/** A move under way: the delivery asked of it, and whether it handed the lane on. */
+type Going = {
+  deliver: (task: TaskRuntime) => void;
+  reopen: boolean;
+  handed: boolean;
+  done: Promise<void>;
+};
+
 /**
  * A started task's move to another login of the same provider
  * (docs/quota.md, "When the login in use runs low"): between turns, never
@@ -43,7 +51,8 @@ export type LoginMovesHost = {
 export class LoginMoves {
   /** The low-login card's click, bound by the watch that raises the card. */
   onClick?: (accountId: string) => void;
-  private readonly moving = new Set<string>();
+  /** Each move under way, with the delivery it owes when it is over. */
+  private readonly moving = new Map<string, Going>();
   /** Each task still to move, with the login it leaves and the one named for it. */
   private readonly bound = new Map<string, { from: string; to: string }>();
 
@@ -73,7 +82,7 @@ export class LoginMoves {
   async moveOff(from: string, to: string): Promise<void> {
     const taskIds = this.tasksOn(from);
     for (const taskId of taskIds) this.bound.set(taskId, { from, to });
-    await Promise.all(taskIds.map((taskId) => this.move(taskId)));
+    await Promise.all(taskIds.map((taskId) => this.begin(taskId).done));
   }
 
   /** The login has room again, or work now waits: its tasks still to move stay. */
@@ -92,42 +101,68 @@ export class LoginMoves {
   /**
    * A lane's delivery to a task still to move: the move takes it, and
    * `deliver` hands the lane to the conversation the task ends up with.
-   * False when the task is bound to no move. With `reopen`, a task with no
-   * open conversation is opened for `deliver` on the login it ends up with,
-   * as a message someone sent opens one; without it, its lane's own sweep
-   * does, which leaves a task in the backlog alone.
+   * Undefined when the task is bound to no move; otherwise it settles once
+   * the move is over, true when the lane was handed on. With `reopen`, a
+   * task with no open conversation is opened for `deliver` on the login it
+   * ends up with, as a message someone sent opens one; without it, its
+   * lane's own sweep does, which leaves a task in the backlog alone. A move
+   * already picking its account takes the request with it.
    */
-  takes(taskId: string, deliver: (task: TaskRuntime) => void, reopen = false): boolean {
-    if (!this.bound.has(taskId)) return false;
-    void this.move(taskId, deliver, reopen);
-    return true;
+  takes(
+    taskId: string,
+    deliver: (task: TaskRuntime) => void,
+    reopen = false,
+  ): Promise<boolean> | undefined {
+    if (!this.bound.has(taskId)) return undefined;
+    const running = this.moving.get(taskId);
+    // A sent message's delivery is not given up for a sweep's.
+    if (running && (reopen || !running.reopen)) {
+      running.deliver = deliver;
+      running.reopen = reopen;
+    }
+    const going = running ?? this.begin(taskId, deliver, reopen);
+    return going.done.then(() => going.handed);
   }
 
-  private async move(
+  private begin(
     taskId: string,
     deliver: (task: TaskRuntime) => void = (task) => this.host.deliverPendingToTask(task),
     reopen = false,
-  ): Promise<void> {
+  ): Going {
+    const running = this.moving.get(taskId);
+    if (running) return running;
+    const going: Going = { deliver, reopen, handed: false, done: Promise.resolve() };
+    this.moving.set(taskId, going);
+    going.done = this.move(taskId, going).finally(() => this.moving.delete(taskId));
+    return going;
+  }
+
+  /** `going` is read where it is used: a delivery asked for while the account is picked is the one made. */
+  private async move(taskId: string, going: Going): Promise<void> {
     const accounts = this.options.accounts;
     const move = this.bound.get(taskId);
-    if (!move || !accounts?.pickForSpawn || this.moving.has(taskId)) return;
+    if (!move || !accounts?.pickForSpawn) return;
     const { from, to } = move;
+    const hand = (task: TaskRuntime) => {
+      going.handed = true;
+      going.deliver(task);
+    };
     // The task stays where it is, with its lane delivered there.
-    const stay = () => {
+    const stay = async () => {
       this.bound.delete(taskId);
       const open = this.host.runtime(taskId);
-      if (open) deliver(open);
-      // The rows are durable: a reopening that fails leaves them to the next message or Start.
-      else if (reopen)
-        void this.host
-          .resumeTask(taskId)
-          .then(deliver)
-          .catch(() => {});
+      if (open) return hand(open);
+      if (!going.reopen) return;
+      try {
+        hand(await this.host.resumeTask(taskId));
+      } catch {
+        // The rows are durable: the next message or Start delivers them.
+      }
     };
-    this.moving.add(taskId);
     try {
       const before = this.options.tasks.get(taskId);
-      if (before?.status !== "active" || before.accountId !== from || !before.model) return stay();
+      if (before?.status !== "active" || before.accountId !== from || !before.model)
+        return await stay();
       // A hold of its own keeps the task bound and unopened; the delivery
       // that follows the hold's end makes the move.
       if (this.host.runtime(taskId)?.turn.busy || this.host.laneHeld(taskId)) return;
@@ -146,7 +181,7 @@ export class LoginMoves {
         record.model !== before.model ||
         this.bound.get(taskId)?.to !== to
       )
-        return stay();
+        return await stay();
       this.bound.delete(taskId);
       if (runtime) {
         this.host.releaseSession(runtime);
@@ -174,19 +209,18 @@ export class LoginMoves {
       });
       // What waited on the login it left is due on the one it goes to.
       this.options.inbox.movedProvider(taskId);
-      if (!runtime && !reopen) {
+      if (!runtime && !going.reopen) {
+        going.handed = true;
         this.host.deliverLane(taskId);
         return;
       }
-      deliver(await this.host.resumeTask(taskId));
+      hand(await this.host.resumeTask(taskId));
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       // i18n-exempt: a task timeline row the first mate reads
       this.options.tasks.note(taskId, `its move to another login could not reopen it: ${message}`, {
         news: true,
       });
-    } finally {
-      this.moving.delete(taskId);
     }
   }
 }

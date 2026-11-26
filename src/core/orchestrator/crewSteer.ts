@@ -606,16 +606,19 @@ export class CrewSteer {
       if (sentByHost) this.tellBacklogNews(taskId, message);
       return "recorded-held";
     }
-    // A task bound to another login reopens there, never where it was (`LoginMoves`).
-    if (
-      this.core.loginMoves.takes(
-        taskId,
-        (open) => this.core.turns.deliverPendingToTask(open, { sent: true }),
-        true,
-      )
-    ) {
-      this.recordSteer(taskId, message, source, "mid-turn", resumeId);
-      return "mid-turn";
+    // A task bound to another login reopens there, never where it was
+    // (`LoginMoves`); the row is durable when the move hands nothing on.
+    const moved = this.core.loginMoves
+      .takes(taskId, (open) => this.core.turns.deliverPendingToTask(open, { sent: true }), true)
+      ?.then((handed): SteerDelivery => {
+        const outcome = handed ? "mid-turn" : "recorded-retrying";
+        this.recordSteer(taskId, message, source, outcome, resumeId);
+        return outcome;
+      });
+    if (moved) {
+      if (!behind) return moved;
+      void moved;
+      return "recorded-sending";
     }
     const resumed = this.core.sessions
       .resumeTask(record.id)
