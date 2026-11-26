@@ -321,14 +321,17 @@ describe("QuotaService", () => {
       },
     };
     let now = 5000;
+    let pooled = true;
     const broadcast = vi.fn();
-    const service = new QuotaService({
+    const db = openInMemoryDatabase();
+    const options = {
       refresh: vi.fn(async () => ({ snapshot, catalog: CATALOG })),
-      db: openInMemoryDatabase(),
+      db,
       broadcast,
       now: () => now,
-      pools: () => [pool],
-    });
+      pools: () => (pooled ? [pool] : []),
+    };
+    const service = new QuotaService(options);
     await service.refresh("demand");
     service.stop();
     const windowsOf = () =>
@@ -350,6 +353,28 @@ describe("QuotaService", () => {
       ["only", asRead],
     ]);
     expect(broadcast).toHaveBeenCalledTimes(1);
+
+    // The review's finding: the rows as measured are kept. A pushed row
+    // saves them, not the served view, and a login whose pool ends (the
+    // other was paused) is served its measured row again.
+    const pushed = { ...login("codex", "only"), plan: "Plus" };
+    service.publishProvider(pushed);
+    pooled = false;
+    const restored = new QuotaService(options);
+    restored.stop();
+    expect(
+      restored.latest()?.providers.map((row) => [row.accountId, row.windows.map((w) => w.id)]),
+    ).toEqual([
+      ["personal", asRead],
+      ["work", asRead],
+      ["only", asRead],
+    ]);
+    service.restamp();
+    expect(windowsOf()).toEqual([
+      ["personal", asRead],
+      ["work", asRead],
+      ["only", asRead],
+    ]);
   });
 
   // The meters are pushed, never polled: the service tells every surface

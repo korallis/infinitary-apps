@@ -114,14 +114,18 @@ export function accountPools(
  * reset has passed is no longer what the login has, so it leaves the row,
  * and every reader of the row, the pool and the catalog then agrees the
  * login serves again once its last such window is gone. Its other windows
- * keep what they read. `nextAtMs` is the next reset of a used-up window
- * still on a pooled login's row: when the rows change again. Rows of a
- * provider with no pool in `pools` are left as read.
+ * keep what they read. A login its provider refused until a later time
+ * (`refusedUntilMs`) keeps its used-up windows until then: a window's reset
+ * frees nothing while the refusal stands. `nextAtMs` is the next time a
+ * used-up window leaves a pooled login's row: when the rows change again.
+ * Rows of a provider with no pool in `pools` are left as read, and the rows
+ * given are never changed: they stay the measurement.
  */
 export function settlePoolResets(
   providers: readonly QuotaProviderView[],
   pools: readonly QuotaProviderView[],
   nowMs: number,
+  refusedUntilMs?: (accountId: string) => number | undefined,
 ): { providers: QuotaProviderView[]; changed: boolean; nextAtMs?: number } {
   const resetOfUsedUp = (window: QuotaProviderView["windows"][number]) =>
     typeof window.percentRemaining === "number" && window.percentRemaining <= 0
@@ -131,11 +135,13 @@ export function settlePoolResets(
   let nextAtMs: number | undefined;
   const settled = providers.map((row) => {
     if (row.pool || !inAccountsPool(accountsPoolOf(pools, row.provider), row.accountId)) return row;
+    const refusedUntil = (row.accountId && refusedUntilMs?.(row.accountId)) || 0;
     const windows = row.windows.filter((window) => {
       const resetsAtMs = resetOfUsedUp(window);
       if (resetsAtMs === undefined) return true;
-      if (resetsAtMs <= nowMs) return false;
-      if (nextAtMs === undefined || resetsAtMs < nextAtMs) nextAtMs = resetsAtMs;
+      const leavesAtMs = Math.max(resetsAtMs, refusedUntil);
+      if (leavesAtMs <= nowMs) return false;
+      if (nextAtMs === undefined || leavesAtMs < nextAtMs) nextAtMs = leavesAtMs;
       return true;
     });
     if (windows.length === row.windows.length) return row;

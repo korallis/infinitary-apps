@@ -696,14 +696,25 @@ describe("a spent pool of two logins, across its resets", () => {
     );
   const standing = (snapshot: QuotaSnapshotView) =>
     standingOn({ latest: () => snapshot, latestModels: () => catalogOf(snapshot) });
-  const standingOn = (quota: {
-    latest: () => QuotaSnapshotView | undefined;
-    latestModels: () => ReturnType<typeof catalogOf> | undefined;
-  }) => {
+  const standingOn = (
+    quota: {
+      latest: () => QuotaSnapshotView | undefined;
+      latestModels: () => ReturnType<typeof catalogOf> | undefined;
+    },
+    /** The provider's own refusal of login B, while one stands. */
+    refusedB?: () => FakeAccount["cutOff"],
+  ) => {
+    const cutOff = refusedB?.();
     const flagship = new Flagship({
       vault: vaultOf([
         { id: "a", providerId: "openai-codex", label: "A", enabled: true },
-        { id: "b", providerId: "openai-codex", label: "B", enabled: true },
+        {
+          id: "b",
+          providerId: "openai-codex",
+          label: "B",
+          enabled: true,
+          ...(cutOff ? { cutOff } : {}),
+        },
       ]),
       settings: settingsOf("a"),
       quota,
@@ -717,8 +728,15 @@ describe("a spent pool of two logins, across its resets", () => {
       seatB: flagship.pause("b")?.class,
       moveTo: flagship.sibling("a")?.id,
       poolBackAt: quota.latest()?.pools?.[0]?.pool?.backAtMs,
+      // The pooled meter, as Settings draws it: each window's share left.
+      meter: Object.fromEntries(
+        quota.latest()?.pools?.[0]?.windows.map((window) => [window.id, window.percentRemaining]) ??
+          [],
+      ),
     };
   };
+  // Both logins spent: every window of the pool reads empty.
+  const emptyMeter = { session: 0, weekly: 0 };
   const week = T + 72 * HOUR;
 
   it("holds every wait and the seat until the first login can serve, then clears them together", () => {
@@ -733,6 +751,7 @@ describe("a spent pool of two logins, across its resets", () => {
       seatB: "no_headroom",
       moveTo: undefined,
       poolBackAt: T + 2 * HOUR,
+      meter: emptyMeter,
     });
 
     // A's session has reset; its week still blocks it, so nothing serves yet.
@@ -759,14 +778,45 @@ describe("a spent pool of two logins, across its resets", () => {
       seatB: undefined,
       moveTo: "b",
       poolBackAt: week,
+      // B read a full session and half its week; A, spent, weighs zero in each.
+      meter: { session: 50, weekly: 25 },
     });
   });
+
+  // One reading for the two clock-only cases below. A's session resets in 1
+  // hour and its week in 72; B's session in 2 hours.
+  const rows = [login("a", [0, T + HOUR], [0, week]), login("b", [0, T + 2 * HOUR], [50, week])];
+  const pools = (snapshot: QuotaSnapshotView) =>
+    accountPools(
+      snapshot.providers,
+      rows.map((row) => ({ accountId: row.accountId, provider: row.provider })),
+      snapshot.fetchedAt,
+    );
+  const held = {
+    provider: false,
+    level: false,
+    seatA: "no_headroom",
+    seatB: "no_headroom",
+    moveTo: undefined,
+    poolBackAt: T + 2 * HOUR,
+    meter: emptyMeter,
+  };
+  // B's used-up session is gone from its row: its week reads half, and A,
+  // spent, weighs zero beside it.
+  const serving = {
+    provider: true,
+    level: true,
+    seatA: "no_headroom",
+    seatB: undefined,
+    moveTo: "b",
+    poolBackAt: week,
+    meter: { weekly: 25 },
+  };
 
   // The captain's choice on the review's question: pooled work resumes at
   // the first reset that makes a login usable, with no new reading.
   it("clears them together when that reset passes, on the one reading it already has", async () => {
     let now = T;
-    const rows = [login("a", [0, T + HOUR], [0, week]), login("b", [0, T + 2 * HOUR], [50, week])];
     const refresh = vi.fn(async () => ({
       snapshot: { generatedAt: new Date(T).toISOString(), fetchedAt: T, providers: rows },
       catalog: { generatedAt: new Date(T).toISOString(), models: [] },
@@ -778,23 +828,10 @@ describe("a spent pool of two logins, across its resets", () => {
       broadcast,
       now: () => now,
       catalogFor: catalogOf,
-      pools: (snapshot) =>
-        accountPools(
-          snapshot.providers,
-          rows.map((row) => ({ accountId: row.accountId, provider: row.provider })),
-          snapshot.fetchedAt,
-        ),
+      pools,
     });
     await service.refresh("demand");
     service.stop();
-    const held = {
-      provider: false,
-      level: false,
-      seatA: "no_headroom",
-      seatB: "no_headroom",
-      moveTo: undefined,
-      poolBackAt: T + 2 * HOUR,
-    };
     expect(standingOn(service)).toEqual(held);
 
     // A's session has reset; its week still blocks it, so nothing serves yet.
@@ -804,16 +841,41 @@ describe("a spent pool of two logins, across its resets", () => {
     // B's session has reset: B serves, and every reader says so at once.
     broadcast.mockClear();
     now = T + 2.1 * HOUR;
-    expect(standingOn(service)).toEqual({
-      provider: true,
-      level: true,
-      seatA: "no_headroom",
-      seatB: undefined,
-      moveTo: "b",
-      poolBackAt: week,
-    });
+    expect(standingOn(service)).toEqual(serving);
     // Every surface is told once, and nothing was read again.
     expect(broadcast).toHaveBeenCalledTimes(1);
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  // The review's finding: a window's reset frees nothing while the
+  // provider's own refusal of that login still stands.
+  it("holds them past a login's reset while its provider still refuses it", async () => {
+    let now = T;
+    // B's provider refused it until an hour after its session resets.
+    const refusedB = () =>
+      now < T + 3 * HOUR ? { class: "no_headroom" as const, resetsAt: T + 3 * HOUR } : undefined;
+    const service = new QuotaService({
+      refresh: async () => ({
+        snapshot: { generatedAt: new Date(T).toISOString(), fetchedAt: T, providers: rows },
+        catalog: { generatedAt: new Date(T).toISOString(), models: [] },
+      }),
+      db: openInMemoryDatabase(),
+      broadcast: () => {},
+      now: () => now,
+      catalogFor: catalogOf,
+      pools,
+      refusedUntil: (accountId) => (accountId === "b" ? refusedB()?.resetsAt : undefined),
+    });
+    await service.refresh("demand");
+    service.stop();
+    expect(standingOn(service, refusedB)).toEqual(held);
+
+    // B's session has reset, and its provider still refuses it.
+    now = T + 2.1 * HOUR;
+    expect(standingOn(service, refusedB)).toEqual(held);
+
+    // The refusal has ended: B serves.
+    now = T + 3.1 * HOUR;
+    expect(standingOn(service, refusedB)).toEqual(serving);
   });
 });

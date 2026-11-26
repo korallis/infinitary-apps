@@ -374,12 +374,16 @@ A pool is a reading of its logins, never an allowance of its own: each login kee
   A login whose row is missing, stale or not a reading is unread, and one whose sign-in ended cannot serve: both are counted on the pool and never weigh as zero.
 - **Where it lives.**
   The snapshot carries the pools beside the account rows, in `pools` (`quotaSnapshotViewSchema`), one row per pooled provider with no account id; `pool.source` is `accounts` and `pool.accounts` names the logins.
-  The account rows stay as they are, so everything that reads one account's row reads what it read before.
+  A pool adds a row and changes no account's measurement: `QuotaService` keeps every row as its reading left it, and that measurement is what a stale merge, a pushed row, a forgotten login and the saved snapshot work on.
+  What readers are served (`latest`) is that measurement, with one difference for pooled logins, "A reset between readings" below.
   The pools are folded on every snapshot, as of the time its rows were read, and again whenever the logins change: an account added, removed, paused or resumed (`QuotaService.restamp`), or a login whose reading is forgotten (`forgetAccount`).
 - **A reset between readings.**
-  A pooled login's used-up window leaves its row once its own reset has passed (`settlePoolResets`), with no new reading: the login's other windows keep what they read, and it serves again when its last used-up window is gone.
-  `QuotaService` does this at the reset itself, on a timer, and before any read after it, then folds the pool, rebuilds the catalog and pushes the snapshot, so the pooled meter, both reset gates, routing and the first mate's seat change together at the first reset that makes a login usable.
-  The provider's own refusal of a login still stands until it lifts, and a login of a provider with no pool keeps its row as read.
+  In the served snapshot, a pooled login's used-up window leaves its row once its own reset has passed (`settlePoolResets`), with no new reading: the login's other windows keep what they read, and it serves again when its last used-up window is gone.
+  A login whose every window was used up and has reset is served with no windows, so it reads as not read yet, never as full, until the next reading.
+  While the provider's own refusal of a login stands (the vault's cut-off, `refusedUntil`), its used-up windows stay on its row until the refusal ends, and the row follows the refusal when it begins or ends: a window's reset frees nothing while the provider still refuses the login.
+  `QuotaService` does this at that moment, on a timer, and before any read after it, then folds the pool, rebuilds the catalog and pushes the snapshot, so the pooled meter, both reset gates, routing and the first mate's seat change together at the first reset that makes a login usable.
+  The measurement is never rewritten: the saved snapshot holds the rows as read, and a login whose pool ends, because another was paused or removed, is served its measured row again.
+  A login of a provider with no pool is served its row as read.
 - **Routing.**
   A model of a pooled provider is read as its pool, not as its best login (`pooledView` in `src/core/quota/catalog.ts`): what is left is the pool's, and its place in the spend order is the mean of the scores of the logins that still have allowance (`poolRank`), since pooled windows have no one cycle to score.
   The pool lasts through its resets when one such login does.

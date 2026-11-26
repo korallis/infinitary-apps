@@ -63,6 +63,12 @@ export type QuotaServiceOptions = {
    */
   pools?: (snapshot: QuotaSnapshotView) => QuotaProviderView[];
   /**
+   * Until when the provider's own refusal of an account's spent allowance
+   * stands, when one does (the vault's cut-off): a pooled login's used-up
+   * window stays on its served row until then (`settlePoolResets`).
+   */
+  refusedUntil?: (accountId: string) => number | undefined;
+  /**
    * A reading of this computer alone (a CLI proxy's pools), taken on its
    * own clock between refreshes and never holding one up: each run answers
    * how it rewrites the last snapshot's rows, or nothing to leave it be.
@@ -75,7 +81,19 @@ export type QuotaServiceOptions = {
 };
 
 export class QuotaService {
+  /**
+   * The last snapshot as measured: every row as its reading left it. Stale
+   * merges, a pushed row, a forgotten login and what is saved all work on
+   * this one, never on the served view.
+   */
+  private measured: QuotaSnapshotView | undefined;
+  /**
+   * The snapshot every reader is served (`latest`): `measured`, with a
+   * pooled login's used-up windows that have reset left out (`laid`).
+   */
   private latestSnapshot: QuotaSnapshotView | undefined;
+  /** A lay is running: a `restamp` it sets off itself is that same lay. */
+  private laying = false;
   private latestCatalog: ModelsCatalogView | undefined;
   private refreshing: Promise<QuotaSnapshotView | undefined> | undefined;
   private refreshingReason: string | undefined;
@@ -102,33 +120,58 @@ export class QuotaService {
     if (json !== undefined) {
       const parsed = quotaSnapshotViewSchema.safeParse(JSON.parse(json));
       // The switches as they stand now, not as they stood when it was saved.
-      if (parsed.success) this.latestSnapshot = this.laid(parsed.data);
+      if (parsed.success) this.take(parsed.data);
     }
   }
 
+  /** Takes `snapshot` as the measurement and lays the served view over it. */
+  private take(snapshot: QuotaSnapshotView): QuotaSnapshotView {
+    const { measured, served } = this.laid(snapshot);
+    this.measured = measured;
+    this.latestSnapshot = served;
+    return served;
+  }
+
   /**
-   * A snapshot with what is derived from its rows laid over it: the
-   * switches, then the pools, whose logins' rows stand as of now
-   * (`settlePoolResets`): a pooled login's used-up window that has reset
-   * since the reading is gone from its row before the pool is folded.
+   * A snapshot with what is derived from its rows laid over it, twice:
+   * `measured` keeps every row as read, under the switches and the pools
+   * folded from those rows, and is what the next lay starts from and what
+   * is saved; `served` is what readers get, in which a pooled login's
+   * used-up window that has reset since the reading is gone from its row
+   * before the pool is folded (`settlePoolResets`). A login that leaves its
+   * pool is therefore served its measured row again.
    */
-  private laid(snapshot: QuotaSnapshotView): QuotaSnapshotView {
-    const { pools: _was, ...stamped } = this.options.stamp?.(snapshot) ?? snapshot;
-    const fold = this.options.pools;
-    const read = fold?.(stamped) ?? [];
-    const settled = settlePoolResets(stamped.providers, read, this.now());
-    this.settleAtMs = settled.nextAtMs;
-    this.arm();
-    if (!fold || !settled.changed) return read.length > 0 ? { ...stamped, pools: read } : stamped;
-    const standing = { ...stamped, providers: settled.providers };
-    const pools = fold(standing);
-    return pools.length > 0 ? { ...standing, pools } : standing;
+  private laid(snapshot: QuotaSnapshotView): {
+    measured: QuotaSnapshotView;
+    served: QuotaSnapshotView;
+  } {
+    this.laying = true;
+    try {
+      const { pools: _was, ...stamped } = this.options.stamp?.(snapshot) ?? snapshot;
+      const fold = this.options.pools;
+      const read = fold?.(stamped) ?? [];
+      const measured = read.length > 0 ? { ...stamped, pools: read } : stamped;
+      const settled = settlePoolResets(
+        stamped.providers,
+        read,
+        this.now(),
+        this.options.refusedUntil,
+      );
+      this.settleAtMs = settled.nextAtMs;
+      this.arm();
+      if (!fold || !settled.changed) return { measured, served: measured };
+      const standing = { ...stamped, providers: settled.providers };
+      const pools = fold(standing);
+      return { measured, served: pools.length > 0 ? { ...standing, pools } : standing };
+    } finally {
+      this.laying = false;
+    }
   }
 
   /**
    * The one reset fact every reader shares (docs/quota.md, "A pool of your
    * own logins"): once a pooled login's used-up window has reset, the last
-   * snapshot and its catalog are read again without it and pushed, so the
+   * snapshot and its catalog are served again without it and pushed, so the
    * meters, both waits, routing and the first mate's seat change together
    * at that moment. A timer brings it, and so does any read after it, so a
    * late timer never leaves two readers on different facts.
@@ -191,8 +234,8 @@ export class QuotaService {
    * surface see it now.
    */
   restamp(): void {
-    if (!this.latestSnapshot) return;
-    this.latestSnapshot = this.laid(this.latestSnapshot);
+    if (!this.measured || !this.latestSnapshot || this.laying) return;
+    this.take(this.measured);
     const rebuilt = this.options.catalogFor
       ? modelsCatalogViewSchema.safeParse(this.options.catalogFor(this.latestSnapshot))
       : undefined;
@@ -213,18 +256,18 @@ export class QuotaService {
    * False, changing nothing, while there is no snapshot to lay it in.
    */
   publishProvider(view: QuotaProviderView): boolean {
-    const latest = this.latestSnapshot;
+    const latest = this.measured;
     if (!latest) return false;
     const same = (provider: QuotaProviderView) =>
       provider.provider === view.provider && provider.accountId === view.accountId;
-    this.latestSnapshot = {
+    this.measured = {
       ...latest,
       providers: latest.providers.some(same)
         ? latest.providers.map((provider) => (same(provider) ? view : provider))
         : [...latest.providers, view],
     };
     this.restamp();
-    this.snapshots.record(this.latestSnapshot);
+    this.snapshots.record(this.measured);
     return true;
   }
 
@@ -263,12 +306,13 @@ export class QuotaService {
     try {
       const rewrite = await local.run();
       this.localRewrite = rewrite;
-      const latest = this.latestSnapshot;
+      const latest = this.measured;
       if (!rewrite || !latest) return;
       const merged = mergeStaleProviders(rewrite(latest), latest, this.now());
       const next = this.laid(merged);
-      if (JSON.stringify(next.providers) === JSON.stringify(latest.providers)) return;
-      this.latestSnapshot = next;
+      if (JSON.stringify(next.measured.providers) === JSON.stringify(latest.providers)) return;
+      this.measured = next.measured;
+      this.latestSnapshot = next.served;
       this.recatalog();
     } catch {
       // A local reading that failed leaves the last snapshot as it was.
@@ -300,10 +344,12 @@ export class QuotaService {
   forgetAccount(accountId: string): void {
     const latest = this.latestSnapshot;
     if (!latest?.providers.some((provider) => provider.accountId === accountId)) return;
-    this.latestSnapshot = {
-      ...latest,
-      providers: latest.providers.filter((provider) => provider.accountId !== accountId),
-    };
+    const without = (snapshot: QuotaSnapshotView) => ({
+      ...snapshot,
+      providers: snapshot.providers.filter((provider) => provider.accountId !== accountId),
+    });
+    this.latestSnapshot = without(latest);
+    if (this.measured) this.measured = without(this.measured);
     // A pool that folded the old login's reading is folded again without it.
     if (latest.pools) this.restamp();
   }
@@ -335,9 +381,8 @@ export class QuotaService {
       try {
         const result = await this.options.refresh(reason);
         const read = this.localRewrite?.(result.snapshot) ?? result.snapshot;
-        const merged = mergeStaleProviders(read, this.latestSnapshot, this.now());
-        const snapshot = this.laid(merged);
-        this.latestSnapshot = snapshot;
+        const merged = mergeStaleProviders(read, this.measured, this.now());
+        const snapshot = this.take(merged);
         // The refresh's own catalog never saw the local reading's rows, nor
         // the pools.
         const catalog = modelsCatalogViewSchema.safeParse(
@@ -347,7 +392,7 @@ export class QuotaService {
         );
         if (catalog.success)
           this.latestCatalog = markCredits(catalog.data, snapshot.providers, snapshot.pools);
-        this.snapshots.record(snapshot);
+        if (this.measured) this.snapshots.record(this.measured);
         this.options.broadcast(snapshot);
         // What a refresh read can change what the local reading reads (a
         // connection added or moved): it runs again now, not at its next tick.

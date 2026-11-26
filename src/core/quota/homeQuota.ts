@@ -480,6 +480,10 @@ export function startHomeQuota(options: {
         }),
         snapshot.fetchedAt,
       ),
+    refusedUntil: (accountId) => {
+      const standing = vault.cutOff(accountId);
+      return standing?.class === "no_headroom" ? standing.resetsAt : undefined;
+    },
     broadcast: options.broadcast,
     ...(readProxy
       ? {
@@ -506,6 +510,9 @@ export function startHomeQuota(options: {
       .map((account) => account.id),
   );
   vault.onCutOffChange((accountId) => {
+    // A pooled login's refusal began or ended: its served row follows it now
+    // (`refusedUntil`), not at the next reading.
+    if (quota.latest()?.pools) quota.restamp();
     if (vault.cutOff(accountId)?.class === "no_headroom") {
       spentHeld.add(accountId);
       return;
