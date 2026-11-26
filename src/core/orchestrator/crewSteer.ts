@@ -265,7 +265,9 @@ export class CrewSteer {
     if (this.core.disposed()) return;
     const task = this.core.tasks.get(taskId);
     if (task?.session && !task.turn.closing && !task.turn.busy) {
-      this.core.turns.deliverPendingToTask(task, { sent: true });
+      // Held for its click's check, it keeps its wake until that check (`LoginMoves`).
+      if (!this.core.turns.deliverPendingToTask(task, { sent: true }))
+        this.core.loginMoves.keepsSent(taskId);
       return;
     }
     const record = this.core.options.tasks.get(taskId);
@@ -586,7 +588,7 @@ export class CrewSteer {
       const pending = enqueue();
       if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
         // Kept on the lane until the account serves again, or the task leaves the backlog.
-        this.core.loginMoves.keepsSent(taskId);
+        if (!sentByHost) this.core.loginMoves.keepsSent(taskId);
         this.recordSteer(taskId, message, source, "recorded-held", pending);
         if (sentByHost) this.tellBacklogNews(taskId, message);
         return "recorded-held";
@@ -607,7 +609,7 @@ export class CrewSteer {
     }
     const resumeId = enqueue();
     if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
-      this.core.loginMoves.keepsSent(taskId);
+      if (!sentByHost) this.core.loginMoves.keepsSent(taskId);
       this.recordSteer(taskId, message, source, "recorded-held", resumeId);
       if (sentByHost) this.tellBacklogNews(taskId, message);
       return "recorded-held";

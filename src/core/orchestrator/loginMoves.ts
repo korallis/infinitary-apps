@@ -61,7 +61,7 @@ export class LoginMoves {
   private readonly moving = new Map<string, Going>();
   /** Each task still to move, with the login it leaves and the one named for it. */
   private readonly bound = new Map<string, { from: string; to: string }>();
-  /** Each task sent a message while its click's check was awaited (`keepsSent`). */
+  /** Each task whose lane keeps a message someone sent, until a delivery takes it (`keepsSent`). */
   private readonly owed = new Set<string>();
 
   constructor(
@@ -108,10 +108,15 @@ export class LoginMoves {
    * Binds each task on `from` to `to` and moves those between turns now;
    * one inside a turn moves at its lane's next delivery. Every task's move
    * is saved in one write before any is bound: a write that fails throws
-   * here, before the promise, with no task bound and nothing saved.
+   * here, before the promise, with no task bound and nothing saved. With
+   * `unnamedOnly`, a task another login is already named for keeps that
+   * login: the click that asked about the rest did not ask about it.
    */
-  moveOff(from: string, to: string): Promise<void> {
-    const taskIds = this.tasksOn(from);
+  moveOff(from: string, to: string, unnamedOnly = false): Promise<void> {
+    const taskIds = this.tasksOn(from).filter((taskId) => {
+      const bound = this.bound.get(taskId);
+      return !unnamedOnly || !bound || (bound.from === from && bound.to === to);
+    });
     // The same move named again keeps its binding, so a pick already out for it stands.
     const named = taskIds.filter((taskId) => {
       const bound = this.bound.get(taskId);
@@ -133,9 +138,11 @@ export class LoginMoves {
 
   /**
    * A message someone sent is kept on the task's lane because its click's
-   * check is awaited: true when so. The check's outcome then delivers it
-   * as a sent message, on the named login or where the task is, so a task
-   * in the backlog, which no sweep opens, still reads it.
+   * check is awaited: true when so. It is delivered as a sent message, on
+   * the named login or where the task is, once the click is checked and
+   * nothing else holds the lane, so a task in the backlog, which no sweep
+   * opens, still reads it. Never for a notice of the host's own, which
+   * waits in the backlog for a Start.
    */
   keepsSent(taskId: string): boolean {
     if (!this.awaitsCheck(taskId)) return false;
@@ -145,21 +152,42 @@ export class LoginMoves {
 
   /** Delivers each kept sent message whose click has been checked. */
   private payOwed(): void {
-    for (const taskId of [...this.owed]) {
-      if (this.awaitsCheck(taskId)) continue;
-      this.owed.delete(taskId);
-      const deliver = (task: TaskRuntime) => this.host.deliverPendingToTask(task, true);
-      if (this.takes(taskId, deliver, true) || this.host.laneHeld(taskId)) continue;
-      const open = this.host.runtime(taskId);
-      if (open) deliver(open);
-      else
-        void this.host
-          .resumeTask(taskId)
-          .then(deliver)
-          .catch(() => {
-            // The rows are durable: the next message or Start delivers them.
-          });
+    for (const taskId of [...this.owed]) this.paySent(taskId);
+  }
+
+  /**
+   * Delivers the task's kept sent message when its click has been checked
+   * and no hold stands. It stays kept until a delivery takes the lane, so
+   * another hold, a conversation that did not open or a delivery that was
+   * not admitted leaves it for the lane's next sweep. `failed` is told of
+   * a conversation that did not open.
+   */
+  paySent(taskId: string, failed: () => void = () => {}): void {
+    if (!this.owed.has(taskId) || this.awaitsCheck(taskId) || this.host.laneHeld(taskId)) return;
+    this.owed.delete(taskId);
+    const deliver = (task: TaskRuntime) => this.host.deliverPendingToTask(task, true);
+    // Still kept while rows wait that no delivery took.
+    const settle = (taken: boolean) => {
+      const parked = this.options.tasks.get(taskId)?.backlogSince != null;
+      if (!taken && parked && this.options.inbox.pending(taskId).length > 0) this.owed.add(taskId);
+    };
+    const moved = this.takes(taskId, deliver, true);
+    if (moved) {
+      void moved.then(settle);
+      return;
     }
+    const open = this.host.runtime(taskId);
+    if (open) {
+      settle(deliver(open));
+      return;
+    }
+    void this.host
+      .resumeTask(taskId)
+      .then(deliver)
+      .then(settle, () => {
+        this.owed.add(taskId);
+        failed();
+      });
   }
 
   /**

@@ -52,6 +52,8 @@ function home(
   const withdrawn: string[] = [];
   /** The tasks' moves and the pin's, in the order the watch recorded them. */
   const order: string[] = [];
+  /** For each move of tasks, whether it was only of tasks no login was named for. */
+  const scoped: boolean[] = [];
   const events: FmEvent[] = [];
   const state = {
     pin: "personal" as string | undefined,
@@ -73,8 +75,9 @@ function home(
     tasksOn: () => ["task-1"],
     unnamedOn: () => (named !== undefined ? [] : ["task-1"]),
     // As `LoginMoves.moveOff`: a record that cannot be written throws before the promise.
-    moveOff: (from: string, to: string) => {
+    moveOff: (from: string, to: string, unnamedOnly?: boolean) => {
       if (state.movesUnwritable) throw new Error("the record could not be written");
+      scoped.push(unnamedOnly === true);
       moved.push(`${from} to ${to}`);
       order.push(`tasks ${from} to ${to}`);
       named = from;
@@ -147,6 +150,7 @@ function home(
     discarded,
     withdrawn,
     order,
+    scoped,
     state,
     loginMoves,
     saved,
@@ -508,6 +512,26 @@ describe("the home's watch after a relaunch, while the login a Move click left i
     after.watch.read();
     expect(after.raised).toEqual([]);
     expect(after.order).toEqual(["tasks personal to spare", "pin spare"]);
+  });
+
+  // INA-9: under spread the card asks about work no login is named for, so its click names only that work.
+  it("moves under spread only the work no login was named for, and under ask all the work on the login in use", () => {
+    const logins = () => [
+      login("personal", "Personal", 4),
+      login("work", "Work", 40),
+      login("spare", "Spare", 60),
+    ];
+    const spread = home(logins());
+    spread.state.choice = "spread";
+    spread.watch.read();
+    spread.loginMoves.onClick?.("spare");
+    expect(spread.order).toEqual(["tasks personal to spare", "pin spare"]);
+    expect(spread.scoped).toEqual([true]);
+
+    const ask = home(logins());
+    ask.watch.read();
+    ask.loginMoves.onClick?.("spare");
+    expect(ask.scoped).toEqual([false]);
   });
 
   it("refuses the click without waiting for the reading once the choice no longer asks", () => {

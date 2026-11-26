@@ -27,6 +27,7 @@ import { STUCK_REFUSAL_LIMIT } from "../storage/inboxStore";
 import { SettingsStore } from "../storage/settingsStore";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
+import { SUPERVISOR_STEER } from "./crewRuntime";
 import { crewmateRestartText } from "./crewSession";
 import type { AccountAttachment, CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { BACKLOG_STEER_LINE } from "./crewTurns";
@@ -1681,6 +1682,214 @@ describe("the low-login card's Move click, cut off as the app quits", () => {
     expect(h.tasks.get("t-move")?.accountId).toBe("acct_spare");
     expect(boundAccount(h, 1)).toBe("acct_spare");
     expect(h.tasks.get("t-move")?.backlogSince != null).toBe(true);
+    await h.supervisor.disposeAll();
+  });
+
+  /**
+   * The click was cut off and the app relaunched; both tasks are in the
+   * backlog and nothing has read the logins yet.
+   */
+  async function relaunchedInBacklog() {
+    const { h, vault, cardId } = await clickCutOff();
+    expect(() =>
+      h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_spare"),
+    ).toThrow("the app quit");
+    await h.supervisor.disposeAll();
+    const specs: { binding?: unknown }[] = [];
+    const boots: FakeCrewmate[] = [];
+    const relaunched = reboot(
+      h,
+      async (spec: { binding?: unknown }) => {
+        specs.push(spec);
+        const boot = fakeCrewmate({});
+        boots.push(boot);
+        return boot;
+      },
+      { router: h.router as unknown as Router, ...h.relaunchWith },
+    );
+    vault.quitsAtPin = false;
+    for (const id of TASKS) {
+      h.costs.clearHold(id);
+      expect(
+        relaunched.hostOps.moveToBacklog(id, { actor: "firstmate", via: "tool", decision: null })
+          .ok,
+      ).toBe(true);
+    }
+    const prompts = () => boots.flatMap((boot) => boot.promptCalls);
+    const accounts = () =>
+      specs.map((spec) => (spec.binding as { accountId?: string } | undefined)?.accountId);
+    const read = (spare: number) =>
+      watching(h, relaunched, vault, () => [
+        reading("acct_personal", "Personal", 4),
+        reading("acct_work", "Work", spare < 10 ? 40 : 95),
+        reading("acct_spare", "Spare", spare),
+      ]).read();
+    return { h, relaunched, prompts, accounts, read };
+  }
+
+  // docs/inbox.md: the host's own steer waits on a started task's lane in the backlog until a Start.
+  it("starts no turn in the backlog for the host's own notice kept while the click was unchecked", async () => {
+    const { h, relaunched, prompts, read } = await relaunchedInBacklog();
+    await expect(
+      relaunched.steer.steerInternal("t-move", "Checks passed.", SUPERVISOR_STEER),
+    ).resolves.toBe("recorded-held");
+    read(60);
+    await tick();
+    await relaunched.watch.sweepInbox(Date.now());
+    await tick();
+    expect(prompts()).toEqual([]);
+    expect(h.inbox.allFor("t-move").filter((row) => row.deliveredAt == null)).toHaveLength(1);
+    expect(h.tasks.get("t-move")?.backlogSince != null).toBe(true);
+    await relaunched.disposeAll();
+  });
+
+  it("keeps a sent message's wake through a cost limit that outlasts the click's check, and delivers it on the named login when the limit is lifted", async () => {
+    const { h, relaunched, prompts, accounts, read } = await relaunchedInBacklog();
+    await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "recorded-held",
+    );
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    read(60);
+    await tick();
+    await relaunched.watch.sweepInbox(Date.now());
+    await tick();
+    expect(prompts()).toEqual([]);
+
+    h.costs.clearHold("t-move");
+    await relaunched.watch.sweepTaskLane("t-move", Date.now());
+    await vi.waitFor(() => expect(prompts()).toHaveLength(1));
+    expect(prompts()[0]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+    expect(prompts()[0]).toContain("Check the footer too.");
+    expect(accounts()).toEqual(["acct_spare"]);
+    expect(h.tasks.get("t-move")?.backlogSince != null).toBe(true);
+    // Taken, it is owed no more: a later sweep opens nothing.
+    await relaunched.watch.sweepTaskLane("t-move", Date.now());
+    await tick();
+    expect(prompts()).toHaveLength(1);
+    await relaunched.disposeAll();
+  });
+
+  it("starts no turn for the host's own notice kept while the click was unchecked, in a backlog task whose conversation is open", async () => {
+    const { h, vault, first, cardId } = await clickCutOff();
+    for (const id of TASKS) {
+      h.costs.clearHold(id);
+      expect(
+        h.supervisor.hostOps.moveToBacklog(id, { actor: "firstmate", via: "tool", decision: null })
+          .ok,
+      ).toBe(true);
+    }
+    await h.supervisor.sessions.resumeTask("t-move");
+    expect(() =>
+      h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_spare"),
+    ).toThrow("the app quit");
+    await expect(
+      h.supervisor.steer.steerInternal("t-move", "Checks passed.", SUPERVISOR_STEER),
+    ).resolves.toBe("recorded-held");
+
+    vault.quitsAtPin = false;
+    first.read();
+    await vi.waitFor(() => expect(h.tasks.get("t-move")?.accountId).toBe("acct_spare"));
+    await tick();
+    await h.supervisor.watch.sweepInbox(Date.now());
+    await tick();
+    expect(h.inbox.allFor("t-move").filter((row) => row.deliveredAt == null)).toHaveLength(1);
+    await h.supervisor.disposeAll();
+  });
+
+  it("keeps a sent message's wake when a cost limit is reached as the conversation opens after the click is refused, and delivers it when the limit is lifted", async () => {
+    const { h, relaunched, prompts, accounts, read } = await relaunchedInBacklog();
+    await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "recorded-held",
+    );
+    const resume = relaunched.sessions.resumeTask.bind(relaunched.sessions);
+    const open = vi
+      .spyOn(relaunched.sessions, "resumeTask")
+      .mockImplementationOnce(async (...args) => {
+        const opened = await resume(...args);
+        h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+        return opened;
+      });
+    read(3);
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    await tick();
+    expect(prompts()).toEqual([]);
+
+    h.costs.clearHold("t-move");
+    await relaunched.watch.sweepTaskLane("t-move", Date.now());
+    await vi.waitFor(() => expect(prompts()).toHaveLength(1));
+    expect(prompts()[0]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+    expect(accounts()).toEqual(["acct_personal"]);
+    await relaunched.disposeAll();
+  });
+
+  it("keeps a sent message's wake when the conversation does not open after the click is refused, waits out the back-off and delivers it then", async () => {
+    const { h, relaunched, prompts, accounts, read } = await relaunchedInBacklog();
+    await expect(relaunched.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "recorded-held",
+    );
+    const open = vi
+      .spyOn(relaunched.sessions, "resumeTask")
+      .mockRejectedValueOnce(new Error("could not open"))
+      .mockRejectedValueOnce(new Error("could not open"));
+    // Spare has 3% left now: the click is refused and the task stays on Personal.
+    read(3);
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    await tick();
+    expect(prompts()).toEqual([]);
+
+    const now = Date.now();
+    await relaunched.watch.sweepTaskLane("t-move", now);
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(2));
+    await tick();
+    expect(prompts()).toEqual([]);
+    const next = Math.max(...h.inbox.allFor("t-move").map((row) => row.nextAttemptAt ?? 0));
+    expect(next).toBeGreaterThan(now);
+    // Before the back-off ends nothing is tried.
+    await relaunched.watch.sweepTaskLane("t-move", now);
+    await tick();
+    expect(open).toHaveBeenCalledTimes(2);
+
+    vi.setSystemTime(next);
+    await relaunched.watch.sweepTaskLane("t-move", next);
+    await vi.waitFor(() => expect(prompts()).toHaveLength(1));
+    expect(prompts()[0]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+    expect(prompts()[0]).toContain("Check the footer too.");
+    expect(accounts()).toEqual(["acct_personal"]);
+    await relaunched.disposeAll();
+  });
+
+  it("delivers files whose crossing ended while the click was unchecked to a backlog task with its conversation open, on the named login once the click is accepted", async () => {
+    const { h, vault, first, cardId } = await clickCutOff();
+    for (const id of TASKS) {
+      h.costs.clearHold(id);
+      expect(
+        h.supervisor.hostOps.moveToBacklog(id, { actor: "firstmate", via: "tool", decision: null })
+          .ok,
+      ).toBe(true);
+    }
+    await h.supervisor.sessions.resumeTask("t-other");
+    expect(boundAccount(h, 0)).toBe("acct_personal");
+    expect(() =>
+      h.supervisor.cardActions.act(cardId, "move-login-acct_personal-acct_spare"),
+    ).toThrow("the app quit");
+    seedTask(h.tasks, { id: "t-finder", title: "Find the screenshot", status: "idle" });
+    const picture = join(scratchDir("infinitary-handed-"), "clipped card.png");
+    writeFileSync(picture, "a picture of the clipped card");
+    await keepHandoverFiles([picture], crewmateHandoverDir(h.paths, "t-finder"));
+    await h.supervisor.steer.steerAfterFiles("t-finder", "t-other", "look at it", {
+      response: { mode: "guidance-only" as const },
+    });
+    await vi.waitFor(() => expect(h.supervisor.steer.handingOver("t-other")).toBe(false));
+    await tick();
+    const waiting = () => h.inbox.allFor("t-other").filter((row) => row.deliveredAt == null);
+    expect(waiting().length).toBeGreaterThan(0);
+
+    vault.quitsAtPin = false;
+    first.read();
+    await vi.waitFor(() => expect(waiting()).toHaveLength(0));
+    expect(h.tasks.get("t-other")?.accountId).toBe("acct_spare");
+    expect(boundAccount(h, 1)).toBe("acct_spare");
+    expect(h.tasks.get("t-other")?.backlogSince != null).toBe(true);
     await h.supervisor.disposeAll();
   });
 

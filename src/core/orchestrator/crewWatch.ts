@@ -412,8 +412,17 @@ export class CrewWatch {
     if (this.core.options.inbox.isServiceRecipient(taskId)) return;
     const spent = this.core.options.inbox.spent(taskId, INBOX_ATTEMPT_MAX);
     if (spent.length > 0) this.escalateTaskGuidance(taskId, spent);
-    // A started task in the backlog keeps its lane until a Start (INF-2062).
-    if (this.core.facts.inBacklog(taskId)) return;
+    // A started task in the backlog keeps its lane until a Start (INF-2062),
+    // but for a message someone sent while a Move click was unchecked, which
+    // keeps its wake until a delivery takes it (`LoginMoves.keepsSent`).
+    if (this.core.facts.inBacklog(taskId)) {
+      const due = this.core.facts.deliverableRows(taskId, now);
+      if (due.length > 0)
+        this.core.loginMoves.paySent(taskId, () =>
+          this.core.options.inbox.release(due.map((row) => row.id)),
+        );
+      return;
+    }
     if (
       this.core.restarts.observing(taskId) &&
       this.core.facts.laneHeld(taskId) &&
