@@ -193,8 +193,11 @@ export async function ensureBundledGit({
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  if (process.platform !== "darwin") process.exit(0);
+// Elsewhere than macOS this ends by itself, never through process.exit: on
+// Windows, Node 24 aborts on an exit this early in a TypeScript script (an
+// assertion in libuv, in most runs), and that status failed the whole install
+// (tests/bundled-git-step.test.ts).
+if (process.argv[1] === fileURLToPath(import.meta.url) && process.platform === "darwin") {
   ensureBundledGit().catch((error: unknown) => {
     const reason = error instanceof Error ? error.message : String(error);
     console.error(
