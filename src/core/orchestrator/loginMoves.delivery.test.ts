@@ -140,6 +140,10 @@ function seedRunning(
   h.tasks.recordBrief("t-move", ["Goal: fix the login form."]);
 }
 
+/** How many times the center was told something sent reached a crewmate. */
+const reached = (h: ReturnType<typeof setup>) =>
+  h.events.filter((event) => event.type === "task_event" && event.kind === "reached").length;
+
 const boundAccount = (h: ReturnType<typeof setup>, index: number) =>
   (h.sessionSpecs[index]?.binding as { accountId?: string } | undefined)?.accountId;
 
@@ -887,6 +891,7 @@ describe("a task still to move whose conversation is restarted", () => {
     expect(boundAccount(h, 1)).toBe("acct_work");
     expect(second.promptCalls).toHaveLength(0);
 
+    const before = reached(h);
     opening.holds = false;
     h.costs.clearHold(taskId);
     await h.supervisor.watch.sweepInbox(Date.now());
@@ -894,6 +899,36 @@ describe("a task still to move whose conversation is restarted", () => {
     expect(second.promptCalls[0]).toContain("context limit");
     expect(h.sessionSpecs).toHaveLength(2);
     expect(first.promptCalls).toHaveLength(1);
+    // Nobody sent the restart's own turn: the center draws nothing for it.
+    expect(reached(h)).toBe(before);
+  });
+
+  it("tells the center a message reached the task once, when the reopened task takes it, and not while a cost limit that came up as it opened stands", async () => {
+    const first = fakeCrewmate({});
+    const h = threeLogins("openai-codex", first, fakeCrewmate({}), false);
+    seedRunning(h, MODEL, "/tmp/s1.jsonl");
+    // Sent while its cost limit stands, so it waits on the lane.
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    await expect(h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "recorded-held",
+    );
+    const opening = costLimitWhileOpening(h, () => "t-move");
+    h.costs.clearHold("t-move");
+    const before = reached(h);
+
+    await h.supervisor.watch.sweepInbox(Date.now());
+    await vi.waitFor(() => expect(h.sessionSpecs).toHaveLength(1));
+    await tick();
+    // The limit was reached again as the conversation opened: nothing reached the task.
+    expect(first.promptCalls).toHaveLength(0);
+    expect(reached(h)).toBe(before);
+
+    opening.holds = false;
+    h.costs.clearHold("t-move");
+    await h.supervisor.watch.sweepInbox(Date.now());
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    expect(first.promptCalls[0]).toContain("Check the footer too.");
+    expect(reached(h)).toBe(before + 1);
   });
 
   it("starts no turn when its cost limit is reached again while a restart kept for a hold reopens, and takes it once that limit is answered", async () => {
@@ -938,6 +973,7 @@ describe("a task still to move whose conversation is restarted", () => {
     expect(boundAccount(h, 1)).toBe("acct_work");
     expect(second.promptCalls).toHaveLength(0);
 
+    const before = reached(h);
     opening.holds = false;
     h.costs.clearHold(taskId);
     await h.supervisor.watch.sweepInbox(Date.now());
@@ -945,6 +981,7 @@ describe("a task still to move whose conversation is restarted", () => {
     expect(second.promptCalls[0]).toContain("context limit");
     expect(h.sessionSpecs).toHaveLength(2);
     expect(first.promptCalls).toHaveLength(1);
+    expect(reached(h)).toBe(before);
   });
 });
 

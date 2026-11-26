@@ -251,6 +251,7 @@ export class CrewTurns {
     // was queued after the message it rides.
     const leading = this.core.sessions.claimConversationRestart(task.id, inboxIds);
     const ids = [...leading.map((row) => row.id), ...inboxIds];
+    task.restartDue = undefined;
     this.beginTurn(task, ids);
     // The rows it delivers name the turn, so a conversation on another
     // computer starts it once however often it is asked.
@@ -1274,16 +1275,6 @@ export class CrewTurns {
    * stays. A reopen that fails is a note on the task, and the first mate
    * hears it as the failed turn it is.
    */
-  /**
-   * A hold came up while a restarted conversation opened with nothing but
-   * its restart reason to serve: its first turn waits on its lane as a row
-   * of its own, since the reason alone starts no turn of an open
-   * conversation (`CrewFacts.deliverableRows`), and goes out after the hold.
-   */
-  continueAfterHold(taskId: string): void {
-    this.core.options.inbox.enqueue(taskId, CONTEXT_CONTINUE_TEXT);
-  }
-
   private async recoverContext(task: TaskRuntime): Promise<void> {
     if (this.core.tasks.get(task.id) !== task) return;
     const from = this.core.options.tasks.get(task.id)?.sessionFile;
@@ -1310,7 +1301,9 @@ export class CrewTurns {
       if (this.core.facts.deliverableRows(task.id, this.core.now()).length > 0)
         this.deliverPendingToTask(resumed);
       else if (!resumed.turn.busy && !resumed.turn.closing) {
-        if (this.core.facts.laneHeld(task.id)) this.continueAfterHold(task.id);
+        // A hold that came up while it opened: the restart's reason is its
+        // first turn, after the hold.
+        if (this.core.facts.laneHeld(task.id)) resumed.restartDue = true;
         else void this.runTurn(resumed, CONTEXT_CONTINUE_TEXT);
       }
     } catch (caught) {
@@ -1486,12 +1479,26 @@ export class CrewTurns {
    * a row delivered again already drew its spark.
    */
   deliverRows(taskId: string, rows: readonly InboxRow[]): number[] {
-    const ids = rows.map((row) => row.id);
-    const sent = rows.some(
+    const sent = this.reaches(rows);
+    const ids = this.claimRows(rows);
+    if (sent) this.core.steer.announceReach(taskId);
+    return ids;
+  }
+
+  /** Whether one of the rows is a sent row going out for the first time. */
+  reaches(rows: readonly InboxRow[]): boolean {
+    return rows.some(
       (row) => row.lastAttemptAt === null && !OWN_LANE_KINDS.has(row.facts?.kind ?? ""),
     );
+  }
+
+  /**
+   * Lane rows marked in flight with no spark yet, for a delivery that opens
+   * the conversation first: the spark flies once the turn is admitted.
+   */
+  claimRows(rows: readonly InboxRow[]): number[] {
+    const ids = rows.map((row) => row.id);
     this.core.options.inbox.markDelivered(ids);
-    if (sent) this.core.steer.announceReach(taskId);
     return ids;
   }
 

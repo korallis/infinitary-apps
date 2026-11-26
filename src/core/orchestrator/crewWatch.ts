@@ -502,30 +502,39 @@ export class CrewWatch {
       return;
     const pictures = this.core.facts.rowPictures(taskId, due);
     if (pictures.blocked) return;
-    const ids = this.core.turns.deliverRows(taskId, due);
+    // The spark for a sent row flies once the reopened task takes the turn.
+    const reaches = this.core.turns.reaches(due);
+    const ids = this.core.turns.claimRows(due);
+    const unspent = () => {
+      this.core.options.inbox.reparkUndelivered(ids);
+      this.core.options.inbox.neverAttempted(
+        due.filter((row) => row.lastAttemptAt === null).map((row) => row.id),
+      );
+    };
     try {
       const resumed = await this.core.sessions.resumeTask(taskId);
       // A hold that came up while the conversation opened starts no turn:
-      // the rows go back unspent for the delivery after it.
+      // the rows go back unspent for the delivery after it, a restart's
+      // reason among them.
       if (this.core.facts.laneHeld(taskId)) {
-        this.core.options.inbox.reparkUndelivered(ids);
-        if (due.every((row) => row.facts?.kind === "conversation-restart"))
-          this.core.turns.continueAfterHold(taskId);
+        unspent();
+        resumed.restartDue = true;
         return;
       }
+      if (reaches) this.core.steer.announceReach(taskId);
       void this.core.turns.runTurn(resumed, laneTurnText(due), ids, pictures.images);
     } catch (caught) {
       // Waiting for a model is no refused delivery: the rows go back
       // unspent, and the lane holds until a model can take it.
       if (caught instanceof ModelWaitError) {
-        this.core.options.inbox.reparkUndelivered(ids);
+        unspent();
         this.core.restarts.recordRestartOutcome(taskId, "waiting", caught.message);
         return;
       }
       // A conversation that opened but was not accepted took no words: the
       // rows go back unspent, and the next pass opens again.
       if (caught instanceof NotAcceptedError) {
-        this.core.options.inbox.reparkUndelivered(ids);
+        unspent();
         this.core.restarts.recordRestartOutcome(taskId, "waiting", caught.message);
         return;
       }

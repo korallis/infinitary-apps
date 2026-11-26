@@ -66,7 +66,7 @@ export class CrewFacts {
       row.facts.restart.from === sessionFile;
     const rest = rows.filter(
       (row) =>
-        (row.facts?.kind !== "conversation-restart" || waited(row)) &&
+        (row.facts?.kind !== "conversation-restart" || waited(row) || task?.restartDue) &&
         !(running && row.facts?.kind === "turn-resumed"),
     );
     // A policy, override or kept-copy notice alone is guidance, not permission to resume or start.
