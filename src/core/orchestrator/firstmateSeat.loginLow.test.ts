@@ -109,6 +109,47 @@ describe("the first mate's login running out, under each choice", () => {
   });
 });
 
+// "First mate": only a spent allowance follows the choice. A lost sign-in or
+// a refusal on the seat's login still moves it to another login on its own.
+describe("the first mate's login lost or refused, under each choice", () => {
+  const MOVED = {
+    signed_out: "Your first mate moved to Work #2 - Personal needs you to sign in again.",
+    refused: "Your first mate moved to Work #2 - Codex is not answering your first mate right now.",
+  };
+  it.each(
+    (["wait", "ask", "spread", "move"] as const).flatMap((choice) =>
+      (["signed_out", "refused"] as const).map((cutOff) => ({ choice, cutOff })),
+    ),
+  )(
+    "moves to the other login on its own under $choice when its login is $cutOff",
+    async ({ choice, cutOff }) => {
+      const t = twoLogins();
+      t.settings.setWhenLoginLow(choice);
+      t.setHeadroom("acct_a", 60);
+      t.setHeadroom("acct_b", 40);
+      await t.agent.converse("first");
+      expect(t.agent.boundAccount()).toBe("acct_a");
+      const first = t.sessions[0] as FakeSession;
+      first.emit({
+        type: "turn_failed",
+        taskId: "firstmate",
+        error: "The provider turned the request down.",
+        cutOff: { class: cutOff },
+      });
+      first.emit({ type: "turn_end", taskId: "firstmate" });
+      first.resolveNextPrompt();
+      await tick();
+      await t.agent.converse("second");
+      await vi.waitFor(() => expect(t.specs).toHaveLength(2));
+      await tick();
+      expect(runtimeKind(t.specs[1])).toBe("runtime-acct_b");
+      expect(t.settings.getFirstmateAccount()).toBe("acct_b");
+      expect(notes(t.events)).toEqual([MOVED[cutOff]]);
+      expect(t.cards().some((card) => card.actions?.some(isMove))).toBe(false);
+    },
+  );
+});
+
 describe("the first mate's offer of another login, between turns", () => {
   const moveOn = (t: ReturnType<typeof twoLogins>) =>
     t
