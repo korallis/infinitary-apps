@@ -14,7 +14,13 @@ import {
 import { addOriginalCaptainText } from "./correctionMigrations";
 import { addCrewResponses } from "./inboxMigrations";
 import { migrateChanges } from "./migrateChanges";
-import { addHousekeepingIndexes, addPluginKind, addTaskPin, MIGRATIONS } from "./migrations";
+import {
+  addHousekeepingIndexes,
+  addPluginKind,
+  addPushedShareTime,
+  addTaskPin,
+  MIGRATIONS,
+} from "./migrations";
 import { privateCopy } from "./privateCopy";
 import { createQueryIndexes } from "./queryIndexes";
 import {
@@ -81,6 +87,7 @@ export const CARD_AFTER_MERGE_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardAfte
 export const CARD_FILES_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardFiles) + 1;
 export const CARD_LIVE_READS_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardLiveReads) + 1;
 export const PLUGIN_KIND_MIGRATION_VERSION = MIGRATIONS.indexOf(addPluginKind) + 1;
+export const PUSHED_SHARE_TIME_MIGRATION_VERSION = MIGRATIONS.indexOf(addPushedShareTime) + 1;
 
 /** Named boundaries keep upgrade fixtures tied to their migration, not the newest release. */
 export const HOUSEKEEPING_INDEXES_MIGRATION_VERSION =

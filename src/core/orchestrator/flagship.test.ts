@@ -736,13 +736,13 @@ describe("the allowance check a pause card reports", () => {
     expect(checkOf(row)).toEqual({ read: false });
     // Nor for an answer whose one window names a reset and no share, built
     // through the app's own proxy row builder, which stamps its time: that
-    // time is no reading's, so the receipt names none.
+    // time is no reading's, so the row is unread and the receipt names none.
     const dated = rowOfOutcome(
       row,
       { status: "ok", windows: [{ id: "five_hour", label: "session", resetsAtMs: NOW + 1 }] },
       NOW - 2_000,
     );
-    expect(dated.measuredAt).toBe(NOW - 2_000);
+    expect(dated).toMatchObject({ measuredAt: NOW - 2_000, unread: true });
     expect(checkOf(dated)).toEqual({ read: false });
   });
 

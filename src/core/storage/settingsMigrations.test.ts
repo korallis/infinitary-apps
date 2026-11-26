@@ -15,7 +15,12 @@ import { fetchPluginSource } from "../plugins/pluginSource";
 import { PushedQuotaStore, shareAtOf } from "../quota/pushedQuota";
 import { TaskService } from "../tasks/taskService";
 import type { AppDatabase } from "./db";
-import { openDatabase, openInMemoryDatabase, PLUGIN_KIND_MIGRATION_VERSION } from "./db";
+import {
+  openDatabase,
+  openInMemoryDatabase,
+  PLUGIN_KIND_MIGRATION_VERSION,
+  PUSHED_SHARE_TIME_MIGRATION_VERSION,
+} from "./db";
 import { SettingsStore } from "./settingsStore";
 import { UsageStore } from "./usageStore";
 import { dropViews } from "./views";
@@ -340,9 +345,7 @@ describe("migration 136 (a pushed reading's extra usage, INF-4104 piece 1)", () 
 describe("the migration that keeps when a pushed reading's share was reported", () => {
   it("adds the nullable column, reads an earlier share as taken at its own time, keeps a new one through a refusal, and reverses", () => {
     const dir = tmpUserData();
-    const newest = ALL_VERSIONS[ALL_VERSIONS.length - 1];
-    if (newest === undefined) throw new Error("no migration is listed");
-    const before = openDatabase(dir, newest - 1);
+    const before = openDatabase(dir, PUSHED_SHARE_TIME_MIGRATION_VERSION - 1);
     const columnsBefore = columnNames(before, "pushed_quota");
     expect(columnsBefore).not.toContain(PUSHED_SHARE_COLUMN);
     before

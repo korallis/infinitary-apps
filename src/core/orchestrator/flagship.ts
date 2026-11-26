@@ -465,8 +465,9 @@ export class Flagship {
    * an older one forward), and who the account's client says is signed in.
    * A row that holds no reading was not read: one known only through its
    * provider's refusal (`unread`), whose time is the refusal's and no
-   * reading's, and one none of whose windows carries a share, as a login
-   * no session has reported on yet.
+   * reading's, or an answer that carried no share. One none of whose
+   * windows carries a share now, as a login no session has reported on
+   * yet, was not read either, and names when a share last was if known.
    */
   allowanceCheck(
     accountId: string,
@@ -477,13 +478,11 @@ export class Flagship {
     if (!row) return undefined;
     if (row.unread) return { read: false };
     const shareRead = row.windows.some((window) => typeof window.percentRemaining === "number");
-    // The time named is a share reading's: an answer that carried no share
-    // was last read at no time.
+    // Not read now, and last read when a share last was: a row with no
+    // share left in its windows can still know that time, as a login whose
+    // sessions reported one before a refusal that has since ended.
     if (row.status !== "ok" || row.stale || !shareRead)
-      return {
-        read: false,
-        ...(shareRead && row.measuredAt !== undefined ? { at: row.measuredAt } : {}),
-      };
+      return { read: false, ...(row.measuredAt !== undefined ? { at: row.measuredAt } : {}) };
     const identity = this.options.vault.identitySync?.(accountId);
     return {
       at: row.measuredAt ?? this.options.quota.latest()?.fetchedAt ?? Date.now(),

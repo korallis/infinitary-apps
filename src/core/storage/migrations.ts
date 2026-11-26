@@ -1584,7 +1584,7 @@ export const MIGRATIONS: readonly Migration[] = [
   // is read as taken at `at` when it carries a share. `PushedQuotaStore` is
   // the only writer and no published view reads the table. Dropping the
   // column reverses it.
-  (db) => addColumn(db, "pushed_quota", "share_at", "INTEGER"),
+  addPushedShareTime,
 ];
 
 /**
@@ -1599,6 +1599,10 @@ export function addTaskPin(db: AppDatabase): void {
   db.exec(
     "CREATE INDEX IF NOT EXISTS tasks_pinned ON tasks(pinned_at) WHERE pinned_at IS NOT NULL",
   );
+}
+
+export function addPushedShareTime(db: AppDatabase): void {
+  addColumn(db, "pushed_quota", "share_at", "INTEGER");
 }
 
 export function addPluginKind(db: AppDatabase): void {

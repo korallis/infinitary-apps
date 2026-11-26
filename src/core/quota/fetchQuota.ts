@@ -5,6 +5,7 @@ import type {
   QuotaSnapshotView,
   QuotaWindowView,
 } from "@shared/quota";
+import { answeredNoShare } from "@shared/quota";
 import type {
   ManagedAuth,
   QuotaAccountRef,
@@ -160,6 +161,7 @@ async function fetchOneAccount(
     status: outcome.status,
     windows: outcome.windows,
     ...(outcome.windows.length > 0 ? { measuredAt: now } : {}),
+    ...(answeredNoShare(outcome.windows) ? { unread: true as const } : {}),
     ...(outcome.credits ? { credits: outcome.credits } : {}),
     ...(outcome.savedResets ? { savedResets: outcome.savedResets } : {}),
     ...(outcome.pool ? { pool: outcome.pool } : {}),

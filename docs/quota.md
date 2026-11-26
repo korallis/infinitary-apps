@@ -163,7 +163,8 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
   So is a row the sensor answered for with no share in any window, and a session-only login's row when its sessions reported a refusal and never a share (`pushedOnlyProviderViews`).
   The card says the same of a row none of whose windows carries a share, such as a login no session has reported on yet.
   A proxy's next reading replaces the mark with the rest of the last measurement (`rowOfOutcome`), so a reading taken after a refusal is a check again.
-  The time the card names is a share reading's own: a row built from sessions' readings carries when a session last reported a share as its `measuredAt` (`pushedProviderViews`), never a refusal's time, a passed reset's or the snapshot's, and an answer that carried a reset and no share is named no time.
+  The time the card names is a share reading's own: a row built from sessions' readings carries when a session last reported a share as its `measuredAt` (`pushedProviderViews`), never a refusal's time, a passed reset's or the snapshot's, and an answer that carried windows and no share is marked `unread` by the sensor's and a proxy's row builders (`answeredNoShare`), so it is named no time.
+  A row that is not read now and still knows when a share last was, as a further login whose refusal with no share ended before its reset, is said to be last read then, never checked.
   The store keeps that time on each window (`pushed_quota.share_at`): a later refusal that names only its reset and a hold that ended both move the reading's `at` and are no readings, so neither erases or moves it, while the same share reported again is a newer reading and moves a further login's row at once.
   A reading saved before the column is read as taken at its own time when it carries a share.
   The row the sensor measured keeps its other windows; a row it could not measure carries only the refusal; `auth_required` is left standing.

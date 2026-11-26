@@ -134360,8 +134360,10 @@ ${startersHtml()}`;
     /**
      * No reading of the allowance produced this row: its windows are a
      * provider's refusal laid over a reading that could not be taken
-     * (`withRejectedReadings`). The row still says what the account can do
-     * now; it never says the allowance was checked.
+     * (`withRejectedReadings`), or an answer that carried windows and no
+     * share (`answeredNoShare`), whose `measuredAt` is the answer's time and
+     * no reading's. The row still says what the account can do now; it never
+     * says the allowance was checked.
      */
     unread: boolean().optional(),
     /**

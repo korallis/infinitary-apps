@@ -771,9 +771,29 @@ describe("further Claude logins", () => {
     ).toEqual([["allowed", START + 300_000]]);
     expect(check()).toMatchObject({ at: START + 270_000, read: true });
 
+    // A refusal with no share, ended before its reset, leaves no share in
+    // the window: the allowance is not read now, and was last read when the
+    // share was. That is no new check.
+    vi.setSystemTime(START + 360_000);
+    run.homeQuota.recordClaudeRateLimit(second.id, {
+      status: "rejected",
+      windowId: "seven_day",
+      resetsAt: START + 100 * HOUR,
+    });
+    run.homeQuota.noteCutOff(second.id, { class: "no_headroom", resetsAt: START + 100 * HOUR });
+    await Promise.resolve();
+    vi.setSystemTime(START + 420_000);
+    run.vault.tryPastSpent(second.id);
+    await Promise.resolve();
+    await run.homeQuota.quota.refresh("demand");
+    expect(rowOf()?.windows.map((window) => window.percentRemaining)).toEqual([undefined]);
+    expect(check()).toEqual({ at: START + 270_000, read: false });
+    // Still held or not is the windows' word, as before: nothing reads used up.
+    expect(run.flagship.pause(second.id)).toBeUndefined();
+
     // The kept time is saved with the reading.
     expect(new PushedQuotaStore(run.db).windowsFor(second.id)).toMatchObject([
-      { windowId: "seven_day", at: START + 300_000, shareAt: START + 270_000 },
+      { windowId: "seven_day", at: START + 420_000, shareAt: START + 270_000 },
     ]);
   });
 

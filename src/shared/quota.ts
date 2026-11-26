@@ -339,8 +339,10 @@ export const quotaProviderViewSchema = z.object({
   /**
    * No reading of the allowance produced this row: its windows are a
    * provider's refusal laid over a reading that could not be taken
-   * (`withRejectedReadings`). The row still says what the account can do
-   * now; it never says the allowance was checked.
+   * (`withRejectedReadings`), or an answer that carried windows and no
+   * share (`answeredNoShare`), whose `measuredAt` is the answer's time and
+   * no reading's. The row still says what the account can do now; it never
+   * says the allowance was checked.
    */
   unread: z.boolean().optional(),
   /**
@@ -617,4 +619,14 @@ export function restoredPins(routing: RoutingSettings): RoutingSettings {
  */
 export function isSensedProvider(providerId: string): boolean {
   return allowanceProviderOf(providerId) !== undefined;
+}
+
+/**
+ * Whether an answer carried windows and a share in none of them: a reset
+ * alone is no reading of the allowance, so its row is `unread`.
+ */
+export function answeredNoShare(windows: readonly { percentRemaining?: number }[]): boolean {
+  return (
+    windows.length > 0 && windows.every((window) => typeof window.percentRemaining !== "number")
+  );
 }
