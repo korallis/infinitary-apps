@@ -414,15 +414,18 @@ export class PlacedWorkScores {
    * Each model's crew ranking facts from one account's reading: the account
    * `bound` names for it - the one that will serve it, so the model is
    * ranked by the account it runs on, and left unranked when that account
-   * has no reading - else, when it names none, the best account by the crew
-   * bands. `bound` is handed the work read for
+   * has no reading, as it is when `bound` answers null for a model no
+   * account may serve - else, when it names none, the best account by the
+   * crew bands. `bound` is handed the work read for
    * this evaluation, so naming the account reads it no second time.
    */
   catalog(
     catalog: CatalogModelView[],
     rows: QuotaProviderView[],
     now: number,
-    bound: ((model: CatalogModelView, data: PlacedWorkData) => string | undefined) | undefined,
+    bound:
+      | ((model: CatalogModelView, data: PlacedWorkData) => string | null | undefined)
+      | undefined,
     data: PlacedWorkData,
   ): RankedModel[] {
     return catalog.map((model) => {
@@ -447,11 +450,14 @@ export class PlacedWorkScores {
       // Readings that name no account are read as before.
       const named = candidates.some((c) => c.row.accountId !== undefined);
       const boundId = named ? bound?.(model, data) : undefined;
-      const best = boundId ? candidates.find((c) => c.row.accountId === boundId) : candidates[0];
+      const best =
+        boundId === undefined ? candidates[0] : candidates.find((c) => c.row.accountId === boundId);
       // A named account with no reading clears what the catalog carried,
       // which is the provider's whole reading, a spent sibling's included.
       if (!best)
-        return boundId ? { provider: model.provider, id: model.id, label: model.label } : model;
+        return boundId !== undefined
+          ? { provider: model.provider, id: model.id, label: model.label }
+          : model;
       const resetsAtMs = limitingResetOf(best.row, now, model.id);
       const measuredAt = best.score.charge?.measuredAt ?? best.row.measuredAt;
       // Whether it keeps going on credits is the serving account's reading.

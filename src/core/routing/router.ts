@@ -193,12 +193,14 @@ export class Router {
       /**
        * The account of this Mac a crewmate on that model would bind now
        * (`AccountSelector.crewAccount`): the model is ranked by its reading.
+       * Null says no account may serve the model now, which leaves it out
+       * of the pick; undefined says nothing is known.
        */
       crewAccount?: (
         piProviderId: string,
         model: string,
         placed: PlacedWorkData,
-      ) => string | undefined;
+      ) => string | null | undefined;
       /**
        * A committed decision dropped a level or waits because these
        * providers' allowance is spent at the asked level: the crew's
@@ -359,7 +361,10 @@ export class Router {
         options.placed,
       ) ?? rawCatalog;
     const pooled = (options.pool?.available ?? this.options.availableModels()).filter(
-      (model) => !without || model.provider !== without,
+      (model) =>
+        (!without || model.provider !== without) &&
+        (pool !== undefined ||
+          crewAccount?.(servedProviderOf(model.provider), model.id, options.placed) !== null),
     );
     const available = kept(pooled);
     // The levels are read from the whole pool, so a model `only` passes over

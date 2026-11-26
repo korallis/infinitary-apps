@@ -635,19 +635,7 @@ export class FirstmateSeat {
     if (!accountId) return session;
     const pause = flagship.pause(accountId);
     if (!pause) {
-      // Credits come after every included allowance: a seat on credits
-      // moves first to a sibling of the same provider that still has some.
-      const sibling = flagship.onCredits(accountId)
-        ? flagship.sibling(accountId, "measured")
-        : undefined;
-      // Only `move` takes the sibling without a click (docs/quota.md,
-      // "When the login in use runs low"): `ask` and `spread` ask once on a
-      // card while the seat keeps answering, and `wait` stays.
-      const whenLow = this.options.settings.getWhenLoginLow();
-      this.askOffCredits(
-        accountId,
-        whenLow === "ask" || whenLow === "spread" ? sibling : undefined,
-      );
+      const { sibling, whenLow } = this.offerOffCredits(accountId);
       if (sibling && whenLow === "move") {
         const label = flagship.labelOf(accountId) ?? accountId;
         flagship.record("rebound", sibling.id, [
@@ -734,9 +722,11 @@ export class FirstmateSeat {
     const fresh =
       previous?.accountId !== accountId ||
       previous.class !== pause.class ||
-      previous.move !== other?.providerId ||
-      previous.login !== login?.id;
-    if (fresh) {
+      previous.move !== other?.providerId;
+    // The same pause offering another login, or none now, asks a new
+    // question on its card without a second feed line.
+    const reoffered = !fresh && previous?.login !== login?.id;
+    if (fresh || reoffered) {
       this.attemptOffered = undefined;
       this.paused = {
         accountId,
@@ -753,7 +743,9 @@ export class FirstmateSeat {
     if (!fresh) {
       // The same pause: its card stands, revised in place if its words
       // moved, without recreating a card removed by a choice or withdrawal.
-      this.options.supervisor.cards.hostCards.addFirstmatePauseCard(card, { reviseOnly: true });
+      this.options.supervisor.cards.hostCards.addFirstmatePauseCard(card, {
+        reviseOnly: !reoffered,
+      });
       return;
     }
     // A changed pause is a new question: the old card's is gone.
@@ -793,6 +785,24 @@ export class FirstmateSeat {
   }
 
   /**
+   * Credits come after every included allowance: the sibling of the same
+   * provider a seat on credits would move to, one that still has some. Only
+   * `move` takes it without a click (docs/quota.md, "When the login in use
+   * runs low"): `ask` and `spread` ask once on a card while the seat keeps
+   * answering, and `wait` stays. Read at every turn's admission and every
+   * check of the seat, so the card follows the choice and the readings.
+   */
+  private offerOffCredits(accountId: string) {
+    const flagship = this.options.flagship;
+    const sibling = flagship?.onCredits(accountId)
+      ? flagship.sibling(accountId, "measured")
+      : undefined;
+    const whenLow = this.options.settings.getWhenLoginLow();
+    this.askOffCredits(accountId, whenLow === "ask" || whenLow === "spread" ? sibling : undefined);
+    return { sibling, whenLow };
+  }
+
+  /**
    * A seat on credits whose sibling still has included allowance: the move
    * asked once on a card, while the seat keeps answering. With no sibling
    * to offer, the card comes down and the next one may ask again.
@@ -819,23 +829,43 @@ export class FirstmateSeat {
    * A card's Move to another login, on the captain's click: the seat moves
    * to that login of its own provider, the pause ends, and what waited is
    * due on the new login - at once when idle, else at the next idle
-   * boundary, where admission applies the saved account. A login of another
-   * provider, or one that cannot serve, is left alone.
+   * boundary, where admission applies the saved account. The click is
+   * checked against what is true now: the choice still asks, the seat's
+   * login is still spent or on credits, and the named login is one of the
+   * same provider that serves, with allowance left when the seat leaves
+   * credits for it. Otherwise nothing moves and the seat's offers are read
+   * again.
    */
   async moveLogin(accountId: string): Promise<void> {
     const flagship = this.options.flagship;
     const from = this.seatAccount();
-    if (!flagship?.isEligible(accountId) || from === accountId) return;
+    if (!flagship) return;
+    const whenLow = this.options.settings.getWhenLoginLow();
+    const pause = from ? flagship.pause(from) : undefined;
+    const room = flagship.headroom(accountId);
+    const leaves =
+      pause?.class === "no_headroom" ||
+      (from !== undefined &&
+        !pause &&
+        flagship.onCredits(from) &&
+        typeof room === "number" &&
+        room > 0);
     if (
-      from &&
-      flagship.labelOf(from) &&
-      flagship.providerOf(from) !== flagship.providerOf(accountId)
-    )
+      !from ||
+      from === accountId ||
+      (whenLow !== "ask" && whenLow !== "spread") ||
+      !leaves ||
+      flagship.providerOf(from) !== flagship.providerOf(accountId) ||
+      !flagship.isEligible(accountId) ||
+      flagship.pause(accountId)
+    ) {
+      this.checkSeat();
       return;
+    }
     const label = flagship.labelOf(accountId) ?? accountId;
     flagship.record("rebound", accountId, [
       // i18n-exempt: reasons on the account ledger, read in diagnostics
-      `from ${(from && flagship.labelOf(from)) ?? "no account"}`,
+      `from ${flagship.labelOf(from) ?? from}`,
       // i18n-exempt: a reason on the account ledger, read in diagnostics
       `picked ${label}: the captain chose it on the card`,
     ]);
@@ -1018,6 +1048,12 @@ export class FirstmateSeat {
     if (paused && (paused.accountId !== this.seatAccount() || !flagship.pause(paused.accountId))) {
       this.servesAgain();
     }
+    // The offers to another login follow the choice and the readings
+    // between turns too: a pause's card and the ask of a seat on credits.
+    const seat = this.seatAccount();
+    const pause = seat ? flagship.pause(seat) : undefined;
+    if (seat && pause && this.paused?.accountId === seat) this.pauseSeat(seat, pause);
+    else if (seat && !pause && seat === this.boundAccountId) this.offerOffCredits(seat);
     const movedFrom = this.options.settings.getFirstmateMovedFrom();
     if (!movedFrom) return;
     if (!flagship.labelOf(movedFrom.accountId)) {

@@ -1423,6 +1423,9 @@ export class CrewTurns {
     if (backlog && !options.sent) return;
     const rows = this.core.facts.deliverableRows(task.id, this.core.now());
     if (rows.length === 0) return;
+    // A task bound to another login takes this delivery there (`LoginMoves`).
+    if (this.core.loginMoves.takes(task.id, (open) => this.deliverPendingToTask(open, options)))
+      return;
     const pictures = this.core.facts.rowPictures(task.id, rows);
     if (pictures.blocked) return;
     if (options.announce && rows.some((row) => !OWN_LANE_KINDS.has(row.facts?.kind ?? ""))) {

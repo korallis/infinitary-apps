@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -283,6 +283,32 @@ describe("the Claude crewmate's coding session", () => {
     expect(harness().options.resume).toBeUndefined();
     expect(harness().options.sessionId).toBe(session.sessionId);
     expect(logs).toContain(`the client has no transcript for session ${lost}; starting fresh`);
+    session.dispose();
+  });
+
+  // The approved plan for several logins of one provider, piece 3, "A moved
+  // lane": a Claude conversation is never copied across accounts. Each
+  // login's client keeps its transcripts in its own folder.
+  it("opens a new conversation under another login's folder, and copies nothing into it", async () => {
+    const recorded = "0b7e3a52-5f1c-4c7e-9d3a-2f6b8e1c4a90";
+    const personal = scratchDir("infinitary-claude-personal-");
+    const work = scratchDir("infinitary-claude-work-");
+    const projectOf = (dir: string) => join(dir, "projects", encodeClaudeProjectDir(baseSpec.cwd));
+    mkdirSync(projectOf(personal), { recursive: true });
+    const transcript = join(projectOf(personal), `${recorded}.jsonl`);
+    writeFileSync(transcript, '{"type":"user"}\n');
+    const { factory, harness } = scriptedQuery({
+      onInput: answering(() => [result({ cost: 0.01, input: 10, output: 2 })]),
+    });
+    const session = await createClaudeSession(
+      { ...baseSpec, configDir: work, resumeToken: recorded },
+      factory,
+    );
+    expect(session.sessionId).not.toBe(recorded);
+    await session.prompt("carry on");
+    expect(harness().options.resume).toBeUndefined();
+    expect(existsSync(join(projectOf(work), `${recorded}.jsonl`))).toBe(false);
+    expect(readFileSync(transcript, "utf8")).toBe('{"type":"user"}\n');
     session.dispose();
   });
 

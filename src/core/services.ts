@@ -1591,7 +1591,7 @@ export async function createServices(
     deviceSignIns,
     vault,
     quota,
-    use: (accountId, options) => savedResets?.use(accountId, options),
+    use: savedResets.use.bind(savedResets),
     note: (text) => broadcastEvent({ type: "firstmate_note", text }),
   });
   const lowLogins = startLowLogins({
@@ -1735,7 +1735,7 @@ export async function createServices(
     timeline,
     auth,
     vault,
-    whenLoginLowChanged: () => lowLogins.read(),
+    whenLoginLowChanged: () => (lowLogins.read(), firstmate.onQuotaRefreshed()),
     setKeepGoingOnCredits: (...args) => setKeepGoingOnCredits(...args),
     redeemSavedReset: (accountId, options) => {
       if (!savedResets) throw new Error("Infinitary is still starting.");

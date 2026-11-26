@@ -23,16 +23,21 @@ export type LoginMovesHost = {
 /**
  * A started task's move to another login of the same provider
  * (docs/quota.md, "When the login in use runs low"): between turns, never
- * inside one, its conversation is let go and its record names the login a
- * pick chooses now, passing over the one it leaves; it then reopens the way
- * a resume on a changed account does, with what waited on its lane due at
- * once. Only this computer's own tasks move: a task on a computer that runs
- * work is on that computer's login.
+ * inside one, its conversation is let go and its record names the login the
+ * move named - the one the captain's card offered, or the home chose under
+ * `move` - and no other; it then reopens the way a resume on a changed
+ * account does, with what waited on its lane due at once. A task inside a
+ * turn stays bound to that login and moves at its lane's next delivery
+ * (`takes`). A login that no longer serves the task's model leaves the task
+ * where it is. Only this computer's own tasks move: a task on a computer
+ * that runs work is on that computer's login.
  */
 export class LoginMoves {
   /** The low-login card's click, bound by the watch that raises the card. */
   onClick?: (accountId: string) => void;
   private readonly moving = new Set<string>();
+  /** Each task still to move, with the login it leaves and the one named for it. */
+  private readonly bound = new Map<string, { from: string; to: string }>();
 
   constructor(
     private readonly options: Pick<
@@ -53,35 +58,68 @@ export class LoginMoves {
       .map((record) => record.id);
   }
 
-  /** Moves each task on the login that is between turns; one mid-turn stays until asked again. */
-  async moveOff(accountId: string): Promise<void> {
-    await Promise.all(this.tasksOn(accountId).map((taskId) => this.move(taskId, accountId)));
+  /**
+   * Binds each task on `from` to `to` and moves those between turns now;
+   * one inside a turn moves at its lane's next delivery.
+   */
+  async moveOff(from: string, to: string): Promise<void> {
+    const taskIds = this.tasksOn(from);
+    for (const taskId of taskIds) this.bound.set(taskId, { from, to });
+    await Promise.all(taskIds.map((taskId) => this.move(taskId)));
   }
 
-  private async move(taskId: string, from: string): Promise<void> {
+  /** The login has room again, or work now waits: its tasks still to move stay. */
+  forget(from: string): void {
+    for (const [taskId, move] of this.bound) if (move.from === from) this.bound.delete(taskId);
+  }
+
+  /**
+   * A lane's delivery to a task still to move: the move takes it, and
+   * `deliver` hands the lane to the conversation the task ends up with.
+   * False when the task is bound to no move.
+   */
+  takes(taskId: string, deliver: (task: TaskRuntime) => void): boolean {
+    if (!this.bound.has(taskId)) return false;
+    void this.move(taskId, deliver);
+    return true;
+  }
+
+  private async move(
+    taskId: string,
+    deliver: (task: TaskRuntime) => void = (task) => this.host.deliverPendingToTask(task),
+  ): Promise<void> {
     const accounts = this.options.accounts;
-    if (!accounts?.pickForSpawn || this.moving.has(taskId)) return;
+    const move = this.bound.get(taskId);
+    if (!move || !accounts?.pickForSpawn || this.moving.has(taskId)) return;
+    const { from, to } = move;
+    // The task stays where it is, with its lane delivered there.
+    const stay = () => {
+      this.bound.delete(taskId);
+      const open = this.host.runtime(taskId);
+      if (open) deliver(open);
+    };
     this.moving.add(taskId);
     try {
       const before = this.options.tasks.get(taskId);
-      if (!before?.model || this.host.runtime(taskId)?.turn.busy) return;
+      if (before?.status !== "active" || before.accountId !== from || !before.model) return stay();
+      if (this.host.runtime(taskId)?.turn.busy) return;
       const model = parseOfferingKey(before.model);
       const pick = await accounts.pickForSpawn(taskId, model.provider, {
         model: model.id,
-        passing: [from],
+        only: to,
       });
-      const to = pick.accountId;
       const record = this.options.tasks.get(taskId);
       const runtime = this.host.runtime(taskId);
+      if (runtime?.turn.busy || this.host.disposed()) return;
       if (
-        !to ||
+        pick.accountId !== to ||
         record?.status !== "active" ||
         record.accountId !== from ||
         record.model !== before.model ||
-        runtime?.turn.busy ||
-        this.host.disposed()
+        this.bound.get(taskId)?.to !== to
       )
-        return;
+        return stay();
+      this.bound.delete(taskId);
       if (runtime) {
         this.host.releaseSession(runtime);
         this.host.forgetRuntime(taskId);
@@ -112,7 +150,7 @@ export class LoginMoves {
         this.host.deliverLane(taskId);
         return;
       }
-      this.host.deliverPendingToTask(await this.host.resumeTask(taskId));
+      deliver(await this.host.resumeTask(taskId));
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       // i18n-exempt: a task timeline row the first mate reads

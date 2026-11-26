@@ -13,6 +13,8 @@ import { LoginMoves } from "./loginMoves";
 // The approved plan for several logins of one provider, piece 3, "A moved
 // lane": a task on the spent login moves to the new login between turns,
 // never inside one, and its conversation reopens the way a resume does.
+// "Ask": the click moves work to the login the card named, so a third
+// login with more room takes none of it.
 
 const MODEL = { provider: "openai-codex", id: "gpt-6.1-terra" };
 
@@ -22,6 +24,8 @@ const reading: QuotaSnapshotView = {
   providers: [
     { accountId: "personal", percent: 0 },
     { accountId: "work", percent: 60 },
+    // More room than Work, and not the login the card named.
+    { accountId: "spare", percent: 95 },
   ].map((row) => ({
     provider: "codex",
     label: "Codex",
@@ -33,7 +37,14 @@ const reading: QuotaSnapshotView = {
   })),
 };
 
-function crew(start: { busy?: boolean; machine?: string } = {}) {
+function crew(
+  start: {
+    busy?: boolean;
+    machine?: string;
+    /** The models a login's sign-in lists, when it lists any. */
+    lists?: Record<string, string[]>;
+  } = {},
+) {
   const db = openInMemoryDatabase();
   const tasks = new TaskService({ db, strict: true });
   const inbox = new InboxStore(db);
@@ -44,6 +55,7 @@ function crew(start: { busy?: boolean; machine?: string } = {}) {
       [
         { id: "personal", label: "Personal" },
         { id: "work", label: "Work" },
+        { id: "spare", label: "Spare" },
       ].map((login) => ({ ...login, providerId: "openai-codex", enabled: true })),
     // The click already moved the login in use to Work.
     pinnedAccount: () => "work",
@@ -59,6 +71,11 @@ function crew(start: { busy?: boolean; machine?: string } = {}) {
     flagshipAccountId: () => null,
     decisions: new DecisionStore(db),
     loginInUse: { whenLow: () => "ask", pin: () => {} },
+    accountModels: () =>
+      Object.entries(start.lists ?? {}).map(([accountId, models]) => ({
+        accountId,
+        models: models.map((id) => ({ provider: MODEL.provider, id })),
+      })),
   });
   seedTask(tasks, {
     id: "task-1",
@@ -67,7 +84,8 @@ function crew(start: { busy?: boolean; machine?: string } = {}) {
     accountId: "personal",
     model: MODEL,
   });
-  const runtime = { id: "task-1", turn: { busy: start.busy ?? false } } as unknown as TaskRuntime;
+  const turn = { busy: start.busy ?? false };
+  const runtime = { id: "task-1", turn } as unknown as TaskRuntime;
   const live = new Map<string, TaskRuntime>([["task-1", runtime]]);
   const moves = new LoginMoves(
     { tasks, inbox, accounts, broadcastEvent: (event) => events.push(event) },
@@ -93,14 +111,14 @@ function crew(start: { busy?: boolean; machine?: string } = {}) {
       disposed: () => false,
     },
   );
-  return { moves, tasks, events, steps, live, db };
+  return { moves, tasks, events, steps, live, db, turn, runtime };
 }
 
 describe("a started task's move to another login", () => {
   it("lets go of its conversation, names the new login on its record and reopens it there", async () => {
     const t = crew();
     expect(t.moves.tasksOn("personal")).toEqual(["task-1"]);
-    await t.moves.moveOff("personal");
+    await t.moves.moveOff("personal", "work");
     expect(t.tasks.get("task-1")?.accountId).toBe("work");
     expect(t.steps).toEqual([
       "released task-1",
@@ -126,18 +144,48 @@ describe("a started task's move to another login", () => {
     expect(t.moves.tasksOn("personal")).toEqual([]);
   });
 
-  it("leaves a task that is inside a turn where it is", async () => {
+  it("leaves a task inside a turn where it is, and moves it to the named login at its next delivery", async () => {
     const t = crew({ busy: true });
-    await t.moves.moveOff("personal");
+    await t.moves.moveOff("personal", "work");
     expect(t.tasks.get("task-1")?.accountId).toBe("personal");
     expect(t.steps).toEqual([]);
     expect(t.events).toEqual([]);
+    // Its turn ends and its lane has words for it: the move takes the delivery.
+    t.turn.busy = false;
+    const delivered: string[] = [];
+    expect(t.moves.takes("task-1", (task) => delivered.push(task.id))).toBe(true);
+    await expect.poll(() => delivered).toEqual(["task-1"]);
+    expect(t.tasks.get("task-1")?.accountId).toBe("work");
+    expect(t.steps).toEqual(["released task-1", "selected work", "resumed task-1 on work"]);
+    // Moved, it is bound to nothing: the next delivery is an ordinary one.
+    expect(t.moves.takes("task-1", () => {})).toBe(false);
+  });
+
+  it("takes no delivery of a task bound to no move, or one whose login has room again", async () => {
+    const t = crew({ busy: true });
+    expect(t.moves.takes("task-1", () => {})).toBe(false);
+    await t.moves.moveOff("personal", "work");
+    t.moves.forget("personal");
+    t.turn.busy = false;
+    expect(t.moves.takes("task-1", () => {})).toBe(false);
+    expect(t.tasks.get("task-1")?.accountId).toBe("personal");
+  });
+
+  it("leaves a task where it is when the named login does not serve its model", async () => {
+    // Work's sign-in lists another model; Spare, which lists this one, was not named.
+    const t = crew({ lists: { work: ["gpt-6.1-luna"], spare: [MODEL.id], personal: [MODEL.id] } });
+    await t.moves.moveOff("personal", "work");
+    expect(t.tasks.get("task-1")?.accountId).toBe("personal");
+    // Its lane is delivered on the conversation it keeps.
+    expect(t.steps).toEqual(["delivered task-1"]);
+    expect(t.events).toEqual([]);
+    expect(t.moves.takes("task-1", () => {})).toBe(false);
   });
 
   it("delivers the lane of a task with no open conversation, without opening one first", async () => {
     const t = crew();
     t.live.clear();
-    await t.moves.moveOff("personal");
+    await t.moves.moveOff("personal", "work");
     expect(t.tasks.get("task-1")?.accountId).toBe("work");
     expect(t.steps).toEqual(["selected work", "lane task-1"]);
   });

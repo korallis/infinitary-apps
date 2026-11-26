@@ -3,7 +3,12 @@ import { servesOnlyLoginInUse, type WhenLoginLow } from "@shared/whenLoginLow";
 import { quotaRowProviderOf } from "../quota/auth";
 import { effectiveFromProvider, spentScopes } from "../quota/catalog";
 import type { DecisionStore } from "../storage/decisionStore";
-import { type AccountCandidate, isExhausted, selectAccount } from "./accountPolicy";
+import {
+  type AccountCandidate,
+  type AccountSelectionDecision,
+  isExhausted,
+  selectAccount,
+} from "./accountPolicy";
 import type { PlacedWorkData, PlacedWorkScores } from "./placedWork";
 
 /**
@@ -124,12 +129,14 @@ export class AccountSelector {
    * another move meanwhile - writes the decision row (`record`) in the
    * move's own transaction, and marks the account selected (`selected`, a
    * file write no transaction rolls back) only once that transaction
-   * committed, so an abandoned move leaves neither.
+   * committed, so an abandoned move leaves neither. `only` names the one
+   * login a low login's move may bind (`LoginMoves`): it is picked while it
+   * serves the model, and nothing is picked otherwise.
    */
   async pickForSpawn(
     taskId: string,
     piProviderId: string,
-    crew?: { model: string; passing?: readonly string[] },
+    crew?: { model: string; passing?: readonly string[]; only?: string },
   ): Promise<{ accountId?: string; record(): void; selected(): void }> {
     const placed = await this.options.placedWork?.prepare(
       this.options.quota.latest()?.providers ?? [],
@@ -192,8 +199,26 @@ export class AccountSelector {
    * model and the account that serves it are judged on the same facts.
    * `placed` is the work the routing evaluation already read.
    */
-  crewAccount(piProviderId: string, model: string, placed: PlacedWorkData): string | undefined {
-    return this.decide(piProviderId, { model }, placed)?.accountId;
+  crewAccount(
+    piProviderId: string,
+    model: string,
+    placed: PlacedWorkData,
+  ): string | null | undefined {
+    const decision = this.decide(piProviderId, { model }, placed);
+    if (decision?.accountId) return decision.accountId;
+    // A login in use that cannot serve is not missing information: a spent
+    // one ranks the model by its own reading, and any other serves nothing.
+    if (decision?.held) return decision.held.spent ? decision.held.accountId : null;
+    return undefined;
+  }
+
+  /** The enabled login the provider's pin names while the pin alone serves. */
+  private loginInUse(piProviderId: string): { id: string; label: string } | undefined {
+    if (!this.onlyLoginInUse()) return undefined;
+    const pin = this.options.pool.pinnedAccount(piProviderId);
+    return this.options.pool
+      .list(piProviderId)
+      .find((account) => account.id === pin && account.enabled);
   }
 
   /** Whether the provider's pin alone serves: the `wait` and `ask` choices. */
@@ -218,13 +243,36 @@ export class AccountSelector {
 
   private decide(
     piProviderId: string,
-    crew: { model: string; passing?: readonly string[] } | undefined,
+    crew: { model: string; passing?: readonly string[]; only?: string } | undefined,
     placed: PlacedWorkData | undefined,
   ) {
+    // A move to a named login reads that login alone, whatever the pin.
+    if (crew?.only) {
+      const named = this.candidatesFor(piProviderId, crew.model, placed, crew.only).filter(
+        (row) => row.accountId === crew.only,
+      );
+      return named.length > 0
+        ? selectAccount({ providerId: piProviderId, candidates: named, bands: true })
+        : undefined;
+    }
     // An account that already failed to open the model is passed over.
-    const candidates = this.candidatesFor(piProviderId, crew?.model, placed).filter(
+    const inUse = this.loginInUse(piProviderId);
+    const candidates = this.candidatesFor(piProviderId, crew?.model, placed, inUse?.id).filter(
       (row) => !crew?.passing?.includes(row.accountId),
     );
+    // A login in use that does not list the model, or failed to open it,
+    // still stands between the work and every other login.
+    if (inUse && !candidates.some((row) => row.accountId === inUse.id))
+      return {
+        held: { accountId: inUse.id, spent: false },
+        reasons: [
+          // i18n-exempt: a decision ledger reason the first mate reads, never shown
+          `skipped ${inUse.label}: ${crew?.passing?.includes(inUse.id) ? "failed to open this model" : "does not list this model"}`,
+          // i18n-exempt: a decision ledger reason the first mate reads, never shown
+          `${inUse.label} is the ${piProviderId} login in use; no other login serves until it is moved`,
+        ],
+        candidates: [],
+      } satisfies AccountSelectionDecision;
     if (candidates.length === 0) return undefined;
     const pinned = this.options.pool.pinnedAccount(piProviderId);
     const flagship = this.options.flagshipAccountId();
@@ -298,6 +346,7 @@ export class AccountSelector {
     piProviderId: string,
     model: string | undefined,
     placed: PlacedWorkData | undefined,
+    inUse?: string,
   ): AccountCandidate[] {
     const snapshot = this.options.quota.latest();
     const rows = placed?.readings ?? snapshot?.providers;
@@ -316,10 +365,13 @@ export class AccountSelector {
     };
     const accounts = this.options.pool.list(piProviderId);
     const confirmed = accounts.filter((account) => serving(account.id) === true);
-    const pool =
-      confirmed.length > 0
-        ? confirmed
-        : accounts.filter((account) => serving(account.id) === undefined);
+    // The login in use with no list yet stands in beside a confirmed
+    // sibling, since it alone may serve.
+    const pool = accounts.filter((account) =>
+      confirmed.length > 0 && account.id !== inUse
+        ? serving(account.id) === true
+        : serving(account.id) !== false,
+    );
     return pool.map((account) => {
       const row = rows?.find(
         (provider) =>

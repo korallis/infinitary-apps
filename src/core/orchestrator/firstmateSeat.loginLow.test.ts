@@ -8,6 +8,8 @@ fakeClockEachTest();
 // mate": the ladder's step to another login of the same provider follows
 // the choice for a low login. Under `ask` that move becomes a card, under
 // `wait` the step is skipped, and only `move` takes it without a click.
+// The card follows the choice and the readings between turns, and its click
+// moves the seat only while they still bear the offer out.
 
 const twoLogins = () =>
   setupWithFlagship({
@@ -94,6 +96,63 @@ describe("the first mate's login running out, under each choice", () => {
   });
 });
 
+describe("the first mate's offer of another login, between turns", () => {
+  const moveOn = (t: ReturnType<typeof twoLogins>) =>
+    t
+      .cards()
+      .find((each) => each.id === "card-fm-no-headroom")
+      ?.actions?.find((action) => action.id === "move-login");
+
+  it("drops the offer when the choice becomes wait, and offers it again under ask", async () => {
+    const t = twoLogins();
+    await spendPersonal(t);
+    expect(moveOn(t)?.label).toBe("Move to Work #2");
+    t.settings.setWhenLoginLow("wait");
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(t.cards().some((each) => each.id === "card-fm-no-headroom")).toBe(true);
+    expect(moveOn(t)).toBeUndefined();
+    t.settings.setWhenLoginLow("ask");
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(moveOn(t)?.label).toBe("Move to Work #2");
+    // One pause, one feed line, however often its card was revised.
+    expect(notes(t.events).filter((text) => text.includes("paused"))).toHaveLength(1);
+  });
+
+  it("drops the offer when the other login runs out too", async () => {
+    const t = twoLogins();
+    await spendPersonal(t);
+    t.setHeadroom("acct_b", 0);
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(moveOn(t)).toBeUndefined();
+    expect(t.settings.getFirstmateAccount()).toBe("acct_a");
+  });
+
+  it("moves nothing on a click the other login no longer bears out", async () => {
+    const t = twoLogins();
+    await spendPersonal(t);
+    // Work #2 ran out after the card went up and before the click.
+    t.setHeadroom("acct_b", 0);
+    t.supervisor.cardActions.act("card-fm-no-headroom", "move-login");
+    await tick();
+    expect(t.specs).toHaveLength(1);
+    expect(t.settings.getFirstmateAccount()).toBe("acct_a");
+    expect(notes(t.events)).not.toContain("Your first mate moved to Work #2.");
+  });
+
+  it("moves nothing on a click after the choice became wait", async () => {
+    const t = twoLogins();
+    await spendPersonal(t);
+    t.settings.setWhenLoginLow("wait");
+    t.supervisor.cardActions.act("card-fm-no-headroom", "move-login");
+    await tick();
+    expect(t.specs).toHaveLength(1);
+    expect(t.settings.getFirstmateAccount()).toBe("acct_a");
+  });
+});
+
 describe("the first mate on a login's credits while another login has allowance left", () => {
   const onCredits = () =>
     setupWithFlagship({
@@ -131,6 +190,33 @@ describe("the first mate on a login's credits while another login has allowance 
     await tick();
     expect(t.cards().some((each) => each.id === "card-fm-on-credits")).toBe(false);
     expect(t.settings.getFirstmateAccount()).toBe("acct_a");
+  });
+
+  it("takes the ask down between turns when the choice becomes wait or the other login runs out", async () => {
+    const waits = onCredits();
+    await spendPersonal(waits);
+    expect(waits.cards().some((each) => each.id === "card-fm-on-credits")).toBe(true);
+    waits.settings.setWhenLoginLow("wait");
+    waits.agent.onQuotaRefreshed();
+    await tick();
+    expect(waits.cards().some((each) => each.id === "card-fm-on-credits")).toBe(false);
+
+    const ranOut = onCredits();
+    await spendPersonal(ranOut);
+    ranOut.setHeadroom("acct_b", 0);
+    ranOut.agent.onQuotaRefreshed();
+    await tick();
+    expect(ranOut.cards().some((each) => each.id === "card-fm-on-credits")).toBe(false);
+  });
+
+  it("moves nothing on a click for a login whose allowance ran out meanwhile", async () => {
+    const t = onCredits();
+    await spendPersonal(t);
+    t.setHeadroom("acct_b", 0);
+    t.supervisor.cardActions.act("card-fm-on-credits", "move-login");
+    await tick();
+    expect(t.settings.getFirstmateAccount()).toBe("acct_a");
+    expect(notes(t.events)).not.toContain("Your first mate moved to Work #2.");
   });
 
   it("stays on credits and asks nothing under wait", async () => {
