@@ -123,7 +123,11 @@ export class QuotaService {
     if (!this.latestSnapshot || !this.options.catalogFor) return;
     const catalog = modelsCatalogViewSchema.safeParse(this.options.catalogFor(this.latestSnapshot));
     if (!catalog.success) return;
-    this.latestCatalog = markCredits(catalog.data, this.latestSnapshot.providers);
+    this.latestCatalog = markCredits(
+      catalog.data,
+      this.latestSnapshot.providers,
+      this.latestSnapshot.pools,
+    );
     this.options.broadcast(this.latestSnapshot);
   }
 
@@ -140,7 +144,12 @@ export class QuotaService {
       ? modelsCatalogViewSchema.safeParse(this.options.catalogFor(this.latestSnapshot))
       : undefined;
     const catalog = rebuilt?.success ? rebuilt.data : this.latestCatalog;
-    if (catalog) this.latestCatalog = markCredits(catalog, this.latestSnapshot.providers);
+    if (catalog)
+      this.latestCatalog = markCredits(
+        catalog,
+        this.latestSnapshot.providers,
+        this.latestSnapshot.pools,
+      );
     this.options.broadcast(this.latestSnapshot);
   }
 
@@ -281,7 +290,8 @@ export class QuotaService {
             ? this.options.catalogFor(snapshot)
             : result.catalog,
         );
-        if (catalog.success) this.latestCatalog = markCredits(catalog.data, snapshot.providers);
+        if (catalog.success)
+          this.latestCatalog = markCredits(catalog.data, snapshot.providers, snapshot.pools);
         this.snapshots.record(snapshot);
         this.options.broadcast(snapshot);
         // What a refresh read can change what the local reading reads (a

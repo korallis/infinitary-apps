@@ -645,6 +645,7 @@ describe("further Claude logins", () => {
         settings: run.settings,
         flagship: run.flagship,
         firstmate: { boundAccount: () => seatedOn },
+        quota: run.homeQuota.quota,
         servedModels: { forget: () => {} },
         firstRun: { reconcile: () => {} },
         broadcastEvent: (event: { type: string; text?: string }) => {

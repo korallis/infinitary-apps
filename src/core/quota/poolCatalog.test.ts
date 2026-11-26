@@ -1,7 +1,7 @@
 import { accountPools } from "@shared/accountPools";
 import type { QuotaProviderView } from "@shared/quota";
 import { describe, expect, it } from "vitest";
-import { buildModelsCatalog, effectiveFromProvider } from "./catalog";
+import { buildModelsCatalog, effectiveFromProvider, markCredits } from "./catalog";
 
 // The captain's ask: where a provider's own logins pool, a model's band and
 // spend order come from its pool, not from one login (docs/quota.md, "A pool
@@ -114,5 +114,28 @@ describe("a model of a provider whose own logins pool", () => {
     // The pooled Opus window reads 0, from the one login that reports it; the
     // other login serves Opus from its week, so the model has (0 + 40) / 2 left.
     expect(model?.effectivePercentRemaining).toBe(20);
+  });
+
+  // The review's ask: a paused login is outside the pool and must not make
+  // a spent pool's model read as serving on credits.
+  it("is marked as on credits by a login of its pool, never by a paused one outside it", () => {
+    const credits = { keepGoingOnCredits: true, credits: { state: "available" as const } };
+    const marked = (rows: QuotaProviderView[], memberIds: string[]) => {
+      const pools = accountPools(
+        rows,
+        memberIds.map((accountId) => ({ accountId, provider: "claude" })),
+        NOW,
+      );
+      const catalog = buildModelsCatalog([FABLE], rows, new Date(NOW).toISOString(), NOW, pools);
+      return markCredits(catalog, rows, pools).models[0];
+    };
+    // Both logins of the pool are spent; the paused third keeps going on credits.
+    const paused = [login("personal", 0), login("work", 0), login("old", 0, credits)];
+    expect(marked(paused, ["personal", "work"])).toMatchObject({ effectivePercentRemaining: 0 });
+    expect(marked(paused, ["personal", "work"])?.onCredits).toBeUndefined();
+
+    // The same switch on a login of the pool does mark it.
+    const member = [login("personal", 0, credits), login("work", 0), login("old", 0)];
+    expect(marked(member, ["personal", "work"])?.onCredits).toBe(true);
   });
 });

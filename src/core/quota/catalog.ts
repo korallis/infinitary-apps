@@ -271,9 +271,18 @@ function runwayRank(model: CatalogModelView): number {
 export function markCredits(
   catalog: ModelsCatalogView,
   providers: QuotaProviderView[],
+  /** The snapshot's pools of the person's own logins (`QuotaSnapshotView.pools`). */
+  pools?: readonly QuotaProviderView[],
 ): ModelsCatalogView {
+  // A pooled provider's models answer on a login of the pool alone: a
+  // paused account outside it serves nothing, whatever its switch says.
   const credited = new Set(
-    providers.filter((row) => answersOnCredits(row)).map((row) => row.provider),
+    providers
+      .filter((row) => {
+        const pool = accountsPoolOf(pools, row.provider);
+        return answersOnCredits(row) && (!pool || inAccountsPool(pool, row.accountId));
+      })
+      .map((row) => row.provider),
   );
   return {
     ...catalog,
