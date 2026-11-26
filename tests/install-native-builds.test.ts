@@ -47,11 +47,11 @@ function buildsWithNodeGyp(dir: string): boolean {
 const nameOf = (dir: string) =>
   (JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Manifest).name;
 
-describe("an install's native builds", () => {
-  it("start no node-gyp build, which needs a C++ toolchain", () => {
+describe("the builds an install is allowed", () => {
+  it("leave out each package pnpm would build with its own node-gyp rebuild", () => {
     const allowBuilds = loadYamlFile("pnpm-workspace.yaml").allowBuilds as Record<string, unknown>;
     const built = [...new Set(installedPackages().filter(buildsWithNodeGyp).map(nameOf))];
-    // The walk reaches the one such package installed today.
+    // A walk that found no such package would pass the loop below unchecked.
     expect(built).toContain("better-sqlite3");
     for (const name of built) {
       expect(allowBuilds[name], `pnpm would run node-gyp rebuild for ${name}`).toBe(false);
