@@ -665,8 +665,10 @@ export class InboxStore {
   }
 
   /**
-   * Rows that went back unspent on their first try were never tried: the
-   * delivery that does reach their task is their first (`lastAttemptAt`).
+   * Rows whose first try reached no task were never tried: the delivery
+   * that does reach their task is their first (`lastAttemptAt`). Their
+   * attempt count and backoff stay as the try left them, so call it after
+   * `release`, which reads the attempt's time.
    */
   neverAttempted(ids: number[]): void {
     this.changed();

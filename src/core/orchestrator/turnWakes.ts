@@ -133,6 +133,12 @@ export type TurnFacts =
       brief?: string;
       /** Where the earlier conversation's transcript is saved, on the computer it runs on. */
       earlier?: string;
+      /**
+       * A hold came up while the new conversation opened, before its first
+       * turn: this reason is that turn, due by itself once the hold ends,
+       * after a relaunch too (`CrewSessions.restartIsDue`).
+       */
+      due?: true;
     };
 
 /**

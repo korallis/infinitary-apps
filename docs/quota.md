@@ -310,8 +310,9 @@ A panel reads and sets it as the `when-login-low` panel setting; the app's own S
   The same move named again, as each reading under `move` names it until the task has moved, keeps its binding and the pick already out.
   A restart of a bound task's conversation, after the context limit or the provider's repeated refusals, names the login on its record first and then opens the new conversation there with its restart reason (`LoginMoves.beforeRestart`, from `CrewTurns.recoverContext` and `CrewTurns.unstick`).
   While anything else holds the task, that restart moves and opens nothing: its reason is kept on the lane (`CrewSessions.keepRestart`), and the delivery after the hold moves the task and opens the new conversation.
-  A hold that comes up while the restarted conversation opens starts no turn either: the hold is read again before the first turn, by the context restart and by the lane sweep that reopens a task, and the restart's reason is then a turn of its own after the hold (`restartDue` on the task's runtime, read by `CrewFacts.deliverableRows`).
+  A hold that comes up while the restarted conversation opens starts no turn either: the hold is read again before the first turn, by the context restart and by the lane sweep that reopens a task, and the restart's reason is then a turn of its own after the hold: its row on the lane is marked `due` (`CrewSessions.restartIsDue`, read by `CrewFacts.deliverableRows`), so a relaunch while the hold stands carries the task on the same way, with no message sent.
   Rows the sweep claimed go back unspent and untried, so the center's spark for a sent message flies once, when the reopened task takes it, and the restart's own turn draws none (`docs/crew-orbits.md`).
+  An opening that fails spends the rows' try and backs them off, and leaves them untried too: the spark flies on the opening that succeeds.
   A cut-off on the login it leaves does not hold its lane meanwhile (`CrewFacts.laneHold`), and every other hold still does; the binding ends when its old login has room again or the choice becomes `wait`.
   Only tasks whose crewmate runs on this computer move.
 - **The first mate.**

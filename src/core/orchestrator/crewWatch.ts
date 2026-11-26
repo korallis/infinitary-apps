@@ -505,11 +505,10 @@ export class CrewWatch {
     // The spark for a sent row flies once the reopened task takes the turn.
     const reaches = this.core.turns.reaches(due);
     const ids = this.core.turns.claimRows(due);
+    const untried = due.filter((row) => row.lastAttemptAt === null).map((row) => row.id);
     const unspent = () => {
       this.core.options.inbox.reparkUndelivered(ids);
-      this.core.options.inbox.neverAttempted(
-        due.filter((row) => row.lastAttemptAt === null).map((row) => row.id),
-      );
+      this.core.options.inbox.neverAttempted(untried);
     };
     try {
       const resumed = await this.core.sessions.resumeTask(taskId);
@@ -518,7 +517,7 @@ export class CrewWatch {
       // reason among them.
       if (this.core.facts.laneHeld(taskId)) {
         unspent();
-        resumed.restartDue = true;
+        this.core.sessions.restartIsDue(taskId);
         return;
       }
       if (reaches) this.core.steer.announceReach(taskId);
@@ -543,7 +542,10 @@ export class CrewWatch {
         "stopped",
         caught instanceof Error ? caught.message : String(caught),
       );
+      // The attempt is spent and backs off, and it reached no task: the
+      // delivery that does is still these rows' first.
       this.core.options.inbox.release(ids);
+      this.core.options.inbox.neverAttempted(untried);
     }
   }
 

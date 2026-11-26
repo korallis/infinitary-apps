@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
+import type { FmEvent } from "@shared/events";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -8,6 +9,7 @@ import {
   fakeCrewmate,
   fakeCrewTimersEachTest,
   intentOf,
+  reboot,
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
@@ -15,6 +17,7 @@ import type { FakeSessionOptions } from "../../../tests/helpers/fakeSession";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { crewmateHandoverDir } from "../paths";
 import { type AccountPool, AccountSelector } from "../routing/accountRouter";
+import type { Router } from "../routing/router";
 import { CostLimitStore } from "../storage/costLimitStore";
 import { DecisionStore } from "../storage/decisionStore";
 import { STUCK_REFUSAL_LIMIT } from "../storage/inboxStore";
@@ -982,6 +985,91 @@ describe("a task still to move whose conversation is restarted", () => {
     expect(h.sessionSpecs).toHaveLength(2);
     expect(first.promptCalls).toHaveLength(1);
     expect(reached(h)).toBe(before);
+  });
+
+  it("carries on a restart with only its brief, held as its conversation opened, after the app is relaunched: once the limit is answered, with no message sent and no spark", async () => {
+    const first = fakeCrewmate({ model: MODEL });
+    const resume = { backend: "pi" as const, sessionFile: "/tmp/s2.jsonl" };
+    const second = fakeCrewmate({ model: MODEL, sessionId: "s2", resume });
+    const h = threeLogins("openai-codex", first, second, false, undefined, undefined, MODEL);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Fix the login form",
+      intent: intentOf("fix the login form"),
+    });
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    costLimitWhileOpening(h, () => taskId);
+    first.emit({
+      type: "turn_failed",
+      taskId,
+      error: "This request exceeds the context window.",
+      contextOverflow: true,
+    });
+    first.emit({ type: "turn_end", taskId });
+    first.finishPrompt();
+    await vi.waitFor(() => expect(h.sessionSpecs).toHaveLength(2));
+    await tick();
+    expect(second.promptCalls).toHaveLength(0);
+    await h.supervisor.disposeAll();
+
+    // The next launch reads the same saved state: the record names the new conversation.
+    const boot = fakeCrewmate({ model: MODEL, sessionId: "s2", resume });
+    const events: FmEvent[] = [];
+    const relaunched = reboot(h, async () => boot, {
+      router: h.router as unknown as Router,
+      costLimits: { store: h.costs, appLimit: () => DEFAULT_COST_LIMIT },
+      broadcastEvent: (event) => events.push(event),
+    });
+    await relaunched.watch.sweepInbox(Date.now());
+    await tick();
+    expect(boot.promptCalls).toHaveLength(0);
+    // Nothing but the restart's own reason waits on its lane.
+    expect(h.inbox.allFor(taskId).map((row) => row.facts?.kind)).toEqual(["conversation-restart"]);
+
+    h.costs.clearHold(taskId);
+    await relaunched.watch.sweepInbox(Date.now());
+    await vi.waitFor(() => expect(boot.promptCalls).toHaveLength(1));
+    expect(boot.promptCalls[0]).toContain("context limit");
+    expect(h.tasks.get(taskId)?.accountId).toBe("acct_work");
+    expect(
+      events.filter((event) => event.type === "task_event" && event.kind === "reached"),
+    ).toHaveLength(0);
+    await relaunched.disposeAll();
+  });
+
+  it("tells the center a message reached the task once, on the opening that succeeds after a failed one backed off, and not on the failure", async () => {
+    const first = fakeCrewmate({});
+    const h = threeLogins("openai-codex", first, fakeCrewmate({}), false);
+    seedRunning(h, MODEL, "/tmp/s1.jsonl");
+    // Sent while its cost limit stands, so it waits on the lane.
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    await expect(h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.")).resolves.toBe(
+      "recorded-held",
+    );
+    h.costs.clearHold("t-move");
+    vi.spyOn(h.supervisor.sessions, "resumeTask").mockRejectedValueOnce(
+      new Error("The conversation could not be opened."),
+    );
+    const before = reached(h);
+
+    await h.supervisor.watch.sweepInbox(Date.now());
+    await tick();
+    // The opening failed: the try is spent and backs off, and nothing reached the task.
+    expect(first.promptCalls).toHaveLength(0);
+    expect(reached(h)).toBe(before);
+    const [row] = h.inbox.allFor("t-move");
+    expect(row?.attempts).toBe(1);
+    const due = row?.nextAttemptAt ?? 0;
+    expect(due).toBeGreaterThan(Date.now());
+    await h.supervisor.watch.sweepInbox(Date.now());
+    await tick();
+    expect(h.sessionSpecs).toHaveLength(0);
+
+    vi.setSystemTime(due);
+    await h.supervisor.watch.sweepInbox(due);
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    expect(first.promptCalls[0]).toContain("Check the footer too.");
+    expect(reached(h)).toBe(before + 1);
   });
 });
 
