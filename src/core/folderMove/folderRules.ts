@@ -66,12 +66,14 @@ export function moveColumnAcross(
   from: string,
   to: string,
 ): void {
+  // i18n-exempt: SQL, never shown to a person
   const rows = db
     .prepare(
       `SELECT rowid AS id, ${column} AS value FROM ${table}
        WHERE (${where}) AND typeof(${column}) = 'text'`,
     )
     .all() as { id: number; value: string }[];
+  // i18n-exempt: SQL, never shown to a person
   const write = db.prepare(`UPDATE ${table} SET ${column} = ? WHERE rowid = ?`);
   for (const row of rows) {
     const moved = movedAcross(row.value, from, to);
