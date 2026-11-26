@@ -613,6 +613,20 @@ export class SettingsStore {
     this.set("login-moves", loginMovesSchema.parse(moves));
   }
 
+  /**
+   * Each provider's answered low-login card that no longer stands, by the
+   * raising it answered (`loginLowAsked`): its move is made or its Wait's
+   * run-out ended (`LowLogins`, through the home's watch, its one writer).
+   */
+  getLoginAnswersOver(): Record<string, string> {
+    const parsed = z.record(z.string(), z.string()).safeParse(this.get("login-low-answers-over"));
+    return parsed.success ? parsed.data : {};
+  }
+
+  setLoginAnswersOver(over: Record<string, string>): void {
+    this.set("login-low-answers-over", z.record(z.string(), z.string()).parse(over));
+  }
+
   /** Global instructions and skills for new crewmate sessions, off by default. */
   getPersonalResourcesEnabled(): boolean {
     return this.get("personal-resources") === true;

@@ -3,6 +3,7 @@ import type { FmEvent } from "@shared/events";
 import { wordSaidMarks } from "@shared/i18n/said";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LOGIN_LOW_WAIT } from "../orchestrator/loginCards";
+import { moveLoginActionId } from "../orchestrator/loginMove";
 import type { LoginMoves } from "../orchestrator/loginMoves";
 import { startLowLogins } from "./homeLowLogins";
 import type { LoginReading } from "./lowLogins";
@@ -26,8 +27,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** What the card store keeps across launches: the provider's card and the action that answered it. */
-type SavedCard = { card?: HostCard; chosen?: string };
+/**
+ * What the app keeps across launches: the provider's card, the action that
+ * answered it, and the answers the watch recorded as over.
+ */
+type SavedCard = { card?: HostCard; chosen?: string; over?: Record<string, string> };
 
 function home(
   logins: LoginReading[],
@@ -37,9 +41,13 @@ function home(
   const listeners: (() => void)[] = [];
   const raised: HostCard[] = [];
   const moved: string[] = [];
+  /** The tasks' moves and the pin's, in the order the watch recorded them. */
+  const order: string[] = [];
   const events: FmEvent[] = [];
   const state = {
     pin: "personal" as string | undefined,
+    /** The app quits as the pin is about to be saved. */
+    quitsAtPin: false,
     get chosen() {
       return saved.chosen;
     },
@@ -51,11 +59,18 @@ function home(
     tasksOn: () => ["task-1"],
     moveOff: async (from: string, to: string) => {
       moved.push(`${from} to ${to}`);
+      order.push(`tasks ${from} to ${to}`);
     },
     forget: () => {},
   } as unknown as LoginMoves;
   const watch = startLowLogins({
-    settings: { getWhenLoginLow: () => "ask" },
+    settings: {
+      getWhenLoginLow: () => "ask",
+      getLoginAnswersOver: () => saved.over ?? {},
+      setLoginAnswersOver: (over) => {
+        saved.over = over;
+      },
+    },
     vault: {
       list: (providerId) =>
         providerId === "openai-codex"
@@ -63,7 +78,9 @@ function home(
           : [],
       pinnedAccount: () => state.pin,
       setPin: (_providerId, accountId) => {
+        if (state.quitsAtPin) throw new Error("the app quit");
         state.pin = accountId ?? undefined;
+        order.push(`pin ${accountId}`);
       },
       onCutOffChange: (listener) => listeners.push(listener),
       cutOff: (accountId) => cutOffs.get(accountId),
@@ -90,7 +107,7 @@ function home(
   const cutOffChanged = () => {
     for (const listener of listeners) listener();
   };
-  return { watch, cutOffs, cutOffChanged, raised, moved, state, loginMoves, saved };
+  return { watch, cutOffs, cutOffChanged, raised, moved, order, state, loginMoves, saved };
 }
 
 const login = (accountId: string, label: string, percent?: number): LoginReading => ({
@@ -232,5 +249,116 @@ describe("the home's watch after a relaunch, when the captain answered Wait for 
     const next = home(logins, before.saved, again);
     next.watch.read();
     expect(next.raised).toHaveLength(1);
+  });
+});
+
+describe("the home's watch when a known refill or a reading with room ends a Wait answer", () => {
+  it("asks again without a relaunch when the login is cut off anew after the refill the answered card named", () => {
+    const cutOffs = new Map([["personal", { class: "no_headroom", resetsAt: RESETS }]]);
+    const t = home([login("personal", "Personal"), login("work", "Work", 60)], {}, cutOffs);
+    t.watch.read();
+    t.saved.chosen = LOGIN_LOW_WAIT;
+    t.watch.read();
+    expect(t.raised).toHaveLength(1);
+
+    // Past that refill the first reading is a cut-off again, until a week later.
+    vi.setSystemTime(RESETS + 60_000);
+    const week = 7 * 24 * 60 * 60 * 1000;
+    cutOffs.set("personal", { class: "no_headroom", resetsAt: RESETS + week });
+    t.cutOffChanged();
+    expect(t.raised).toHaveLength(2);
+  });
+
+  it("asks at the next run-out after a relaunch, when the login was read with room before the app quit and no card went up since", () => {
+    const logins = [login("personal", "Personal", 4), login("work", "Work", 60)];
+    const before = home(logins);
+    before.watch.read();
+    before.saved.chosen = LOGIN_LOW_WAIT;
+    before.watch.read();
+    logins[0] = login("personal", "Personal", 100);
+    before.watch.read();
+    expect(before.raised).toHaveLength(1);
+
+    // The next launch reads nothing of the login at first, then reads it low again.
+    const later = [login("personal", "Personal"), login("work", "Work", 60)];
+    const after = home(later, before.saved);
+    after.watch.read();
+    expect(after.raised).toEqual([]);
+    later[0] = login("personal", "Personal", 9);
+    after.watch.read();
+    expect(after.raised).toHaveLength(1);
+  });
+});
+
+// The approved plan, "Ask": the click moves work to the login the card
+// named. The card store records the click before the watch acts on it, so a
+// quit in between leaves an answered card the next launch finishes.
+describe("the home's watch after a relaunch, when the app quit while it made the move a click named", () => {
+  const offeringSpare = () => [
+    login("personal", "Personal", 4),
+    login("work", "Work", 40),
+    login("spare", "Spare", 60),
+  ];
+  // By the next launch Work has more room than the login the click named.
+  const workRoomier = () => [
+    login("personal", "Personal", 4),
+    login("work", "Work", 95),
+    login("spare", "Spare", 60),
+  ];
+
+  it("moves the tasks and the pin to the named login, tasks first, when the click was recorded and nothing else", () => {
+    const before = home(offeringSpare());
+    before.watch.read();
+    expect(before.raised[0]?.actions?.[0]?.label).toBe("Move to Spare");
+    before.saved.chosen = moveLoginActionId("personal", "spare");
+
+    const logins = [login("personal", "Personal"), ...workRoomier().slice(1)];
+    const after = home(logins, before.saved);
+    after.watch.read();
+    // The low login is not read yet: the answer waits.
+    expect(after.order).toEqual([]);
+    logins[0] = login("personal", "Personal", 4);
+    after.watch.read();
+    after.watch.read();
+    expect(after.order).toEqual(["tasks personal to spare", "pin spare"]);
+    expect(after.raised).toEqual([]);
+
+    // Finished, it is not made again at a later launch.
+    const later = home(workRoomier(), { ...before.saved });
+    later.state.pin = "spare";
+    later.watch.read();
+    expect(later.order).toEqual([]);
+    expect(later.raised).toEqual([]);
+  });
+
+  it("finishes on the named login a move cut off after the tasks' moves were recorded and before the pin's", () => {
+    const before = home(offeringSpare());
+    before.watch.read();
+    before.saved.chosen = moveLoginActionId("personal", "spare");
+    before.state.quitsAtPin = true;
+    expect(() => before.loginMoves.onClick?.("spare")).toThrow("the app quit");
+    expect(before.order).toEqual(["tasks personal to spare"]);
+    expect(before.state.pin).toBe("personal");
+
+    const after = home(workRoomier(), before.saved);
+    after.watch.read();
+    expect(after.order).toEqual(["tasks personal to spare", "pin spare"]);
+    expect(after.state.pin).toBe("spare");
+    expect(after.raised).toEqual([]);
+  });
+
+  it("moves nothing and asks about what is true now, when the named login has no room left at the next launch", () => {
+    const before = home(offeringSpare());
+    before.watch.read();
+    before.saved.chosen = moveLoginActionId("personal", "spare");
+
+    const after = home(
+      [login("personal", "Personal", 4), login("work", "Work", 95), login("spare", "Spare", 3)],
+      before.saved,
+    );
+    after.watch.read();
+    expect(after.order).toEqual([]);
+    expect(after.raised).toHaveLength(1);
+    expect(after.raised[0]?.actions?.[0]?.label).toBe("Move to Work");
   });
 });
