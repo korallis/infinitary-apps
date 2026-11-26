@@ -665,6 +665,18 @@ export class InboxStore {
   }
 
   /**
+   * Rows that went back unspent on their first try were never tried: the
+   * delivery that does reach their task is their first (`lastAttemptAt`).
+   */
+  neverAttempted(ids: number[]): void {
+    this.changed();
+    if (ids.length === 0) return;
+    this.db
+      .prepare(`UPDATE inbox SET last_attempt_at = NULL WHERE id IN (${placeholders(ids)})`)
+      .run(...ids);
+  }
+
+  /**
    * The turn failed at the provider (the honest retry): back to pending
    * WITHOUT spending the attempt, one more failure counted, and due after
    * the backoff for that count - or at `notBefore` when that is later: a
