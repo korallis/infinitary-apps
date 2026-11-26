@@ -58,6 +58,8 @@ function threeLogins(
   second: FakeCrewmate,
   claude: boolean,
   cutOffs = new Map<string, typeof RAN_OUT>(),
+  /** Each account pick waits for this, as a pick that reads a login's models does. */
+  beforePick: () => Promise<void> = async () => {},
 ) {
   let costs: CostLimitStore | undefined;
   const pool: AccountPool = {
@@ -93,7 +95,10 @@ function threeLogins(
       : {}),
     accounts: {
       selectForSpawn: () => undefined,
-      pickForSpawn: (...args) => (accounts as AccountSelector).pickForSpawn(...args),
+      pickForSpawn: async (...args) => {
+        await beforePick();
+        return (accounts as AccountSelector).pickForSpawn(...args);
+      },
       reselectForResume: (...args) => (accounts as AccountSelector).reselectForResume(...args),
       labelOf: (accountId) => (accounts as AccountSelector).labelOf(accountId),
     },
@@ -374,6 +379,92 @@ describe("a task in the backlog, bound to a move, when a message's files have cr
     expect(h.tasks.get("t-move")?.accountId).toBe("acct_work");
     expect(first.promptCalls[0]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
     expect(first.promptCalls[0]).toMatch(/Files handed to you from [^\n]*\n\nlook at it/);
+  });
+});
+
+describe("a move still picking its account when a message is sent to its task", () => {
+  /** A pick that waits until the case lets it go. */
+  function heldPick() {
+    let release: () => void = () => {};
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return { beforePick: () => waiting, release };
+  }
+
+  it("hands a backlog task the message whose files crossed meanwhile, on the named login, with no second message or Start", async () => {
+    const pick = heldPick();
+    const first = fakeCrewmate({});
+    const h = threeLogins(
+      "openai-codex",
+      first,
+      fakeCrewmate({}),
+      false,
+      undefined,
+      pick.beforePick,
+    );
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+    h.supervisor.hostOps.moveToBacklog("t-move", {
+      actor: "firstmate",
+      via: "tool",
+      decision: null,
+    });
+    seedTask(h.tasks, { id: "t-finder", title: "Find the screenshot", status: "idle" });
+    const picture = join(scratchDir("infinitary-handed-"), "clipped card.png");
+    writeFileSync(picture, "a picture of the clipped card");
+    await keepHandoverFiles([picture], crewmateHandoverDir(h.paths, "t-finder"));
+
+    // The click's own move is still picking its account.
+    const moving = h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    await h.supervisor.steer.steerAfterFiles("t-finder", "t-move", "look at it", {
+      response: { mode: "guidance-only" as const },
+    });
+    await vi.waitFor(() => expect(h.supervisor.steer.handingOver("t-move")).toBe(false));
+    await tick();
+    expect(h.sessionSpecs).toHaveLength(0);
+
+    pick.release();
+    await moving;
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    expect(h.sessionSpecs).toHaveLength(1);
+    expect(boundAccount(h, 0)).toBe("acct_work");
+    expect(first.promptCalls[0]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+    expect(first.promptCalls[0]).toMatch(/Files handed to you from [^\n]*\n\nlook at it/);
+  });
+
+  it("answers a message sent to its task only once the task has reopened on the named login", async () => {
+    const pick = heldPick();
+    const first = fakeCrewmate({});
+    const h = threeLogins(
+      "openai-codex",
+      first,
+      fakeCrewmate({}),
+      false,
+      undefined,
+      pick.beforePick,
+    );
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+
+    const moving = h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    let answer: string | undefined;
+    const steered = h.supervisor.steer
+      .steerCrewmate("t-move", "Check the footer too.")
+      .then((delivery) => {
+        answer = delivery;
+      });
+    await tick();
+    // Nothing has reopened yet, so nothing is claimed.
+    expect(answer).toBeUndefined();
+    expect(h.sessionSpecs).toHaveLength(0);
+
+    pick.release();
+    await moving;
+    await steered;
+    expect(answer).toBe("mid-turn");
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    expect(h.sessionSpecs).toHaveLength(1);
+    expect(boundAccount(h, 0)).toBe("acct_work");
+    expect(first.promptCalls[0]).toContain("Check the footer too.");
   });
 });
 
