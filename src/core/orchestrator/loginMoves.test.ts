@@ -110,6 +110,7 @@ function crew(
       },
       deliverPendingToTask: (task) => {
         steps.push(`delivered ${task.id}`);
+        return true;
       },
       deliverLane: (taskId) => {
         steps.push(`lane ${taskId}`);
@@ -161,12 +162,14 @@ describe("a started task's move to another login", () => {
     // Its turn ends and its lane has words for it: the move takes the delivery.
     t.turn.busy = false;
     const delivered: string[] = [];
-    await expect(t.moves.takes("task-1", (task) => delivered.push(task.id))).resolves.toBe(true);
+    await expect(t.moves.takes("task-1", (task) => delivered.push(task.id) > 0)).resolves.toBe(
+      true,
+    );
     await expect.poll(() => delivered).toEqual(["task-1"]);
     expect(t.tasks.get("task-1")?.accountId).toBe("work");
     expect(t.steps).toEqual(["released task-1", "selected work", "resumed task-1 on work"]);
     // Moved, it is bound to nothing: the next delivery is an ordinary one.
-    expect(t.moves.takes("task-1", () => {})).toBeUndefined();
+    expect(t.moves.takes("task-1", () => true)).toBeUndefined();
   });
 
   it("leaves an idle task held by something else unopened, and moves it at the delivery after that hold", async () => {
@@ -177,7 +180,9 @@ describe("a started task's move to another login", () => {
     expect(t.events).toEqual([]);
     t.hold.held = false;
     const delivered: string[] = [];
-    await expect(t.moves.takes("task-1", (task) => delivered.push(task.id))).resolves.toBe(true);
+    await expect(t.moves.takes("task-1", (task) => delivered.push(task.id) > 0)).resolves.toBe(
+      true,
+    );
     await expect.poll(() => delivered).toEqual(["task-1"]);
     expect(t.tasks.get("task-1")?.accountId).toBe("work");
     expect(t.steps).toEqual(["released task-1", "selected work", "resumed task-1 on work"]);
@@ -189,20 +194,20 @@ describe("a started task's move to another login", () => {
     await t.moves.moveOff("personal", "work");
     t.hold.held = false;
     const delivered: string[] = [];
-    await expect(t.moves.takes("task-1", (task) => delivered.push(task.id), true)).resolves.toBe(
-      true,
-    );
+    await expect(
+      t.moves.takes("task-1", (task) => delivered.push(task.id) > 0, true),
+    ).resolves.toBe(true);
     await expect.poll(() => delivered).toEqual(["task-1"]);
     expect(t.steps).toEqual(["selected work", "resumed task-1 on work"]);
   });
 
   it("takes no delivery of a task bound to no move, or one whose login has room again", async () => {
     const t = crew({ busy: true });
-    expect(t.moves.takes("task-1", () => {})).toBeUndefined();
+    expect(t.moves.takes("task-1", () => true)).toBeUndefined();
     await t.moves.moveOff("personal", "work");
     t.moves.forget("personal");
     t.turn.busy = false;
-    expect(t.moves.takes("task-1", () => {})).toBeUndefined();
+    expect(t.moves.takes("task-1", () => true)).toBeUndefined();
     expect(t.tasks.get("task-1")?.accountId).toBe("personal");
   });
 
@@ -210,7 +215,7 @@ describe("a started task's move to another login", () => {
     const t = crew({ busy: true, pin: "spare" });
     await t.moves.moveOff("personal", "work");
     t.turn.busy = false;
-    await expect(t.moves.takes("task-1", () => {})).resolves.toBe(true);
+    await expect(t.moves.takes("task-1", () => true)).resolves.toBe(true);
     await expect.poll(() => t.tasks.get("task-1")?.accountId).toBe("work");
     expect(t.steps).toContain("selected work");
   });
@@ -230,7 +235,7 @@ describe("a started task's move to another login", () => {
     // Its lane is delivered on the conversation it keeps.
     expect(t.steps).toEqual(["delivered task-1"]);
     expect(t.events).toEqual([]);
-    expect(t.moves.takes("task-1", () => {})).toBeUndefined();
+    expect(t.moves.takes("task-1", () => true)).toBeUndefined();
   });
 
   it("delivers the lane of a task with no open conversation, without opening one first", async () => {

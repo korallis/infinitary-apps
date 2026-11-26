@@ -287,6 +287,9 @@ export class CrewWatch {
         this.core.steer.tellBacklogNews(taskId, renderWake(result));
         return;
       }
+      // A task bound to another login reopens there, not where it was (`LoginMoves`).
+      if (this.core.loginMoves.takes(taskId, (open) => this.core.turns.deliverPendingToTask(open)))
+        return;
       void this.core.sessions
         .resumeTask(taskId)
         .then((resumed) => this.core.turns.deliverPendingToTask(resumed))

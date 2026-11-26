@@ -468,6 +468,108 @@ describe("a move still picking its account when a message is sent to its task", 
   });
 });
 
+describe("a bound task with no open conversation that is started from the backlog", () => {
+  it("is opened on the named login alone and hears what waited on its lane", async () => {
+    const first = fakeCrewmate({});
+    const h = threeLogins("openai-codex", first, fakeCrewmate({}), false);
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+    h.supervisor.hostOps.moveToBacklog("t-move", {
+      actor: "firstmate",
+      via: "tool",
+      decision: null,
+    });
+    // Its cost limit kept the move from reopening it, so it is still to move.
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    h.costs.clearHold("t-move");
+    const record = h.tasks.get("t-move");
+    if (!record) throw new Error("the seeded task is gone");
+
+    h.supervisor.hostOps.startFromBacklog(record, "captain");
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    // Personal was never opened: the one conversation is Work's.
+    expect(h.sessionSpecs).toHaveLength(1);
+    expect(boundAccount(h, 0)).toBe("acct_work");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_work");
+    expect(h.tasks.get("t-move")?.backlogSince).toBeNull();
+  });
+});
+
+describe("a move still picking its account, and what it owes the task when it is over", () => {
+  /** A pick that waits until the case lets it go. */
+  function heldPick() {
+    let release: () => void = () => {};
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return { beforePick: () => waiting, release };
+  }
+
+  it("keeps a sent message's delivery when an ordinary delivery follows it, so a task since moved to the backlog still reads it", async () => {
+    const pick = heldPick();
+    const first = fakeCrewmate({});
+    const second = fakeCrewmate({});
+    const h = threeLogins("openai-codex", first, second, false, undefined, pick.beforePick);
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+    // Its conversation is open and idle on Personal. No move binds it yet, so no pick is asked for.
+    await h.supervisor.steer.steerCrewmate("t-move", "carry on");
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    first.finishPrompt();
+    await tick();
+
+    const moving = h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    void h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.");
+    await tick();
+    // An ordinary delivery, as a sweep makes, comes behind the sent one.
+    h.supervisor.watch.deliverLane("t-move");
+    h.supervisor.hostOps.moveToBacklog("t-move", {
+      actor: "firstmate",
+      via: "tool",
+      decision: null,
+    });
+    expect(second.promptCalls).toHaveLength(0);
+
+    pick.release();
+    await moving;
+    await vi.waitFor(() => expect(second.promptCalls).toHaveLength(1));
+    expect(boundAccount(h, 1)).toBe("acct_work");
+    expect(second.promptCalls[0]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+    expect(second.promptCalls[0]).toContain("Check the footer too.");
+  });
+
+  it("answers a sent message as kept, not delivered, when a cost limit holds the task while it reopens", async () => {
+    const pick = heldPick();
+    const first = fakeCrewmate({});
+    const h = threeLogins(
+      "openai-codex",
+      first,
+      fakeCrewmate({}),
+      false,
+      undefined,
+      pick.beforePick,
+    );
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+    const resume = h.supervisor.sessions.resumeTask.bind(h.supervisor.sessions);
+    vi.spyOn(h.supervisor.sessions, "resumeTask").mockImplementation(async (...args) => {
+      const resumed = await resume(...args);
+      // The task passes its cost limit while its conversation opens.
+      h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+      return resumed;
+    });
+
+    const moving = h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    const steered = h.supervisor.steer.steerCrewmate("t-move", "Check the footer too.");
+    await tick();
+    pick.release();
+    await moving;
+    await expect(steered).resolves.toBe("recorded-retrying");
+    expect(boundAccount(h, 0)).toBe("acct_work");
+    expect(first.promptCalls).toHaveLength(0);
+    // Its row still waits on the lane for the hold to end.
+    expect(h.inbox.allFor("t-move")).toHaveLength(1);
+  });
+});
+
 describe("the low-login card's Move button, as the host admits its click", () => {
   it("refuses the button as it stood before the card named another login, and takes the one it shows", async () => {
     const h = threeLogins("openai-codex", queueingCrewmate({}), queueingCrewmate({}), false);

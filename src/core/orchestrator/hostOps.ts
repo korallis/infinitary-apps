@@ -571,7 +571,13 @@ export class HostOps {
         now &&
         TaskService.isResumable(now) &&
         now.sessionFile &&
-        !this.core.facts.laneHeld(record.id)
+        !this.core.facts.laneHeld(record.id) &&
+        // A task bound to another login is opened there, never where it was (`LoginMoves`).
+        !this.core.loginMoves.takes(
+          record.id,
+          (open) => this.core.turns.deliverPendingToTask(open, { sent: true }),
+          true,
+        )
       )
         void this.core.sessions
           .resumeTask(record.id)
