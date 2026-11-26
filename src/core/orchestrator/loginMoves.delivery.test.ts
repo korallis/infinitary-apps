@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { describe, expect, it, vi } from "vitest";
@@ -9,11 +11,15 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import type { FakeSessionOptions } from "../../../tests/helpers/fakeSession";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { crewmateHandoverDir } from "../paths";
 import { type AccountPool, AccountSelector } from "../routing/accountRouter";
 import { CostLimitStore } from "../storage/costLimitStore";
 import { DecisionStore } from "../storage/decisionStore";
+import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
 import { crewmateRestartText } from "./crewSession";
+import { BACKLOG_STEER_LINE } from "./crewTurns";
 import { loginLowCard, loginLowCardId } from "./loginCards";
 
 fakeCrewTimersEachTest();
@@ -333,6 +339,41 @@ describe("an idle task held at its cost limit when its login's work is moved", (
     expect(h.tasks.get("t-move")?.accountId).toBe("acct_work");
     expect(first.promptCalls[0]).toContain("Check the footer too.");
     expect(first.promptCalls[0]).toContain("And the header.");
+  });
+});
+
+describe("a task in the backlog, bound to a move, when a message's files have crossed", () => {
+  it("is opened on the named login alone and reads the first mate's message there", async () => {
+    const first = fakeCrewmate({});
+    const h = threeLogins("openai-codex", first, fakeCrewmate({}), false);
+    seedRunning(h, { provider: "openai-codex", id: "gpt-6.1-terra" }, "/tmp/s1.jsonl");
+    expect(
+      h.supervisor.hostOps.moveToBacklog("t-move", {
+        actor: "firstmate",
+        via: "tool",
+        decision: null,
+      }).ok,
+    ).toBe(true);
+    // Its cost limit kept the move from reopening it, so it is still to move.
+    h.costs.placeHold({ taskId: "t-move", limitUsd: 50, spentUsd: 51.5, at: Date.now() });
+    await h.supervisor.loginMoves.moveOff("acct_personal", "acct_work");
+    h.costs.clearHold("t-move");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_personal");
+    seedTask(h.tasks, { id: "t-finder", title: "Find the screenshot", status: "idle" });
+    const picture = join(scratchDir("infinitary-handed-"), "clipped card.png");
+    writeFileSync(picture, "a picture of the clipped card");
+    await keepHandoverFiles([picture], crewmateHandoverDir(h.paths, "t-finder"));
+
+    await h.supervisor.steer.steerAfterFiles("t-finder", "t-move", "look at it", {
+      response: { mode: "guidance-only" as const },
+    });
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    // Personal was never opened: the one conversation is Work's.
+    expect(h.sessionSpecs).toHaveLength(1);
+    expect(boundAccount(h, 0)).toBe("acct_work");
+    expect(h.tasks.get("t-move")?.accountId).toBe("acct_work");
+    expect(first.promptCalls[0]?.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+    expect(first.promptCalls[0]).toMatch(/Files handed to you from [^\n]*\n\nlook at it/);
   });
 });
 
