@@ -2,7 +2,7 @@ import { accountPools } from "@shared/accountPools";
 import type { QuotaSnapshotView } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
 import type { ModelRuntime } from "../pi/types";
-import { buildModelsCatalog } from "../quota/catalog";
+import { buildModelsCatalog, limitingResetOf } from "../quota/catalog";
 import { QuotaService } from "../quota/quotaService";
 import { quotaGateCleared } from "../routing/quotaGate";
 import { openInMemoryDatabase } from "../storage/db";
@@ -894,6 +894,73 @@ describe("a spent pool of two logins, across its resets", () => {
     // The refusal has ended: B serves.
     now = T + 3.1 * HOUR;
     expect(standingOn(service, refusedB)).toEqual(serving);
+  });
+
+  // The review's finding: a refused login's return is its last blocker, the
+  // refusal's end or a used-up window's own reset, whichever is later, and
+  // never the first window that happens to read used up.
+  it.each([
+    {
+      blocker: "a used-up week that outlasts the refusal",
+      windows: [
+        { id: "session", label: "session", percentRemaining: 50, resetsAtMs: T + 2 * HOUR },
+        { id: "weekly", label: "weekly", percentRemaining: 0, resetsAtMs: week },
+      ],
+      backAt: week,
+      last: "weekly",
+    },
+    {
+      blocker: "the refusal, which outlasts a used-up session",
+      windows: [
+        { id: "session", label: "session", percentRemaining: 0, resetsAtMs: T + 2 * HOUR },
+        { id: "weekly", label: "weekly", percentRemaining: 50, resetsAtMs: week },
+      ],
+      backAt: T + 3 * HOUR,
+      last: "weekly",
+    },
+  ])("names a refused login's return by $blocker", async ({ windows, backAt, last }) => {
+    const service = new QuotaService({
+      refresh: async () => ({
+        snapshot: {
+          generatedAt: new Date(T).toISOString(),
+          fetchedAt: T,
+          providers: [
+            login("a", [0, T + HOUR], [0, week]),
+            {
+              ...login("b", [0, 0], [0, 0]),
+              windows: windows.map((window) => ({ ...window, resetText: `as read: ${window.id}` })),
+            },
+          ],
+        },
+        catalog: { generatedAt: new Date(T).toISOString(), models: [] },
+      }),
+      db: openInMemoryDatabase(),
+      broadcast: () => {},
+      now: () => T,
+      catalogFor: catalogOf,
+      pools,
+      refusedUntil: (accountId) => (accountId === "b" ? T + 3 * HOUR : undefined),
+    });
+    await service.refresh("demand");
+    service.stop();
+    const flagship = new Flagship({
+      vault: vaultOf([
+        { id: "a", providerId: "openai-codex", label: "A", enabled: true },
+        { id: "b", providerId: "openai-codex", label: "B", enabled: true },
+      ]),
+      settings: settingsOf("a"),
+      quota: service,
+      baseRuntime,
+    });
+    const row = service.latest()?.providers.find((entry) => entry.accountId === "b");
+    if (!row) throw new Error("login B has no served row");
+    // Both windows read used up while the refusal stands.
+    expect(row.windows.map((window) => window.percentRemaining)).toEqual([0, 0]);
+    expect(limitingResetOf(row, T)).toBe(backAt);
+    const text = row.windows.find((window) => window.id === last)?.resetText;
+    expect(text).toBeTruthy();
+    expect(text).not.toBe(row.windows.find((window) => window.id !== last)?.resetText);
+    expect(flagship.resetText("b")).toBe(text);
   });
 
   // The review's finding: the refusal itself holds the login, whatever its

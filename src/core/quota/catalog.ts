@@ -59,15 +59,42 @@ function modelScope(
   return view.allModels;
 }
 
-/** When the window holding a model's least headroom on one account row resets. */
+/**
+ * Of a row's used-up windows, the one that resets last: the account serves
+ * again only when every window that blocks it has reset, so the first one
+ * listed names a return that may come too early. None when no window is
+ * used up, or when one of them has no known reset.
+ */
+export function lastBlockerOf<Window extends { percentRemaining?: number; resetsAtMs?: number }>(
+  windows: readonly Window[],
+): Window | undefined {
+  const usedUp = windows.filter(
+    (window) => typeof window.percentRemaining === "number" && window.percentRemaining <= 0,
+  );
+  if (usedUp.some((window) => window.resetsAtMs === undefined)) return undefined;
+  return usedUp.reduce<Window | undefined>(
+    (last, window) =>
+      !last || (window.resetsAtMs as number) > (last.resetsAtMs as number) ? window : last,
+    undefined,
+  );
+}
+
+/**
+ * When a model's allowance on one account row is back: the reset of the
+ * window holding its least headroom, and with several of its windows used
+ * up, the last of their resets (`lastBlockerOf`).
+ */
 export function limitingResetOf(
   provider: QuotaProviderView,
   nowMs: number,
   modelId?: string,
 ): number | undefined {
   if (provider.status !== "ok" || provider.stale) return undefined;
-  const id = modelScope(provider, nowMs, modelId)?.limitingWindowId;
-  return provider.windows.find((window) => window.id === id)?.resetsAtMs;
+  const scope = modelScope(provider, nowMs, modelId);
+  const bounds = provider.windows.filter((window) => scope?.boundedBy.includes(window.id));
+  const limiting =
+    lastBlockerOf(bounds) ?? bounds.find((window) => window.id === scope?.limitingWindowId);
+  return limiting?.resetsAtMs;
 }
 
 /**

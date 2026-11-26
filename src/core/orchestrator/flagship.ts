@@ -14,7 +14,7 @@ import { creditsOfferOf, type QuotaSnapshotView, quotaRowOf, savedResetsNow } fr
 import { allowanceSpent } from "@shared/quotaSignals";
 import { CUT_OFF_REFUSED, CUT_OFF_SIGNED_OUT } from "../accounts/credentialHealth";
 import type { ModelRuntime } from "../pi/types";
-import { effectiveFromProvider } from "../quota/catalog";
+import { effectiveFromProvider, lastBlockerOf } from "../quota/catalog";
 import { SessionBinder } from "../session/binding";
 import type { AccountDecisionInput } from "../storage/decisionStore";
 import { allowanceSpentWords, type SeatBinding, type SeatPause, signedOutSentence } from "./seat";
@@ -478,9 +478,10 @@ export class Flagship {
   resetText(accountId: string): string | undefined {
     const row = this.snapshotRow(accountId);
     if (!row) return undefined;
-    const bounding = [...row.windows]
-      .filter((window) => typeof window.percentRemaining === "number")
-      .sort((a, b) => (a.percentRemaining ?? 0) - (b.percentRemaining ?? 0))[0];
+    const read = row.windows.filter((window) => typeof window.percentRemaining === "number");
+    const bounding =
+      lastBlockerOf(read) ??
+      [...read].sort((a, b) => (a.percentRemaining ?? 0) - (b.percentRemaining ?? 0))[0];
     return bounding?.resetText;
   }
 
