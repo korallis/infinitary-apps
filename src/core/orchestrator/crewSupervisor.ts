@@ -465,6 +465,7 @@ export class CrewSupervisor {
       deliverPendingToTask: (task) => this.turns.deliverPendingToTask(task),
       deliverLane: (taskId) => this.watch.deliverLane(taskId),
       machineOf: (taskId) => this.facts.machineOf(taskId),
+      laneHeld: (taskId) => this.facts.laneHeld(taskId),
       disposed: () => this.disposed,
     });
     const runbooks = options.runbooks;

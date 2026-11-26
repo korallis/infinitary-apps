@@ -541,7 +541,13 @@ export class CrewSteer {
           this.recordSteer(taskId, message, source, "recorded-held", held);
           return "recorded-held";
         }
-        if (reviewBuilder || task.session.controlProfile.steer === "followup-queue") {
+        // A task bound to another login takes no more words on the one it
+        // leaves: they wait for the move at its turn's end (`LoginMoves`).
+        if (
+          reviewBuilder ||
+          task.session.controlProfile.steer === "followup-queue" ||
+          this.core.loginMoves.bindsTask(taskId)
+        ) {
           const queued = enqueue();
           this.recordSteer(taskId, message, source, "queued-next-turn", queued);
           return "queued-next-turn";
@@ -590,6 +596,15 @@ export class CrewSteer {
       this.recordSteer(taskId, message, source, "recorded-held", resumeId);
       if (sentByHost) this.tellBacklogNews(taskId, message);
       return "recorded-held";
+    }
+    // A task bound to another login reopens there, never where it was (`LoginMoves`).
+    if (
+      this.core.loginMoves.takes(taskId, (open) =>
+        this.core.turns.deliverPendingToTask(open, { sent: true }),
+      )
+    ) {
+      this.recordSteer(taskId, message, source, "mid-turn", resumeId);
+      return "mid-turn";
     }
     const resumed = this.core.sessions
       .resumeTask(record.id)

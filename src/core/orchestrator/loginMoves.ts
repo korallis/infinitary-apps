@@ -16,6 +16,11 @@ export type LoginMovesHost = {
   deliverLane(taskId: string): void;
   /** Where a task's crewmate runs: the computer that runs work its record names, or this Mac. */
   machineOf(taskId: string): string;
+  /**
+   * Something other than the login it leaves holds the task's lane: a cost
+   * limit, an update, a move to another computer (`CrewFacts.laneHold`).
+   */
+  laneHeld(taskId: string): boolean;
   /** The app is quitting: no move starts now. */
   disposed(): boolean;
 };
@@ -28,7 +33,10 @@ export type LoginMovesHost = {
  * `move` - and no other; it then reopens the way a resume on a changed
  * account does, with what waited on its lane due at once. A task inside a
  * turn stays bound to that login and moves at its lane's next delivery
- * (`takes`). A login that no longer serves the task's model leaves the task
+ * (`takes`), which reaches the new login and never the turn still running
+ * on the old one. A task held by anything else - a cost limit, an update, a
+ * move to another computer - stays bound and moves at the delivery after
+ * that hold ends. A login that no longer serves the task's model leaves the task
  * where it is. Only this computer's own tasks move: a task on a computer
  * that runs work is on that computer's login.
  */
@@ -74,15 +82,18 @@ export class LoginMoves {
   }
 
   /**
-   * A lane's delivery to a task still to move: the move takes it, and
-   * `deliver` hands the lane to the conversation the task ends up with.
-   * False when the task is bound to no move.
+   * Whether the task still has a move to make: the login it leaves holds it
+   * no more (`CrewFacts.laneHold`) and takes no more of its words.
    */
-  /** Whether the task still has a move to make (`CrewFacts.laneHold`). */
   bindsTask(taskId: string): boolean {
     return this.bound.has(taskId);
   }
 
+  /**
+   * A lane's delivery to a task still to move: the move takes it, and
+   * `deliver` hands the lane to the conversation the task ends up with.
+   * False when the task is bound to no move.
+   */
   takes(taskId: string, deliver: (task: TaskRuntime) => void): boolean {
     if (!this.bound.has(taskId)) return false;
     void this.move(taskId, deliver);
@@ -107,7 +118,9 @@ export class LoginMoves {
     try {
       const before = this.options.tasks.get(taskId);
       if (before?.status !== "active" || before.accountId !== from || !before.model) return stay();
-      if (this.host.runtime(taskId)?.turn.busy) return;
+      // A hold of its own keeps the task bound and unopened; the delivery
+      // that follows the hold's end makes the move.
+      if (this.host.runtime(taskId)?.turn.busy || this.host.laneHeld(taskId)) return;
       const model = parseOfferingKey(before.model);
       const pick = await accounts.pickForSpawn(taskId, model.provider, {
         model: model.id,
@@ -115,7 +128,7 @@ export class LoginMoves {
       });
       const record = this.options.tasks.get(taskId);
       const runtime = this.host.runtime(taskId);
-      if (runtime?.turn.busy || this.host.disposed()) return;
+      if (runtime?.turn.busy || this.host.disposed() || this.host.laneHeld(taskId)) return;
       if (
         pick.accountId !== to ||
         record?.status !== "active" ||
