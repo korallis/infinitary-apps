@@ -1577,6 +1577,14 @@ export const MIGRATIONS: readonly Migration[] = [
   // string posts none. `RepoRegistry` is the only writer; no published view
   // reads it. Dropping the column reverses it.
   (db) => addColumn(db, "repos", "contributor_disclosure", "TEXT"),
+  // When a session last reported a share of a pushed reading's window
+  // (docs/quota.md, "A spent allowance withholds nothing"): `at` moves with
+  // a refusal or an ended hold, which are no readings, so the first mate's
+  // pause card names this time instead. Null on every older reading, which
+  // is read as taken at `at` when it carries a share. `PushedQuotaStore` is
+  // the only writer and no published view reads the table. Dropping the
+  // column reverses it.
+  (db) => addColumn(db, "pushed_quota", "share_at", "INTEGER"),
 ];
 
 /**

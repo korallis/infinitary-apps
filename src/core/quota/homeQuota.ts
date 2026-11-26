@@ -59,6 +59,7 @@ import {
   pushedCredits,
   pushedOnlyProviderViews,
   pushedProviderViews,
+  shareAtOf,
   withPushedCredits,
   withRejectedReadings,
 } from "./pushedQuota";
@@ -303,8 +304,15 @@ export function startHomeQuota(options: {
       if (window.status === "rejected") {
         // Ending the refusal is not a new word from the session: whether it
         // was answering on extra usage is not carried to the new time.
+        // Nor is it a reading: a share the window keeps keeps its own time.
         const { usingOverage: _using, ...rest } = window;
-        pushedQuota.record(accountId, { ...rest, status: "allowed", at: Date.now() });
+        const shareAt = shareAtOf(window);
+        pushedQuota.record(accountId, {
+          ...rest,
+          status: "allowed",
+          at: Date.now(),
+          ...(shareAt !== undefined ? { shareAt } : {}),
+        });
       }
     }
   };
@@ -545,6 +553,8 @@ export function startHomeQuota(options: {
           : {}),
         ...(reading.usingOverage !== undefined ? { usingOverage: reading.usingOverage } : {}),
         at: now,
+        // A share the session reports is a reading of the allowance, taken now.
+        ...(reading.utilization !== undefined ? { shareAt: now } : {}),
       });
       const after = pushedQuota.windowsFor(accountId);
       const creditsAfter = pushedCredits(after, now)?.credits;
@@ -558,7 +568,10 @@ export function startHomeQuota(options: {
       if (vault.claudeConfigDir(accountId) !== undefined) {
         const shown = (windows: PushedWindow[]) => {
           const window = windows.find((entry) => entry.windowId === reading.windowId);
-          return window && [window.status, window.utilization, window.resetsAt].join();
+          // The same share reported again is a newer reading: its time moves.
+          return (
+            window && [window.status, window.utilization, window.resetsAt, window.shareAt].join()
+          );
         };
         if (shown(before) === shown(after) && !creditsMoved) return;
         const [row] = pushedOnlyViews(now, accountId);

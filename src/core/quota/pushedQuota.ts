@@ -35,7 +35,22 @@ export type PushedWindow = {
   /** The session was answering on extra usage when it pushed this reading. */
   usingOverage?: boolean;
   at: number;
+  /**
+   * When a session last reported a share of this window. The store keeps it
+   * through a later word that carries none (a refusal that names only its
+   * reset, a hold that ended), which moves `at` and is no reading. Absent
+   * when no session has reported one.
+   */
+  shareAt?: number;
 };
+
+/**
+ * When a session last reported a share of the reading's window. A reading
+ * that carries a share and names no such time was taken at its own.
+ */
+export function shareAtOf(reading: PushedWindow): number | undefined {
+  return reading.shareAt ?? (reading.utilization !== undefined ? reading.at : undefined);
+}
 
 export type PushedQuotaReading = {
   accountId: string;
@@ -70,18 +85,30 @@ export class PushedQuotaStore {
     this.load();
   }
 
-  record(accountId: string, window: PushedWindow): void {
+  /**
+   * Replace the window's reading. One that carries no share keeps the time
+   * the window's last share was reported, so a refusal that names only its
+   * reset never erases it.
+   */
+  record(accountId: string, reading: PushedWindow): void {
     const windows = this.readings.get(accountId) ?? new Map<string, PushedWindow>();
+    const previous = windows.get(reading.windowId);
+    const shareAt =
+      reading.shareAt ??
+      (reading.utilization === undefined && previous ? shareAtOf(previous) : undefined);
+    const window: PushedWindow = { ...reading, ...(shareAt !== undefined ? { shareAt } : {}) };
     windows.set(window.windowId, window);
     this.readings.set(accountId, windows);
     this.db
       .prepare(
         "INSERT INTO pushed_quota (account_id, window_id, status, utilization, resets_at," +
-          " overage_status, overage_reason, using_overage, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)" +
+          " overage_status, overage_reason, using_overage, at, share_at)" +
+          " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" +
           " ON CONFLICT(account_id, window_id) DO UPDATE SET status = excluded.status," +
           " utilization = excluded.utilization, resets_at = excluded.resets_at," +
           " overage_status = excluded.overage_status, overage_reason = excluded.overage_reason," +
-          " using_overage = excluded.using_overage, at = excluded.at",
+          " using_overage = excluded.using_overage, at = excluded.at," +
+          " share_at = excluded.share_at",
       )
       .run(
         accountId,
@@ -93,6 +120,7 @@ export class PushedQuotaStore {
         window.overageReason ?? null,
         window.usingOverage === undefined ? null : window.usingOverage ? 1 : 0,
         window.at,
+        window.shareAt ?? null,
       );
   }
 
@@ -109,7 +137,7 @@ export class PushedQuotaStore {
     const rows = this.db
       .prepare(
         "SELECT account_id, window_id, status, utilization, resets_at, overage_status," +
-          " overage_reason, using_overage, at FROM pushed_quota",
+          " overage_reason, using_overage, at, share_at FROM pushed_quota",
       )
       .all() as {
       account_id: string;
@@ -121,6 +149,7 @@ export class PushedQuotaStore {
       overage_reason: string | null;
       using_overage: number | null;
       at: number;
+      share_at: number | null;
     }[];
     for (const row of rows) {
       const windows = this.readings.get(row.account_id) ?? new Map<string, PushedWindow>();
@@ -135,6 +164,7 @@ export class PushedQuotaStore {
         ...(row.overage_reason !== null ? { overageReason: row.overage_reason } : {}),
         ...(row.using_overage !== null ? { usingOverage: row.using_overage === 1 } : {}),
         at: row.at,
+        ...(row.share_at !== null ? { shareAt: row.share_at } : {}),
       });
       this.readings.set(row.account_id, windows);
     }
@@ -142,11 +172,12 @@ export class PushedQuotaStore {
 }
 
 /**
- * When a session last reported a share of the allowance: the newest reading
- * that carries one. A refusal that names only its reset is no such reading.
+ * When a session last reported a share of the allowance: the newest such
+ * time among the windows. A refusal that names only its reset is no such
+ * reading.
  */
 function shareReadAt(readings: PushedWindow[]): number | undefined {
-  const at = readings.flatMap((reading) => (reading.utilization !== undefined ? [reading.at] : []));
+  const at = readings.flatMap((reading) => shareAtOf(reading) ?? []);
   return at.length > 0 ? Math.max(...at) : undefined;
 }
 
