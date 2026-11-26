@@ -1,6 +1,11 @@
 import { accountsPoolOf } from "@shared/accountPools";
 import type { CatalogModelView, ModelsCatalogView, QuotaProviderView } from "@shared/quota";
-import { allowanceProviderOf, answersOnCredits, inAccountsPool } from "@shared/quota";
+import {
+  allowanceProviderOf,
+  answersOnCredits,
+  formatResetText,
+  inAccountsPool,
+} from "@shared/quota";
 import {
   allowanceSpent,
   type BandFacts,
@@ -63,16 +68,17 @@ function modelScope(
  * What blocks a model on a pooled login's row, and until when (docs/quota.md,
  * "A pool of your own logins"): of the windows that bound the model, the
  * used-up one that resets last, since the login serves the model again only
- * when every one of them has reset. Nothing when none is used up; a blocker
- * with no `window` when one of them has no known reset, so no return can be
- * named. Another model's window and credits past the allowance bound nothing
- * here and are never the blocker.
+ * when every one of them has reset, or the end of its provider's refusal of
+ * the login (`refusedUntilMs`) when that is later. Nothing when nothing
+ * blocks it; a blocker with no time when a used-up window has no known
+ * reset, so no return can be named. Another model's window and credits past
+ * the allowance bound nothing here and are never the blocker.
  */
 export function pooledBlockerOf(
   provider: QuotaProviderView,
   nowMs: number,
   modelId?: string,
-): { window?: QuotaProviderView["windows"][number] } | undefined {
+): { backAtMs?: number; resetText?: string } | undefined {
   const bounds = modelScope(provider, nowMs, modelId)?.boundedBy ?? [];
   const usedUp = provider.windows.filter(
     (window) =>
@@ -80,12 +86,24 @@ export function pooledBlockerOf(
       typeof window.percentRemaining === "number" &&
       window.percentRemaining <= 0,
   );
-  if (usedUp.length === 0) return undefined;
+  const refusedUntilMs =
+    provider.refusedUntilMs !== undefined && provider.refusedUntilMs > nowMs
+      ? provider.refusedUntilMs
+      : undefined;
+  if (usedUp.length === 0 && refusedUntilMs === undefined) return undefined;
   if (usedUp.some((window) => window.resetsAtMs === undefined)) return {};
+  const last = usedUp.reduce<(typeof usedUp)[number] | undefined>(
+    (latest, window) =>
+      !latest || (window.resetsAtMs as number) > (latest.resetsAtMs as number) ? window : latest,
+    undefined,
+  );
+  if (refusedUntilMs !== undefined && (!last || refusedUntilMs > (last.resetsAtMs as number))) {
+    const resetText = formatResetText(refusedUntilMs, nowMs);
+    return { backAtMs: refusedUntilMs, ...(resetText ? { resetText } : {}) };
+  }
   return {
-    window: usedUp.reduce((last, window) =>
-      (window.resetsAtMs as number) > (last.resetsAtMs as number) ? window : last,
-    ),
+    ...(last?.resetsAtMs !== undefined ? { backAtMs: last.resetsAtMs } : {}),
+    ...(last?.resetText ? { resetText: last.resetText } : {}),
   };
 }
 
@@ -104,7 +122,7 @@ export function limitingResetOf(
   if (provider.status !== "ok" || provider.stale) return undefined;
   if (inAccountsPool(accountsPoolOf(pools, provider.provider), provider.accountId)) {
     const blocker = pooledBlockerOf(provider, nowMs, modelId);
-    if (blocker) return blocker.window?.resetsAtMs;
+    if (blocker) return blocker.backAtMs;
   }
   const id = modelScope(provider, nowMs, modelId)?.limitingWindowId;
   return provider.windows.find((window) => window.id === id)?.resetsAtMs;

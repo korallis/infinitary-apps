@@ -465,8 +465,8 @@ export class Flagship {
    * an older one forward), and who the account's client says is signed in.
    * A row that holds no reading was not read: one known only through its
    * provider's refusal (`unread`), whose time is the refusal's and no
-   * reading's, and one with no window at all, as a login no session has
-   * reported on yet.
+   * reading's, and one none of whose windows carries a share, as a login
+   * no session has reported on yet.
    */
   allowanceCheck(
     accountId: string,
@@ -476,7 +476,8 @@ export class Flagship {
     const row = this.snapshotRow(accountId, "measured");
     if (!row) return undefined;
     if (row.unread) return { read: false };
-    if (row.status !== "ok" || row.stale || row.windows.length === 0)
+    const shareRead = row.windows.some((window) => typeof window.percentRemaining === "number");
+    if (row.status !== "ok" || row.stale || !shareRead)
       return { read: false, ...(row.measuredAt !== undefined ? { at: row.measuredAt } : {}) };
     const identity = this.options.vault.identitySync?.(accountId);
     return {
@@ -495,7 +496,7 @@ export class Flagship {
     const pools = this.options.quota.latest()?.pools;
     if (inAccountsPool(accountsPoolOf(pools, row.provider), accountId)) {
       const blocker = pooledBlockerOf(row, Date.now(), this.modelOn(accountId));
-      if (blocker) return blocker.window?.resetText;
+      if (blocker) return blocker.resetText;
     }
     const bounding = [...row.windows]
       .filter((window) => typeof window.percentRemaining === "number")

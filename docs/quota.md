@@ -160,7 +160,9 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
 - **A spent allowance withholds nothing.**
   Its predicate is headroom: a pushed `rejected` reading is a zero window until its reset, even for the sensed Claude row (`withRejectedReadings`, laid over each sensed row by `createQuotaFetcher`'s `overlay`; a reading that flips to or from `rejected` refreshes the snapshot at once).
   A row the sensor could not read, known only through that refusal, is marked `unread`: it holds the account like any used-up row, and the first mate's pause card says its allowance could not be read, never that it was checked (`Flagship.allowanceCheck`).
-  The card says the same of a row with no window at all, such as a login no session has reported on yet.
+  So is a row the sensor answered for with no share in any window, and a session-only login's row when its sessions reported a refusal and never a share (`pushedOnlyProviderViews`).
+  The card says the same of a row none of whose windows carries a share, such as a login no session has reported on yet.
+  A proxy's next reading replaces the mark with the rest of the last measurement (`rowOfOutcome`), so a reading taken after a refusal is a check again.
   The row the sensor measured keeps its other windows; a row it could not measure carries only the refusal; `auth_required` is left standing.
   Only a `rejected` reading's reset is trusted (rows from before migration 51 held seconds).
   The vault still records `no_headroom` with its reset for the lane and seat phases, and holds none with no reset named, since nothing could clear it.
@@ -386,6 +388,7 @@ A pool is a reading of its logins, never an allowance of its own: each login kee
   The refusal itself is on that login's served row until it ends, whatever its reading says (`withRefusal`, as `withRejectedReadings` lays a session's refusal over a meter): the refusal is the whole account's, so every window of a current reading that bounds a scope reads used up until the refusal ends (one with room left, one read without a share, and a model's own), and a reading that failed, went stale or is missing is served as one used-up account-wide window.
   A bound left unread would make that scope's allowance unknown, and unknown may be tried.
   Each window keeps its own reset, so a pooled login's return is named by its last blocker (`pooledBlockerOf`): of the windows that bound the model, the used-up one that resets last, and no time at all when one of them has no known reset.
+  The served row names the refusal's end itself (`refusedUntilMs`), and the return is that end when it is later than every such reset: a window already used up keeps its own earlier reset, so no window may name the refusal's end.
   The first mate's pause card and the reset a routing decision records read that for a login of a pool; a login outside one, and a credits notice, read the window with the least left as before.
   That row is what the login can do, not a reading of it: the first mate's pause card takes whether and when a login's allowance was checked from the measurement (`QuotaService.latestMeasured`, `Flagship.allowanceCheck`).
   So a reading taken before the refusal, or one that could not be taken, never opens the pooled waits or offers that login to the first mate's seat.

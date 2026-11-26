@@ -132,7 +132,9 @@ export function accountPools(
  * own reset, which `settlePoolResets` holds until the refusal ends, and
  * credits past the allowance bound nothing and stay as read. A row that is
  * no current reading is known only through the refusal, so it carries one
- * used-up account-wide window. A sign-in that ended is left as it stands.
+ * used-up account-wide window. The row names the refusal's end itself
+ * (`refusedUntilMs`), since windows already used up keep earlier resets.
+ * A sign-in that ended is left as it stands.
  */
 function withRefusal(
   row: QuotaProviderView,
@@ -159,9 +161,9 @@ function withRefusal(
   );
   if (classifyProviderWindows(row.provider, windows).bounding.length === 0)
     windows.push(usedUp("weekly", "weekly"));
-  if (current) return { ...row, windows };
+  if (current) return { ...row, refusedUntilMs, windows };
   const { reason: _reason, detail: _detail, retryAfter: _retryAfter, ...rest } = row;
-  return { ...rest, status: "ok", stale: false, windows };
+  return { ...rest, status: "ok", stale: false, refusedUntilMs, windows };
 }
 
 /**

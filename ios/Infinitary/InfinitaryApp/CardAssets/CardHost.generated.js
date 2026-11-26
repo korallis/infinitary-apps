@@ -134365,6 +134365,13 @@ ${startersHtml()}`;
      */
     unread: boolean().optional(),
     /**
+     * Its provider refuses this account until then, whatever its windows say:
+     * on the served row of a login of a pool of the person's own logins while
+     * the refusal stands (`settlePoolResets`). A window's own reset before
+     * that time frees nothing.
+     */
+    refusedUntilMs: number().optional(),
+    /**
      * A sanitized machine reason for a non-ok status: a code from our own
      * vocabulary, never provider text, never a header, never a URL.
      */

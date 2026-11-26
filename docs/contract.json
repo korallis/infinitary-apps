@@ -13101,6 +13101,9 @@
                                   "unread": {
                                     "type": "boolean"
                                   },
+                                  "refusedUntilMs": {
+                                    "type": "number"
+                                  },
                                   "reason": {
                                     "type": "string"
                                   },
@@ -13341,6 +13344,9 @@
                                   },
                                   "unread": {
                                     "type": "boolean"
+                                  },
+                                  "refusedUntilMs": {
+                                    "type": "number"
                                   },
                                   "reason": {
                                     "type": "string"
@@ -39191,6 +39197,9 @@
                     "unread": {
                       "type": "boolean"
                     },
+                    "refusedUntilMs": {
+                      "type": "number"
+                    },
                     "reason": {
                       "type": "string"
                     },
@@ -39431,6 +39440,9 @@
                     },
                     "unread": {
                       "type": "boolean"
+                    },
+                    "refusedUntilMs": {
+                      "type": "number"
                     },
                     "reason": {
                       "type": "string"
@@ -39705,6 +39717,9 @@
                     "unread": {
                       "type": "boolean"
                     },
+                    "refusedUntilMs": {
+                      "type": "number"
+                    },
                     "reason": {
                       "type": "string"
                     },
@@ -39945,6 +39960,9 @@
                     },
                     "unread": {
                       "type": "boolean"
+                    },
+                    "refusedUntilMs": {
+                      "type": "number"
                     },
                     "reason": {
                       "type": "string"
@@ -40219,6 +40237,9 @@
                     "unread": {
                       "type": "boolean"
                     },
+                    "refusedUntilMs": {
+                      "type": "number"
+                    },
                     "reason": {
                       "type": "string"
                     },
@@ -40459,6 +40480,9 @@
                     },
                     "unread": {
                       "type": "boolean"
+                    },
+                    "refusedUntilMs": {
+                      "type": "number"
                     },
                     "reason": {
                       "type": "string"
@@ -96597,6 +96621,9 @@
                             "unread": {
                               "type": "boolean"
                             },
+                            "refusedUntilMs": {
+                              "type": "number"
+                            },
                             "reason": {
                               "type": "string"
                             },
@@ -96837,6 +96864,9 @@
                             },
                             "unread": {
                               "type": "boolean"
+                            },
+                            "refusedUntilMs": {
+                              "type": "number"
                             },
                             "reason": {
                               "type": "string"
@@ -101917,6 +101947,9 @@
                 "unread": {
                   "type": "boolean"
                 },
+                "refusedUntilMs": {
+                  "type": "number"
+                },
                 "reason": {
                   "type": "string"
                 },
@@ -102157,6 +102190,9 @@
                 },
                 "unread": {
                   "type": "boolean"
+                },
+                "refusedUntilMs": {
+                  "type": "number"
                 },
                 "reason": {
                   "type": "string"
@@ -112335,6 +112371,9 @@
                                   "unread": {
                                     "type": "boolean"
                                   },
+                                  "refusedUntilMs": {
+                                    "type": "number"
+                                  },
                                   "reason": {
                                     "type": "string"
                                   },
@@ -112575,6 +112614,9 @@
                                   },
                                   "unread": {
                                     "type": "boolean"
+                                  },
+                                  "refusedUntilMs": {
+                                    "type": "number"
                                   },
                                   "reason": {
                                     "type": "string"
@@ -114460,6 +114502,9 @@
                                   "unread": {
                                     "type": "boolean"
                                   },
+                                  "refusedUntilMs": {
+                                    "type": "number"
+                                  },
                                   "reason": {
                                     "type": "string"
                                   },
@@ -114700,6 +114745,9 @@
                                   },
                                   "unread": {
                                     "type": "boolean"
+                                  },
+                                  "refusedUntilMs": {
+                                    "type": "number"
                                   },
                                   "reason": {
                                     "type": "string"
@@ -119050,6 +119098,9 @@
                           "unread": {
                             "type": "boolean"
                           },
+                          "refusedUntilMs": {
+                            "type": "number"
+                          },
                           "reason": {
                             "type": "string"
                           },
@@ -119290,6 +119341,9 @@
                           },
                           "unread": {
                             "type": "boolean"
+                          },
+                          "refusedUntilMs": {
+                            "type": "number"
                           },
                           "reason": {
                             "type": "string"

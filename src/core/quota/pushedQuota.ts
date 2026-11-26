@@ -206,7 +206,14 @@ export function pushedOnlyProviderViews(
           : reading;
       }),
     now,
-  );
+  ).map((view) => {
+    // The share a refusal reads as used up is the refusal's word, not a
+    // reading: a login whose sessions reported no share is unread.
+    const readings = view.accountId ? windowsFor(view.accountId) : [];
+    return readings.length > 0 && readings.every((reading) => reading.utilization === undefined)
+      ? { ...view, unread: true }
+      : view;
+  });
 }
 
 /**
@@ -287,7 +294,8 @@ export function withPushedCredits(
  *
  * A row the sensor measured keeps its other windows. A row it could not
  * measure is known only through the refusal, so it carries just that and
- * is marked `unread`: the refusal is no reading of the allowance. A
+ * is marked `unread`: the refusal is no reading of the allowance. So is a
+ * row the sensor answered for with no share in any window. A
  * sign-out proven by the sensor is left as it stands, and with no current
  * refusal the row is untouched - unknown is still never zero.
  */
@@ -313,8 +321,11 @@ export function withRejectedReadings(
   );
   const refused = new Set(zero.map((window) => window.id));
   if (view.status === "ok") {
+    // A reading that answered with no share is known only through the refusal.
+    const shareRead = view.windows.some((window) => typeof window.percentRemaining === "number");
     return {
       ...view,
+      ...(shareRead ? {} : { unread: true }),
       windows: [...view.windows.filter((window) => !refused.has(window.id)), ...zero].sort((a, b) =>
         a.id.localeCompare(b.id),
       ),

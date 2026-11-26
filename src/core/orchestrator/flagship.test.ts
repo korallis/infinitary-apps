@@ -1,9 +1,14 @@
 import { accountPools } from "@shared/accountPools";
-import type { QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
+import { formatResetText, type QuotaProviderView, type QuotaSnapshotView } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
 import type { ModelRuntime } from "../pi/types";
 import { buildModelsCatalog, limitingResetOf } from "../quota/catalog";
-import { pushedProviderViews, withRejectedReadings } from "../quota/pushedQuota";
+import { rowOfOutcome } from "../quota/cliProxy/proxyQuota";
+import {
+  pushedOnlyProviderViews,
+  pushedProviderViews,
+  withRejectedReadings,
+} from "../quota/pushedQuota";
 import { QuotaService } from "../quota/quotaService";
 import { quotaGateCleared } from "../routing/quotaGate";
 import { openInMemoryDatabase } from "../storage/db";
@@ -729,6 +734,52 @@ describe("the allowance check a pause card reports", () => {
     if (!row) throw new Error("the login has no row");
     expect(row).toMatchObject({ status: "ok", windows: [] });
     expect(checkOf(row)).toEqual({ read: false });
+    // Nor for a row whose one window names a reset and no share.
+    const dated = { ...row, windows: [{ id: "five_hour", label: "session", resetsAtMs: NOW + 1 }] };
+    expect(checkOf(dated)).toEqual({ read: false });
+  });
+
+  // The review's findings: a refusal that names a reset and no share is no
+  // reading on either path, and a later reading is one again.
+  const refusalAlone = {
+    windowId: "five_hour",
+    status: "rejected" as const,
+    resetsAt: NOW + 3_600_000,
+    at: NOW - 1_000,
+  };
+
+  it("is no check for a login whose sessions reported only a refusal", () => {
+    const [row] = pushedOnlyProviderViews([account], () => [refusalAlone], NOW);
+    if (!row) throw new Error("the login has no row");
+    expect(row.windows.map((window) => window.percentRemaining)).toEqual([0]);
+    expect(checkOf(row)).toEqual({ read: false });
+    // Once a session reports a share, it is a reading.
+    const [read] = pushedOnlyProviderViews(
+      [account],
+      () => [{ ...refusalAlone, status: "allowed" as const, utilization: 0.4 }],
+      NOW,
+    );
+    if (!read) throw new Error("the login has no row");
+    expect(checkOf(read)?.read).toBe(true);
+  });
+
+  it("is no check when the reading answered with no share and a refusal stands", () => {
+    const empty: QuotaProviderView = { ...sensed, windows: [] };
+    const row = withRejectedReadings(empty, [refusalAlone], NOW);
+    expect(row.windows.map((window) => window.percentRemaining)).toEqual([0]);
+    expect(checkOf(row)).toEqual({ read: false });
+  });
+
+  it("is a check again once a proxy's reading replaces a row known only by a refusal", () => {
+    const failed: QuotaProviderView = { ...sensed, status: "unavailable", windows: [] };
+    const refusedOnly = withRejectedReadings(failed, [rejected], NOW);
+    expect(checkOf(refusedOnly)).toEqual({ read: false });
+    const recovered = rowOfOutcome(
+      refusedOnly,
+      { status: "ok", windows: [{ id: "five_hour", label: "session", percentRemaining: 60 }] },
+      NOW + 5_000,
+    );
+    expect(checkOf(recovered)).toEqual({ at: NOW + 5_000, read: true });
   });
 });
 
@@ -1017,6 +1068,17 @@ describe("a spent pool of two logins, across its resets", () => {
       last: "weekly",
       unpooledBackAt: T + 3 * HOUR,
     },
+    {
+      blocker: "the refusal, when every window was already used up and resets before it ends",
+      windows: [
+        { id: "session", label: "session", percentRemaining: 0, resetsAtMs: T + 2 * HOUR },
+        { id: "weekly", label: "weekly", percentRemaining: 0, resetsAtMs: T + 2.5 * HOUR },
+      ],
+      backAt: T + 3 * HOUR,
+      // No window names the refusal's end: the words are the refusal's own.
+      last: "refusal",
+      unpooledBackAt: T + 2 * HOUR,
+    },
   ])(
     "names a refused login's return by $blocker",
     async ({ windows, backAt, last, unpooledBackAt }) => {
@@ -1061,11 +1123,19 @@ describe("a spent pool of two logins, across its resets", () => {
       const row = snapshot?.providers.find((entry) => entry.accountId === "b");
       if (!snapshot || !row) throw new Error("login B has no served row");
       const textOf = (id: string | undefined) =>
-        row.windows.find((window) => window.id === id)?.resetText;
+        id === "refusal"
+          ? formatResetText(T + 3 * HOUR, T)
+          : row.windows.find((window) => window.id === id)?.resetText;
 
       expect(limitingResetOf(row, T, undefined, snapshot.pools)).toBe(backAt);
       if (last) expect(textOf(last)).toBeTruthy();
-      expect(seatOver(service).resetText("b")).toBe(textOf(last));
+      // The seat reads the clock itself: hold it at the reading's time.
+      const clock = vi.spyOn(Date, "now").mockReturnValue(T);
+      try {
+        expect(seatOver(service).resetText("b")).toBe(textOf(last));
+      } finally {
+        clock.mockRestore();
+      }
 
       // The same row with no pool over it.
       const { pools: _pools, ...unpooled } = snapshot;

@@ -87,6 +87,7 @@ export function rowOfOutcome(
     detail: _detail,
     retryAfter: _retryAfter,
     measuredAt: _measuredAt,
+    unread: _unread,
     fromProxy: _fromProxy,
     ...rest
   } = row;
