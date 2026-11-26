@@ -124,12 +124,15 @@ export function accountPools(
 /**
  * A refused login's row with the refusal laid over it, as a session's
  * refusal is laid over a meter (`withRejectedReadings`): the provider said
- * no after the sensor read, or where it could not read. A current reading
- * with room in every account-wide window has the one with the least left
- * read used up until `refusedUntilMs`, and keeps its other windows. A row
- * that is no current reading is known only through the refusal, so it
- * carries just that one used-up window. A sign-in that ended is left as it
- * stands, and so is a reading whose own window already says used up.
+ * no after the sensor read, or where it could not read. The refusal is the
+ * whole account's, so every window that bounds a scope reads used up until
+ * `refusedUntilMs`: one with room left, one read without a share, and a
+ * model's own. A bound left unread would make that scope's allowance
+ * unknown, and unknown may be tried. A window already used up keeps its
+ * own reset, which `settlePoolResets` holds until the refusal ends, and
+ * credits past the allowance bound nothing and stay as read. A row that is
+ * no current reading is known only through the refusal, so it carries one
+ * used-up account-wide window. A sign-in that ended is left as it stands.
  */
 function withRefusal(
   row: QuotaProviderView,
@@ -137,29 +140,28 @@ function withRefusal(
   nowMs: number,
 ): QuotaProviderView {
   if (row.status === "auth_required") return row;
-  const { combined, bounding } = classifyProviderWindows(row.provider, row.windows);
-  const read = combined
-    ? bounding.filter((window) => typeof window.percentRemaining === "number")
-    : [];
-  const current = row.status === "ok" && !row.stale;
-  if (current && read.some((window) => (window.percentRemaining as number) <= 0)) return row;
-  const least = read.reduce<QuotaProviderView["windows"][number] | undefined>(
-    (low, window) =>
-      !low || (window.percentRemaining as number) < (low.percentRemaining as number) ? window : low,
-    undefined,
-  );
   const resetText = formatResetText(refusedUntilMs, nowMs);
-  const usedUp = {
-    id: least?.id ?? "weekly",
-    label: least?.label ?? "weekly",
+  const usedUp = (id: string, label: string) => ({
+    id,
+    label,
     percentRemaining: 0,
     resetsAtMs: refusedUntilMs,
     ...(resetText ? { resetText } : {}),
-  };
-  if (current && least)
-    return { ...row, windows: row.windows.map((window) => (window === least ? usedUp : window)) };
+  });
+  const current = row.status === "ok" && !row.stale;
+  const read = current ? row.windows : [];
+  const { excluded } = classifyProviderWindows(row.provider, read);
+  const windows = read.map((window) =>
+    excluded.includes(window) ||
+    (typeof window.percentRemaining === "number" && window.percentRemaining <= 0)
+      ? window
+      : usedUp(window.id, window.label),
+  );
+  if (classifyProviderWindows(row.provider, windows).bounding.length === 0)
+    windows.push(usedUp("weekly", "weekly"));
+  if (current) return { ...row, windows };
   const { reason: _reason, detail: _detail, retryAfter: _retryAfter, ...rest } = row;
-  return { ...rest, status: "ok", stale: false, windows: [usedUp] };
+  return { ...rest, status: "ok", stale: false, windows };
 }
 
 /**

@@ -220,6 +220,15 @@ export class QuotaService {
     return this.latestSnapshot;
   }
 
+  /**
+   * The rows as their readings left them, for a reader that reports the
+   * reading itself: whether a login's allowance was read and when. What a
+   * login can do now is `latest`.
+   */
+  latestMeasured(): QuotaSnapshotView | undefined {
+    return this.measured;
+  }
+
   latestModels(): ModelsCatalogView | undefined {
     this.settle();
     return this.latestCatalog;

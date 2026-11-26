@@ -699,6 +699,7 @@ describe("a spent pool of two logins, across its resets", () => {
   const standingOn = (
     quota: {
       latest: () => QuotaSnapshotView | undefined;
+      latestMeasured?: () => QuotaSnapshotView | undefined;
       latestModels: () => ReturnType<typeof catalogOf> | undefined;
     },
     /** The provider's own refusal of login B, while one stands. */
@@ -727,6 +728,8 @@ describe("a spent pool of two logins, across its resets", () => {
       seatA: flagship.pause("a")?.class,
       seatB: flagship.pause("b")?.class,
       moveTo: flagship.sibling("a")?.id,
+      // Whether the pause card may say B's allowance was checked.
+      readB: flagship.allowanceCheck("b")?.read,
       poolBackAt: quota.latest()?.pools?.[0]?.pool?.backAtMs,
       // The pooled meter, as Settings draws it: each window's share left.
       meter: Object.fromEntries(
@@ -750,6 +753,7 @@ describe("a spent pool of two logins, across its resets", () => {
       seatA: "no_headroom",
       seatB: "no_headroom",
       moveTo: undefined,
+      readB: true,
       poolBackAt: T + 2 * HOUR,
       meter: emptyMeter,
     });
@@ -777,6 +781,7 @@ describe("a spent pool of two logins, across its resets", () => {
       seatA: "no_headroom",
       seatB: undefined,
       moveTo: "b",
+      readB: true,
       poolBackAt: week,
       // B read a full session and half its week; A, spent, weighs zero in each.
       meter: { session: 50, weekly: 25 },
@@ -802,6 +807,7 @@ describe("a spent pool of two logins, across its resets", () => {
     seatA: "no_headroom",
     seatB: "no_headroom",
     moveTo: undefined,
+    readB: true as boolean | undefined,
     poolBackAt: T + 2 * HOUR,
     meter: emptyMeter,
   };
@@ -813,6 +819,7 @@ describe("a spent pool of two logins, across its resets", () => {
     seatA: "no_headroom",
     seatB: undefined,
     moveTo: "b",
+    readB: true as boolean | undefined,
     poolBackAt: week,
     meter: { weekly: 25 },
   };
@@ -896,7 +903,9 @@ describe("a spent pool of two logins, across its resets", () => {
     {
       reading: "shows room left",
       b: [login("b", [50, T + 2 * HOUR], [50, week])],
+      atFirst: emptyMeter,
       afterAReset: emptyMeter,
+      readB: true,
       // Once back, B's half and A's nothing: a quarter in each window.
       back: { meter: { session: 25, weekly: 25 } },
     },
@@ -904,19 +913,59 @@ describe("a spent pool of two logins, across its resets", () => {
       reading: "could not be taken",
       b: [{ ...login("b", [0, 0], [0, 0]), status: "error" as const, stale: true, windows: [] }],
       // A's session has reset and B is known only by the refusal's window.
+      atFirst: emptyMeter,
       afterAReset: { weekly: 0 },
+      // The refusal is no reading: the pause card must not say B was checked.
+      readB: false,
       // Once back, B is not read yet: the pool's allowance is unknown.
       back: { meter: {} },
     },
     {
+      reading: "has a window read without a share",
+      b: [
+        {
+          ...login("b", [50, T + 2 * HOUR], [50, week]),
+          windows: [
+            { id: "session", label: "session", resetsAtMs: T + 2 * HOUR },
+            { id: "weekly", label: "weekly", percentRemaining: 50, resetsAtMs: week },
+          ],
+        },
+      ],
+      atFirst: emptyMeter,
+      afterAReset: emptyMeter,
+      readB: true,
+      // Once back, B's week reads half beside A's nothing; no session is read.
+      back: { meter: { weekly: 25 } },
+    },
+    {
+      reading: "has the model's own window read without a share",
+      b: [
+        {
+          ...login("b", [50, T + 2 * HOUR], [50, week]),
+          windows: [
+            { id: "session", label: "session", percentRemaining: 50, resetsAtMs: T + 2 * HOUR },
+            { id: "weekly", label: "weekly", percentRemaining: 50, resetsAtMs: week },
+            { id: "model:gpt-6-sol", label: "Sol", resetsAtMs: week },
+          ],
+        },
+      ],
+      // The refusal is the whole account's: the model's own window reads used up too.
+      atFirst: { ...emptyMeter, "model:gpt-6-sol": 0 },
+      afterAReset: { ...emptyMeter, "model:gpt-6-sol": 0 },
+      readB: true,
+      back: { meter: { session: 25, weekly: 25 } },
+    },
+    {
       reading: "is missing",
       b: [],
+      atFirst: emptyMeter,
       afterAReset: { weekly: 0 },
+      readB: undefined,
       back: { meter: {} },
     },
   ])(
     "holds them while a login's provider refuses it and its reading $reading",
-    async ({ b, afterAReset, back }) => {
+    async ({ b, atFirst, afterAReset, readB, back }) => {
       let now = T;
       const refusedB = () =>
         now < T + 3 * HOUR ? { class: "no_headroom" as const, resetsAt: T + 3 * HOUR } : undefined;
@@ -938,13 +987,13 @@ describe("a spent pool of two logins, across its resets", () => {
       });
       await service.refresh("demand");
       service.stop();
-      const refused = { ...held, poolBackAt: T + 3 * HOUR };
+      const refused = { ...held, readB, poolBackAt: T + 3 * HOUR, meter: atFirst };
       expect(standingOn(service, refusedB)).toEqual(refused);
       now = T + 2.9 * HOUR;
       expect(standingOn(service, refusedB)).toEqual({ ...refused, meter: afterAReset });
 
       now = T + 3.1 * HOUR;
-      expect(standingOn(service, refusedB)).toEqual({ ...serving, ...back });
+      expect(standingOn(service, refusedB)).toEqual({ ...serving, readB, ...back });
     },
   );
 });

@@ -107,7 +107,11 @@ export type FlagshipOptions = {
     setFirstmateAccount(accountId: string | null): void;
     getFirstmateModel?(): { provider: string; id: string } | null;
   };
-  quota: { latest(): QuotaSnapshotView | undefined };
+  quota: {
+    latest(): QuotaSnapshotView | undefined;
+    /** The rows as read, where the served view differs from them (`QuotaService.latestMeasured`). */
+    latestMeasured?(): QuotaSnapshotView | undefined;
+  };
   /** The base runtime, serving custom providers and account-less setups. */
   baseRuntime: ModelRuntime;
   /** The one decision ledger the seat's binding decisions are recorded in. */
@@ -456,7 +460,9 @@ export class Flagship {
   allowanceCheck(
     accountId: string,
   ): { at: number; read: true; identity?: string } | { at?: number; read: false } | undefined {
-    const row = this.snapshotRow(accountId);
+    // The reading itself, not the served row: a refusal laid over a login
+    // whose reading failed or never happened is no reading of it.
+    const row = this.snapshotRow(accountId, "measured");
     if (!row) return undefined;
     if (row.status !== "ok" || row.stale)
       return { read: false, ...(row.measuredAt !== undefined ? { at: row.measuredAt } : {}) };
@@ -548,10 +554,13 @@ export class Flagship {
    * connection to a CLI proxy has a row per pool, and the first mate's
    * model's pool is the one it pauses, keeps headroom and resets by.
    */
-  private snapshotRow(accountId: string) {
+  private snapshotRow(accountId: string, as?: "measured") {
     const selected = this.options.settings.getFirstmateModel?.();
     const modelId =
       selected && selected.provider === this.providerOf(accountId) ? selected.id : undefined;
-    return quotaRowOf(this.options.quota.latest()?.providers, accountId, modelId);
+    const { quota } = this.options;
+    const snapshot =
+      as === "measured" && quota.latestMeasured ? quota.latestMeasured() : quota.latest();
+    return quotaRowOf(snapshot?.providers, accountId, modelId);
   }
 }
