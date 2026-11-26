@@ -469,9 +469,8 @@ export class FirstmateAgent {
           ...(line !== undefined ? { aboutLine: line } : {}),
         });
       },
-      moveFlagship: (providerId) => {
-        void this.seat.moveFlagship(providerId);
-      },
+      moveFlagship: (providerId) => void this.seat.moveFlagship(providerId),
+      moveFirstmateLogin: (accountId) => void this.seat.moveLogin(accountId),
       tryAgain: (arg) => this.seat.tryAgain(arg),
       keepGoingOnCredits: (accountId) => this.seat.keepGoingOnCredits(accountId),
       redeemSavedReset: (accountKey) => this.options.redeemSavedReset?.(accountKey) ?? "sign-in",

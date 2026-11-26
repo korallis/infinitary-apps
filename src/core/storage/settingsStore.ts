@@ -59,6 +59,11 @@ import {
 } from "@shared/releaseTracking";
 import { DEFAULT_SHARING, type Sharing, sharingSchema } from "@shared/sharing";
 import { tagCheckReachSchema } from "@shared/tagCheck";
+import {
+  WHEN_LOGIN_LOW_DEFAULT,
+  type WhenLoginLow,
+  whenLoginLowSchema,
+} from "@shared/whenLoginLow";
 import { z } from "zod";
 import { runbookStateSchema } from "../../shared/runbooks";
 import { type SeatDigestEntry, seatDigestEntrySchema } from "../orchestrator/seatDigest";
@@ -93,6 +98,8 @@ const firstmatePausedSchema = z.object({
   accountId: z.string(),
   class: z.enum(["signed_out", "no_headroom", "refused", "client", "unavailable"]),
   move: z.string().optional(),
+  /** The login of the same provider the pause card offers (docs/quota.md). */
+  login: z.string().optional(),
 });
 export type FirstmatePaused = z.infer<typeof firstmatePausedSchema>;
 
@@ -578,6 +585,16 @@ export class SettingsStore {
 
   setRunbookStates(states: Record<string, boolean>): void {
     this.set("runbooks", runbookStateSchema.parse(states));
+  }
+
+  /** What happens when the login in use runs low; an unread value is the default. */
+  getWhenLoginLow(): WhenLoginLow {
+    const parsed = whenLoginLowSchema.safeParse(this.get("when-login-low"));
+    return parsed.success ? parsed.data : WHEN_LOGIN_LOW_DEFAULT;
+  }
+
+  setWhenLoginLow(choice: WhenLoginLow): void {
+    this.set("when-login-low", whenLoginLowSchema.parse(choice));
   }
 
   /** Global instructions and skills for new crewmate sessions, off by default. */

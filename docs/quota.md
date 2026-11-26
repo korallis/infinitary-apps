@@ -257,6 +257,48 @@ The row's menu offers it, and the provider's own limit is the only cap: Infinita
 - **Feed lines.**
   `CreditsWatch` reads each snapshot against the one before it and says one line when an account that keeps going starts spending credits, and one when its credits run out; a restart says nothing again.
 
+## When the login in use runs low
+
+One saved choice says what happens when a provider with several logins has the one in use run low: `wait`, `ask`, `spread` or `move` (`WhenLoginLow` in `src/shared/whenLoginLow.ts`, the `when-login-low` setting, `ask` when nothing is saved).
+It is the `when-login-low` catalog line (`inf:settings:when-login-low:set`) at the own-words tier: the first mate changes it only on the captain's typed words, and its description tells the first mate to name the provider-terms risk of `spread` and `move` before setting either.
+A panel reads and sets it as the `when-login-low` panel setting; the app's own Settings draws no row for it.
+
+- **The login in use.**
+  It is the provider's account pin (`AccountVault.setPin`).
+  Under `wait` and `ask`, new work of a provider runs only on that login (`onlyPin` and `chooseLoginInUse` in `src/core/routing/accountPolicy.ts`): an enabled pin that is spent, signed out or withheld serves no other login, so the decision waits as it does for a provider with one login.
+  A provider with no pin, or whose pin names a login that is off or gone, gets one: the login the pick would have chosen without the choice becomes the pin, and one feed line says which login is in use (`AccountSelector`'s `loginInUse`).
+  Under `spread` and `move` the pick is unchanged: the login with the most room, with a pin winning while it is healthy.
+  A computer that runs work keeps its own pick over its own sign-ins.
+- **The moment.**
+  At every allowance reading and every change of a typed cut-off, `LowLogins` (`src/core/quota/lowLogins.ts`) reads each provider with two or more enabled logins.
+  A login runs low at `CREW_NEAR_FLOOR_PERCENT` or less of its measured allowance, a typed `no_headroom` included, and the place to move is the enabled, signed-in login with the most measured room that is not itself low, withheld or on credits (`roomiestOther`); a login with no reading comes after every measured one.
+  With no such login nothing is asked and nothing moves.
+- **`ask`.**
+  One crew card per provider per run-out (`card-login-low-<provider>`, `loginLowCard` in `src/core/orchestrator/loginCards.ts`) names the low login, what it has left, when its allowance refills, and the login with the most room, with Move to that login and Wait for the refill.
+  Nothing moves until the click.
+  Move (`move-login` host op, `crew:<accountId>`) makes that login the one in use, writes one feed line, and moves the started tasks on the low login.
+  Wait for the refill leaves everything where it is, and the card comes back only at that login's next run-out.
+  The card goes when the login has room again, when no other login has room, or when the choice becomes `wait`; the home keeps what it asked in memory, so a restart may ask once more.
+- **`move`.**
+  The same without the card: the pin moves to the login with the most room with one feed line naming both logins, and each task that moves writes its own line.
+- **`spread`.**
+  New work already runs across the logins, so only started work is asked about: the card names a low login that tasks run on, and its click moves those tasks and leaves a pin on another login alone.
+- **`wait`.**
+  Nothing is asked and nothing moves; work on the low login waits for its refill.
+- **A moved task.**
+  `LoginMoves` (`src/core/orchestrator/loginMoves.ts`) moves a started task between turns, never inside one: it lets go of the task's conversation, records the new login's pick in `account_decisions`, names the login on the task's placement, writes one feed line naming the task and both logins, and reopens the conversation the way a resume does, which renews it on the new login (`docs/inbox.md`, "A lane on a withheld account").
+  A Claude conversation is never copied across accounts, and nothing is retried inside a refused turn.
+  A task that was inside a turn at the click moves at a later reading while its old login is still low.
+  Only tasks whose crewmate runs on this computer move.
+- **The first mate.**
+  The first mate's account is its own setting, and its ladder's step to another login of the same provider follows the choice (`FirstmateSeat.admitTurn`, `docs/architecture.md` §16).
+  Under `move` it rebinds with a feed line.
+  Under `ask` and `spread` its spent-allowance card leads with Move to that login (`move-login`, `firstmate:<accountId>`) and says the captain's messages are kept; a first mate that serves on a login's credits keeps answering and asks once on `card-fm-on-credits`, with Stay on that login beside the move.
+  Under `wait` it waits on its own login and its card names no other.
+  The move to another provider still asks on its own card under every choice.
+- **Older views.**
+  A home sends the Move button only to a desktop view that lists the `when-login-runs-low` contract change, or to the phone (`readsMoveLogin` in `src/core/connection/taskAllow.ts`), as for Keep going on credits.
+
 ## Saved resets
 
 INF-5369 piece 6.

@@ -373,6 +373,35 @@ describe("the first mate's Settings actions, driven through the whole core", () 
       ).rejects.toThrow("stays with the captain");
   });
 
+  // The approved plan for several logins of one provider, piece 3, "Setting":
+  // one saved choice, starting on ask, that the first mate changes only on
+  // the captain's words, naming the terms risk of spread and move.
+  it("sets what happens when a login runs low only on the captain's words", async () => {
+    expect(ACTIONS["when-login-low"].tier).toBe("own-words");
+    expect(ACTIONS["when-login-low"].line).toContain(
+      "Before setting spread or move, name the terms risk",
+    );
+    expect(await core.dispatch("inf:settings:when-login-low:get", [])).toBe("ask");
+    const refused = await tool("app_change").run({
+      action: "when-login-low",
+      value: { choice: "move" },
+    });
+    expect(refused.text).toContain("Give the captain's words");
+    expect(await core.dispatch("inf:settings:when-login-low:get", [])).toBe("ask");
+
+    const moved = await asked(
+      "when-login-low",
+      { choice: "move" },
+      "Yes, I know the risk. Move my work between logins on its own.",
+    );
+    expect(moved.lines).toEqual(["when the login in use runs low: move"]);
+    expect(await core.dispatch("inf:settings:when-login-low:get", [])).toBe("move");
+    await expect(
+      core.dispatch("inf:settings:when-login-low:set", ["sometimes" as never]),
+    ).rejects.toThrow();
+    await core.dispatch("inf:settings:when-login-low:set", ["ask"]);
+  });
+
   it("leaves the captain's own clicks on newly claimed requests as they were", async () => {
     const before = operations().length;
     const copy = await core.dispatch("inf:standby:name", ["mini", true]);

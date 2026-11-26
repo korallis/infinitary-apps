@@ -175,3 +175,45 @@ export class AutoSavedResets {
 function keyOf(accountId: string, deviceId?: string): string {
   return deviceId ? `${accountId}@${deviceId}` : accountId;
 }
+
+/** The home's own: this Mac's vault and readings, and each computer that runs work's as it last said. */
+export function homeAutoSavedResets(options: {
+  models: SavedResetModels;
+  deviceSignIns: {
+    lastSaid(deviceId: string): {
+      accounts: { id: string; useSavedResets?: boolean | undefined }[];
+      quota?: QuotaSnapshotView | null | undefined;
+    } | null;
+    canUseSavedReset(deviceId: string): boolean;
+    takesAutoSavedResets(deviceId: string): boolean;
+  };
+  vault: { usesSavedResets(accountId: string): boolean };
+  quota: { latest(): QuotaSnapshotView | undefined };
+  /** `SavedResets.use`, once the home's saved resets exist. */
+  use:
+    | ((accountId: string, options: { deviceId?: string; auto: true }) => Promise<SavedResetResult>)
+    | undefined;
+  note: (text: string) => void;
+}): AutoSavedResets {
+  const { deviceSignIns } = options;
+  return new AutoSavedResets({
+    models: options.models,
+    switchOn: (accountId, deviceId) =>
+      deviceId
+        ? deviceSignIns
+            .lastSaid(deviceId)
+            ?.accounts.some((account) => account.id === accountId && account.useSavedResets) ===
+          true
+        : options.vault.usesSavedResets(accountId),
+    latest: (deviceId) =>
+      deviceId ? (deviceSignIns.lastSaid(deviceId)?.quota ?? undefined) : options.quota.latest(),
+    canUse: (deviceId) =>
+      deviceSignIns.canUseSavedReset(deviceId) && deviceSignIns.takesAutoSavedResets(deviceId),
+    use: (accountId, deviceId) =>
+      options.use
+        ? options.use(accountId, { ...(deviceId ? { deviceId } : {}), auto: true })
+        : Promise.reject(new Error("Infinitary is still starting.")),
+    note: options.note,
+    now: Date.now,
+  });
+}

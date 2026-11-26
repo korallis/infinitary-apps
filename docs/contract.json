@@ -18064,6 +18064,7 @@
                               "keep-going-on-credits",
                               "use-saved-reset",
                               "use-saved-resets",
+                              "move-login",
                               "add-plugin",
                               "decline-plugin",
                               "apply-project-change",
@@ -19556,6 +19557,7 @@
                                 "keep-going-on-credits",
                                 "use-saved-reset",
                                 "use-saved-resets",
+                                "move-login",
                                 "add-plugin",
                                 "decline-plugin",
                                 "apply-project-change",
@@ -67187,7 +67189,7 @@
         "prefixItems": [
           {
             "minItems": 1,
-            "maxItems": 10,
+            "maxItems": 11,
             "type": "array",
             "items": {
               "type": "string",
@@ -67201,7 +67203,8 @@
                 "notifications",
                 "cost-limit",
                 "personal-resources",
-                "panels-switch"
+                "panels-switch",
+                "when-login-low"
               ]
             }
           }
@@ -71641,6 +71644,54 @@
       },
       "response": {
         "type": "boolean"
+      }
+    },
+    "inf:settings:when-login-low:get": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "items": false,
+        "maxItems": 0
+      },
+      "response": {
+        "type": "string",
+        "enum": [
+          "wait",
+          "ask",
+          "spread",
+          "move"
+        ]
+      }
+    },
+    "inf:settings:when-login-low:set": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "enum": [
+              "wait",
+              "ask",
+              "spread",
+              "move"
+            ]
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "type": "string",
+        "enum": [
+          "wait",
+          "ask",
+          "spread",
+          "move"
+        ]
       }
     },
     "inf:secrets:approvals": {
@@ -81832,6 +81883,7 @@
                       "account-rename",
                       "account-pause",
                       "account-prefer",
+                      "when-login-low",
                       "projects-folder",
                       "custom-connection-file",
                       "project-batch-answer",
@@ -82408,6 +82460,7 @@
                       "account-rename",
                       "account-pause",
                       "account-prefer",
+                      "when-login-low",
                       "projects-folder",
                       "custom-connection-file",
                       "project-batch-answer",
@@ -85245,6 +85298,7 @@
                                     "keep-going-on-credits",
                                     "use-saved-reset",
                                     "use-saved-resets",
+                                    "move-login",
                                     "add-plugin",
                                     "decline-plugin",
                                     "apply-project-change",
@@ -100334,6 +100388,7 @@
                               "keep-going-on-credits",
                               "use-saved-reset",
                               "use-saved-resets",
+                              "move-login",
                               "add-plugin",
                               "decline-plugin",
                               "apply-project-change",
@@ -106554,6 +106609,7 @@
                       "account-rename",
                       "account-pause",
                       "account-prefer",
+                      "when-login-low",
                       "projects-folder",
                       "custom-connection-file",
                       "project-batch-answer",
@@ -107130,6 +107186,7 @@
                       "account-rename",
                       "account-pause",
                       "account-prefer",
+                      "when-login-low",
                       "projects-folder",
                       "custom-connection-file",
                       "project-batch-answer",

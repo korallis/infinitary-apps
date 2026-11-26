@@ -19,6 +19,7 @@ export const PANEL_SETTING_NAMES = [
   "cost-limit",
   "personal-resources",
   "panels-switch",
+  "when-login-low",
 ] as const;
 export type PanelSettingName = (typeof PANEL_SETTING_NAMES)[number];
 export const panelSettingNameSchema = z.enum(PANEL_SETTING_NAMES);

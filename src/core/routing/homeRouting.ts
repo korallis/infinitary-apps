@@ -40,6 +40,8 @@ export type HomeRouting = {
   router: Router;
   /** Each computer's sign-ins reach the slot record once they exist. */
   attachComputerSignIns: (view: () => ReturnType<DeviceSignIns["view"]>) => void;
+  /** Hears each login a pick took as a provider's login in use (docs/quota.md). */
+  attachLoginInUse: (said: (providerId: string, accountId: string) => void) => void;
 };
 
 export function startHomeRouting(options: {
@@ -194,6 +196,8 @@ export function startHomeRouting(options: {
    */
   const decisionNamedModels = () =>
     availableModels().filter((model) => model.provider !== "anthropic");
+  // Filled once the low-login watch exists; a pick before then pins without a feed line.
+  const loginInUse: { said?: (providerId: string, accountId: string) => void } = {};
   const accounts = new AccountSelector({
     pool: vault,
     placedWork,
@@ -201,6 +205,13 @@ export function startHomeRouting(options: {
     flagshipAccountId: () => settings.getFirstmateAccount(),
     decisions: ledger,
     accountModels: () => vault.availableModelsByAccount(),
+    loginInUse: {
+      whenLow: () => settings.getWhenLoginLow(),
+      pin: (providerId, accountId) => {
+        vault.setPin(providerId, accountId);
+        loginInUse.said?.(providerId, accountId);
+      },
+    },
   });
   const router = new Router({
     quota,
@@ -227,6 +238,9 @@ export function startHomeRouting(options: {
     router,
     attachComputerSignIns: (view) => {
       computerSignIns.view = view;
+    },
+    attachLoginInUse: (said) => {
+      loginInUse.said = said;
     },
   };
 }

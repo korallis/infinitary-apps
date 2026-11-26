@@ -33,6 +33,7 @@ import type { CrewCore } from "./crewCore";
 import type { InterruptSource } from "./crewRuntime";
 import type { PluginConsentHandler, ProjectSetupHandler } from "./crewSupervisorOptions";
 import { stallCardId } from "./idleLadder";
+import { loginMoveOf } from "./loginMove";
 import { describeStatus } from "./settleService";
 
 function startWaitRefusal(
@@ -152,6 +153,12 @@ export class HostOps {
       case "move-flagship":
         if (effect.arg) this.core.hooks().moveFlagship?.(effect.arg);
         return {};
+      case "move-login": {
+        const move = loginMoveOf(effect.arg ?? "");
+        if (move?.who === "crew") this.core.loginMoves.onClick?.(move.accountId);
+        if (move?.who === "firstmate") this.core.hooks().moveFirstmateLogin?.(move.accountId);
+        return {};
+      }
       case "try-again":
         if (effect.arg) this.core.hooks().tryAgain?.(effect.arg);
         return {};

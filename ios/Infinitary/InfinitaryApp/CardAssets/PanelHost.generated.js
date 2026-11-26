@@ -6481,6 +6481,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       "Lets work spend an account's saved resets with no click"
     ],
     "account-disconnect": ["credential", "Forgets an account's sign-in"],
+    "when-login-low": true,
     "projects-folder": true,
     "custom-connection-file": true,
     "project-batch-answer": true,
@@ -19468,6 +19469,145 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Show fewer`;
   }
+  function cardFirstMateKept() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `رسائلك محفوظة.`;
+      case "de":
+        return `Deine Nachrichten bleiben erhalten.`;
+      case "es":
+        return `Tus mensajes se conservan.`;
+      case "fr":
+        return `Vos messages sont conservés.`;
+      case "ja":
+        return `メッセージは保存されています。`;
+      case "ko":
+        return `메시지는 보관돼요.`;
+      case "pt-BR":
+        return `Suas mensagens ficam guardadas.`;
+      case "zh-Hans":
+        return `你的消息已保留。`;
+      case "zh-Hant":
+        return `你的訊息已保留。`;
+      case "en-XA":
+        return `[Ýöûŕ ɱéššáĝéš áŕé ķéþţ. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your messages are kept.‬`;
+    }
+    return `Your messages are kept.`;
+  }
+  function cardFirstMateMoveLogin(input2) {
+    const other = input2.other;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ما زال لدى ${other} رصيد. هل تنقل نائب القبطان إلى ${other} حتى ذلك الحين؟`;
+      case "de":
+        return `${other} hat noch Kontingent. Deinen Ersten Offizier bis dahin zu ${other} wechseln?`;
+      case "es":
+        return `A ${other} le queda asignación. ¿Pasar a tu primer oficial a ${other} hasta entonces?`;
+      case "fr":
+        return `${other} a encore de l’allocation. Passer votre second sur ${other} d’ici là ?`;
+      case "ja":
+        return `${other} には利用枠が残っています。それまで一等航海士を ${other} に移しますか？`;
+      case "ko":
+        return `${other}에는 사용량이 남아 있어요. 그때까지 일등항해사를 ${other}(으)로 옮길까요?`;
+      case "pt-BR":
+        return `${other} ainda tem franquia. Mover seu imediato para ${other} até lá?`;
+      case "zh-Hans":
+        return `${other} 还有额度。在那之前把你的大副改用 ${other} 吗？`;
+      case "zh-Hant":
+        return `${other} 還有額度。在那之前把你的大副改用 ${other} 嗎？`;
+      case "en-XA":
+        return `[${other} ĥáš áļļöŵáñçé ļéƒţ. Ṁöṽé ýöûŕ ƒîŕšţ ɱáţé ţö ${other} ûñţîļ ţĥéñ? ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${other}‮ has allowance left. Move your first mate to ‬${other}‮ until then?‬`;
+    }
+    return `${other} has allowance left. Move your first mate to ${other} until then?`;
+  }
+  function cardFirstMateOnCreditsBody(input2) {
+    const login = input2.login;
+    const other = input2.other;
+    switch (currentLanguage()) {
+      case "ar":
+        return `استنفد ${login} رصيده ويواصل العمل على الاعتمادات. ما زال لدى ${other} رصيد.`;
+      case "de":
+        return `${login} hat sein Kontingent aufgebraucht und macht mit Guthaben weiter. ${other} hat noch Kontingent.`;
+      case "es":
+        return `${login} agotó su asignación y sigue con créditos. A ${other} todavía le queda asignación.`;
+      case "fr":
+        return `${login} a épuisé son allocation et continue avec les crédits. ${other} a encore de l’allocation.`;
+      case "ja":
+        return `${login} は利用枠を使い切り、クレジットで続けています。${other} にはまだ利用枠が残っています。`;
+      case "ko":
+        return `${login}의 사용량을 모두 써서 크레딧으로 계속하고 있어요. ${other}에는 아직 사용량이 남아 있어요.`;
+      case "pt-BR":
+        return `${login} esgotou a franquia e continua com créditos. ${other} ainda tem franquia.`;
+      case "zh-Hans":
+        return `${login} 的额度已用完，正在用点数继续。${other} 还有额度。`;
+      case "zh-Hant":
+        return `${login} 的額度已用完，正在用點數繼續。${other} 還有額度。`;
+      case "en-XA":
+        return `[${login} ĥáš ûšéð ûþ îţš áļļöŵáñçé áñð ķééþš ĝöîñĝ öñ çŕéðîţš. ${other} šţîļļ ĥáš áļļöŵáñçé ļéƒţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${login}‮ has used up its allowance and keeps going on credits. ‬${other}‮ still has allowance left.‬`;
+    }
+    return `${login} has used up its allowance and keeps going on credits. ${other} still has allowance left.`;
+  }
+  function cardFirstMateOnCreditsTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نائب القبطان يعمل على الاعتمادات`;
+      case "de":
+        return `Dein Erster Offizier läuft auf Guthaben`;
+      case "es":
+        return `Tu primer oficial está usando créditos`;
+      case "fr":
+        return `Votre second fonctionne sur les crédits`;
+      case "ja":
+        return `一等航海士はクレジットで動いています`;
+      case "ko":
+        return `일등항해사가 크레딧으로 실행 중이에요`;
+      case "pt-BR":
+        return `Seu imediato está rodando com créditos`;
+      case "zh-Hans":
+        return `你的大副正在用点数运行`;
+      case "zh-Hant":
+        return `你的大副正在用點數執行`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé îš ŕûññîñĝ öñ çŕéðîţš ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate is running on credits‬`;
+    }
+    return `Your first mate is running on credits`;
+  }
+  function cardFirstMateStayOnCredits(input2) {
+    const login = input2.login;
+    switch (currentLanguage()) {
+      case "ar":
+        return `البقاء على ${login}`;
+      case "de":
+        return `Bei ${login} bleiben`;
+      case "es":
+        return `Seguir en ${login}`;
+      case "fr":
+        return `Rester sur ${login}`;
+      case "ja":
+        return `${login} のままにする`;
+      case "ko":
+        return `${login}에 그대로 두기`;
+      case "pt-BR":
+        return `Continuar em ${login}`;
+      case "zh-Hans":
+        return `继续用 ${login}`;
+      case "zh-Hant":
+        return `繼續用 ${login}`;
+      case "en-XA":
+        return `[Šţáý öñ ${login} ~~~]`;
+      case "ar-XB":
+        return `‮Stay on ‬${login}`;
+    }
+    return `Stay on ${login}`;
+  }
   function cardHeadingAfter() {
     switch (currentLanguage()) {
       case "ar":
@@ -20201,6 +20341,232 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Hide · the task goes on‬`;
     }
     return `Hide · the task goes on`;
+  }
+  function cardLoginLowLeft(input2) {
+    const percent = input2.percent;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بقي ${percent}% من رصيده.`;
+      case "de":
+        return `Es sind noch ${percent} % des Kontingents übrig.`;
+      case "es":
+        return `Le queda el ${percent} % de su asignación.`;
+      case "fr":
+        return `Il lui reste ${percent} % de son allocation.`;
+      case "ja":
+        return `利用枠の残りは ${percent}% です。`;
+      case "ko":
+        return `사용량이 ${percent}% 남았어요.`;
+      case "pt-BR":
+        return `Resta ${percent}% da franquia.`;
+      case "zh-Hans":
+        return `它的额度还剩 ${percent}%。`;
+      case "zh-Hant":
+        return `它的額度還剩 ${percent}%。`;
+      case "en-XA":
+        return `[Îţ ĥáš ${percent}% öƒ îţš áļļöŵáñçé ļéƒţ. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It has ‬${percent}‮% of its allowance left.‬`;
+    }
+    return `It has ${percent}% of its allowance left.`;
+  }
+  function cardLoginLowMove(input2) {
+    const login = input2.login;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى ${login}`;
+      case "de":
+        return `Zu ${login} wechseln`;
+      case "es":
+        return `Pasar a ${login}`;
+      case "fr":
+        return `Passer à ${login}`;
+      case "ja":
+        return `${login} に移す`;
+      case "ko":
+        return `${login}(으)로 옮기기`;
+      case "pt-BR":
+        return `Mover para ${login}`;
+      case "zh-Hans":
+        return `改用 ${login}`;
+      case "zh-Hant":
+        return `改用 ${login}`;
+      case "en-XA":
+        return `[Ṁöṽé ţö ${login} ~~~]`;
+      case "ar-XB":
+        return `‮Move to ‬${login}`;
+    }
+    return `Move to ${login}`;
+  }
+  function cardLoginLowOffer(input2) {
+    const login = input2.login;
+    const other = input2.other;
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${other} لديه أكبر رصيد متاح. سيعمل عمل ${provider} الجديد على ${other}، وعمل الطاقم المنتظر على ${login} سيستمر هناك في دوره التالي.`;
+      case "de":
+        return `${other} hat am meisten Spielraum. Neue ${provider}-Arbeit würde auf ${other} laufen, und Crew-Arbeit, die auf ${login} wartet, würde dort bei ihrem nächsten Zug weitergehen.`;
+      case "es":
+        return `${other} es el que tiene más margen. El trabajo nuevo de ${provider} se ejecutaría en ${other}, y el trabajo de la tripulación que espera en ${login} continuaría allí en su siguiente turno.`;
+      case "fr":
+        return `${other} a le plus de marge. Le nouveau travail ${provider} s’exécuterait sur ${other}, et le travail de l’équipage en attente sur ${login} y continuerait à son prochain tour.`;
+      case "ja":
+        return `${other} にいちばん余裕があります。新しい ${provider} の作業は ${other} で動き、${login} で待っている乗組員の作業は次のターンからそちらで続きます。`;
+      case "ko":
+        return `${other}에 여유가 가장 많아요. 새 ${provider} 작업은 ${other}에서 실행되고, ${login}에서 기다리는 선원들의 작업은 다음 턴부터 그곳에서 이어져요.`;
+      case "pt-BR":
+        return `${other} tem mais folga. O trabalho novo do ${provider} rodaria em ${other}, e o trabalho da tripulação que espera em ${login} continuaria lá no próximo turno.`;
+      case "zh-Hans":
+        return `${other} 的余量最多。新的 ${provider} 工作会在 ${other} 上运行，在 ${login} 上等待的船员工作会在下一轮转到那里继续。`;
+      case "zh-Hant":
+        return `${other} 的餘量最多。新的 ${provider} 工作會在 ${other} 上執行，在 ${login} 上等待的船員工作會在下一輪轉到那裡繼續。`;
+      case "en-XA":
+        return `[${other} ĥáš ţĥé ɱöšţ ŕööɱ. Ñéŵ ${provider} ŵöŕķ ŵöûļð ŕûñ öñ ${other}, áñð çŕéŵ ŵöŕķ ŵáîţîñĝ öñ ${login} ŵöûļð çöñţîñûé ţĥéŕé áţ îţš ñéẋţ ţûŕñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${other}‮ has the most room. New ‬${provider}‮ work would run on ‬${other}‮, and crew work waiting on ‬${login}‮ would continue there at its next turn.‬`;
+    }
+    return `${other} has the most room. New ${provider} work would run on ${other}, and crew work waiting on ${login} would continue there at its next turn.`;
+  }
+  function cardLoginLowRefills(input2) {
+    const when = input2.when;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُعاد ملء رصيده ${when}.`;
+      case "de":
+        return `Das Kontingent wird ${when} aufgefüllt.`;
+      case "es":
+        return `Su asignación se repone ${when}.`;
+      case "fr":
+        return `Son allocation se recharge ${when}.`;
+      case "ja":
+        return `利用枠は ${when} に補充されます。`;
+      case "ko":
+        return `사용량은 ${when}에 다시 채워져요.`;
+      case "pt-BR":
+        return `A franquia renova ${when}.`;
+      case "zh-Hans":
+        return `它的额度会在 ${when} 补满。`;
+      case "zh-Hant":
+        return `它的額度會在 ${when} 補滿。`;
+      case "en-XA":
+        return `[Îţš áļļöŵáñçé ŕéƒîļļš ${when}. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its allowance refills ‬${when}‮.‬`;
+    }
+    return `Its allowance refills ${when}.`;
+  }
+  function cardLoginLowSpreadOffer(input2) {
+    const login = input2.login;
+    const other = input2.other;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${other} لديه أكبر رصيد متاح. عمل الطاقم الجاري على ${login} سيستمر على ${other} في دوره التالي.`;
+      case "de":
+        return `${other} hat am meisten Spielraum. Crew-Arbeit, die auf ${login} läuft, würde bei ihrem nächsten Zug auf ${other} weitergehen.`;
+      case "es":
+        return `${other} es el que tiene más margen. El trabajo de la tripulación que se ejecuta en ${login} continuaría en ${other} en su siguiente turno.`;
+      case "fr":
+        return `${other} a le plus de marge. Le travail de l’équipage en cours sur ${login} continuerait sur ${other} à son prochain tour.`;
+      case "ja":
+        return `${other} にいちばん余裕があります。${login} で動いている乗組員の作業は、次のターンから ${other} で続きます。`;
+      case "ko":
+        return `${other}에 여유가 가장 많아요. ${login}에서 실행 중인 선원들의 작업은 다음 턴부터 ${other}에서 이어져요.`;
+      case "pt-BR":
+        return `${other} tem mais folga. O trabalho da tripulação que roda em ${login} continuaria em ${other} no próximo turno.`;
+      case "zh-Hans":
+        return `${other} 的余量最多。在 ${login} 上运行的船员工作会在下一轮转到 ${other} 继续。`;
+      case "zh-Hant":
+        return `${other} 的餘量最多。在 ${login} 上執行的船員工作會在下一輪轉到 ${other} 繼續。`;
+      case "en-XA":
+        return `[${other} ĥáš ţĥé ɱöšţ ŕööɱ. Çŕéŵ ŵöŕķ ŕûññîñĝ öñ ${login} ŵöûļð çöñţîñûé öñ ${other} áţ îţš ñéẋţ ţûŕñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${other}‮ has the most room. Crew work running on ‬${login}‮ would continue on ‬${other}‮ at its next turn.‬`;
+    }
+    return `${other} has the most room. Crew work running on ${login} would continue on ${other} at its next turn.`;
+  }
+  function cardLoginLowTitle(input2) {
+    const login = input2.login;
+    switch (currentLanguage()) {
+      case "ar":
+        return `رصيد ${login} يوشك على النفاد`;
+      case "de":
+        return `${login} geht zur Neige`;
+      case "es":
+        return `A ${login} le queda poca asignación`;
+      case "fr":
+        return `${login} arrive bientôt à court`;
+      case "ja":
+        return `${login} の利用枠が残りわずかです`;
+      case "ko":
+        return `${login}의 사용량이 얼마 남지 않았어요`;
+      case "pt-BR":
+        return `${login} está com pouca franquia`;
+      case "zh-Hans":
+        return `${login} 的额度快用完了`;
+      case "zh-Hant":
+        return `${login} 的額度快用完了`;
+      case "en-XA":
+        return `[${login} îš ŕûññîñĝ ļöŵ ~~~~~]`;
+      case "ar-XB":
+        return `${login}‮ is running low‬`;
+    }
+    return `${login} is running low`;
+  }
+  function cardLoginLowWait() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `انتظار إعادة الملء`;
+      case "de":
+        return `Auf die Auffüllung warten`;
+      case "es":
+        return `Esperar a que se reponga`;
+      case "fr":
+        return `Attendre la recharge`;
+      case "ja":
+        return `補充を待つ`;
+      case "ko":
+        return `다시 채워질 때까지 기다리기`;
+      case "pt-BR":
+        return `Esperar a renovação`;
+      case "zh-Hans":
+        return `等待补满`;
+      case "zh-Hant":
+        return `等待補滿`;
+      case "en-XA":
+        return `[Ŵáîţ ƒöŕ ţĥé ŕéƒîļļ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Wait for the refill‬`;
+    }
+    return `Wait for the refill`;
+  }
+  function cardLoginSpentTitle(input2) {
+    const login = input2.login;
+    switch (currentLanguage()) {
+      case "ar":
+        return `استنفد ${login} رصيده`;
+      case "de":
+        return `${login} hat sein Kontingent aufgebraucht`;
+      case "es":
+        return `${login} agotó su asignación`;
+      case "fr":
+        return `${login} a épuisé son allocation`;
+      case "ja":
+        return `${login} は利用枠を使い切りました`;
+      case "ko":
+        return `${login}의 사용량을 모두 썼어요`;
+      case "pt-BR":
+        return `${login} esgotou a franquia`;
+      case "zh-Hans":
+        return `${login} 的额度已用完`;
+      case "zh-Hant":
+        return `${login} 的額度已用完`;
+      case "en-XA":
+        return `[${login} ĥáš ûšéð ûþ îţš áļļöŵáñçé ~~~~~~~~~]`;
+      case "ar-XB":
+        return `${login}‮ has used up its allowance‬`;
+    }
+    return `${login} has used up its allowance`;
   }
   function cardNoteAnnotate() {
     switch (currentLanguage()) {
@@ -39643,6 +40009,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `You removed ${label}, the Claude login your first mate was running on. No other Claude login can run your first mate now.`;
   }
+  function feedFirstMateMovedLogin(input2) {
+    const login = input2.login;
+    switch (currentLanguage()) {
+      case "ar":
+        return `انتقل نائب القبطان إلى ${login}.`;
+      case "de":
+        return `Dein Erster Offizier ist zu ${login} gewechselt.`;
+      case "es":
+        return `Tu primer oficial pasó a ${login}.`;
+      case "fr":
+        return `Votre second est passé sur ${login}.`;
+      case "ja":
+        return `一等航海士を ${login} に移しました。`;
+      case "ko":
+        return `일등항해사를 ${login}(으)로 옮겼어요.`;
+      case "pt-BR":
+        return `Seu imediato passou para ${login}.`;
+      case "zh-Hans":
+        return `你的大副已改用 ${login}。`;
+      case "zh-Hant":
+        return `你的大副已改用 ${login}。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé ɱöṽéð ţö ${login}. ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate moved to ‬${login}‮.‬`;
+    }
+    return `Your first mate moved to ${login}.`;
+  }
   function feedFirstMateProblem(input2) {
     const problem = input2.problem;
     switch (currentLanguage()) {
@@ -39726,6 +40120,95 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮First mate · ‬${text}`;
     }
     return `First mate · ${text}`;
+  }
+  function feedLoginInUse(input2) {
+    const login = input2.login;
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `عمل ${provider} يجري الآن على ${login}. لا ينتقل إلى تسجيل دخول آخر إلا عندما تختار واحدًا.`;
+      case "de":
+        return `${provider}-Arbeit läuft jetzt auf ${login}. Sie wechselt nur dann zu einer anderen Anmeldung, wenn du eine auswählst.`;
+      case "es":
+        return `El trabajo de ${provider} ahora se ejecuta en ${login}. Solo pasa a otro inicio de sesión cuando eliges uno.`;
+      case "fr":
+        return `Le travail ${provider} s’exécute maintenant sur ${login}. Il ne passe à une autre connexion que si vous en choisissez une.`;
+      case "ja":
+        return `${provider} の作業は ${login} で動くようになりました。別のログインに移るのは、あなたが選んだときだけです。`;
+      case "ko":
+        return `${provider} 작업은 이제 ${login}에서 실행돼요. 다른 로그인으로는 직접 고를 때만 옮겨요.`;
+      case "pt-BR":
+        return `O trabalho do ${provider} agora roda em ${login}. Ele só passa para outro login quando você escolhe um.`;
+      case "zh-Hans":
+        return `${provider} 的工作现在在 ${login} 上运行。只有你选择时，它才会改用另一个登录。`;
+      case "zh-Hant":
+        return `${provider} 的工作現在在 ${login} 上執行。只有你選擇時，它才會改用另一個登入。`;
+      case "en-XA":
+        return `[${provider} ŵöŕķ ñöŵ ŕûñš öñ ${login}. Îţ ɱöṽéš ţö áñöţĥéŕ ļöĝîñ öñļý ŵĥéñ ýöû çĥööšé öñé. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${provider}‮ work now runs on ‬${login}‮. It moves to another login only when you choose one.‬`;
+    }
+    return `${provider} work now runs on ${login}. It moves to another login only when you choose one.`;
+  }
+  function feedLoginMoved(input2) {
+    const from = input2.from;
+    const provider = input2.provider;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `انتقل عمل ${provider} من ${from} إلى ${to}.`;
+      case "de":
+        return `${provider}-Arbeit ist von ${from} zu ${to} gewechselt.`;
+      case "es":
+        return `El trabajo de ${provider} pasó de ${from} a ${to}.`;
+      case "fr":
+        return `Le travail ${provider} est passé de ${from} à ${to}.`;
+      case "ja":
+        return `${provider} の作業を ${from} から ${to} に移しました。`;
+      case "ko":
+        return `${provider} 작업을 ${from}에서 ${to}(으)로 옮겼어요.`;
+      case "pt-BR":
+        return `O trabalho do ${provider} passou de ${from} para ${to}.`;
+      case "zh-Hans":
+        return `${provider} 的工作已从 ${from} 改用 ${to}。`;
+      case "zh-Hant":
+        return `${provider} 的工作已從 ${from} 改用 ${to}。`;
+      case "en-XA":
+        return `[${provider} ŵöŕķ ɱöṽéð ƒŕöɱ ${from} ţö ${to}. ~~~~~~~~]`;
+      case "ar-XB":
+        return `${provider}‮ work moved from ‬${from}‮ to ‬${to}‮.‬`;
+    }
+    return `${provider} work moved from ${from} to ${to}.`;
+  }
+  function feedLoginMovedLow(input2) {
+    const from = input2.from;
+    const provider = input2.provider;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `رصيد ${from} يوشك على النفاد، لذلك انتقل عمل ${provider} إلى ${to}.`;
+      case "de":
+        return `${from} geht zur Neige, daher ist ${provider}-Arbeit zu ${to} gewechselt.`;
+      case "es":
+        return `A ${from} le queda poca asignación, así que el trabajo de ${provider} pasó a ${to}.`;
+      case "fr":
+        return `${from} arrive bientôt à court, donc le travail ${provider} est passé à ${to}.`;
+      case "ja":
+        return `${from} の利用枠が残りわずかなため、${provider} の作業を ${to} に移しました。`;
+      case "ko":
+        return `${from}의 사용량이 얼마 남지 않아 ${provider} 작업을 ${to}(으)로 옮겼어요.`;
+      case "pt-BR":
+        return `${from} está com pouca franquia, então o trabalho do ${provider} passou para ${to}.`;
+      case "zh-Hans":
+        return `${from} 的额度快用完了，所以 ${provider} 的工作已改用 ${to}。`;
+      case "zh-Hant":
+        return `${from} 的額度快用完了，所以 ${provider} 的工作已改用 ${to}。`;
+      case "en-XA":
+        return `[${from} îš ŕûññîñĝ ļöŵ, šö ${provider} ŵöŕķ ɱöṽéð ţö ${to}. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${from}‮ is running low, so ‬${provider}‮ work moved to ‬${to}‮.‬`;
+    }
+    return `${from} is running low, so ${provider} work moved to ${to}.`;
   }
   function feedMerged() {
     switch (currentLanguage()) {
@@ -41151,6 +41634,36 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       default:
         return `${project}: checked ${count} tasks for tags; ${missed} got no answer and stay unchecked.`;
     }
+  }
+  function feedTaskMovedLogin(input2) {
+    const from = input2.from;
+    const task = input2.task;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `انتقلت ${task} من ${from} إلى ${to}.`;
+      case "de":
+        return `${task} ist von ${from} zu ${to} gewechselt.`;
+      case "es":
+        return `${task} pasó de ${from} a ${to}.`;
+      case "fr":
+        return `${task} est passée de ${from} à ${to}.`;
+      case "ja":
+        return `${task} を ${from} から ${to} に移しました。`;
+      case "ko":
+        return `${task}을(를) ${from}에서 ${to}(으)로 옮겼어요.`;
+      case "pt-BR":
+        return `${task} passou de ${from} para ${to}.`;
+      case "zh-Hans":
+        return `${task} 已从 ${from} 改用 ${to}。`;
+      case "zh-Hant":
+        return `${task} 已從 ${from} 改用 ${to}。`;
+      case "en-XA":
+        return `[${task} ɱöṽéð ƒŕöɱ ${from} ţö ${to}. ~~~~~~]`;
+      case "ar-XB":
+        return `${task}‮ moved from ‬${from}‮ to ‬${to}‮.‬`;
+    }
+    return `${task} moved from ${from} to ${to}.`;
   }
   function feedUndelivered(input2) {
     const why = input2.why;
@@ -113916,6 +114429,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardFilesSavedAll,
     cardFilesShowAll,
     cardFilesShowFewer,
+    cardFirstMateKept,
+    cardFirstMateMoveLogin,
+    cardFirstMateOnCreditsBody,
+    cardFirstMateOnCreditsTitle,
+    cardFirstMateStayOnCredits,
     cardHeadingAfter,
     cardHeadingBefore,
     cardHeadingWhatChanged,
@@ -113938,6 +114456,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardLeaveHide,
     cardLeaveHidePanelRest,
     cardLeaveHideRest,
+    cardLoginLowLeft,
+    cardLoginLowMove,
+    cardLoginLowOffer,
+    cardLoginLowRefills,
+    cardLoginLowSpreadOffer,
+    cardLoginLowTitle,
+    cardLoginLowWait,
+    cardLoginSpentTitle,
     cardNoteAnnotate,
     cardNoteCancel,
     cardNoteCommentLabel,
@@ -114602,9 +115128,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedFinished,
     feedFirstMateLoginRemoved,
     feedFirstMateLoginRemovedNoOther,
+    feedFirstMateMovedLogin,
     feedFirstMateProblem,
     feedFirstMateSaid,
     feedFirstMateSet,
+    feedLoginInUse,
+    feedLoginMoved,
+    feedLoginMovedLow,
     feedMerged,
     feedMergesOnItsOwn,
     feedMoved,
@@ -114648,6 +115178,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedStopped,
     feedTagCheckFinished,
     feedTagCheckFinishedMissed,
+    feedTaskMovedLogin,
     feedUndelivered,
     feedUnsafeDataReaderReported,
     feedUpdated,
@@ -117537,6 +118068,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardFilesSavedAll": ["folder"],
     "cardFilesShowAll": [],
     "cardFilesShowFewer": [],
+    "cardFirstMateKept": [],
+    "cardFirstMateMoveLogin": ["other"],
+    "cardFirstMateOnCreditsBody": ["login", "other"],
+    "cardFirstMateOnCreditsTitle": [],
+    "cardFirstMateStayOnCredits": ["login"],
     "cardHeadingAfter": [],
     "cardHeadingBefore": [],
     "cardHeadingWhatChanged": [],
@@ -117559,6 +118095,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardLeaveHide": [],
     "cardLeaveHidePanelRest": [],
     "cardLeaveHideRest": [],
+    "cardLoginLowLeft": ["percent"],
+    "cardLoginLowMove": ["login"],
+    "cardLoginLowOffer": ["login", "other", "provider"],
+    "cardLoginLowRefills": ["when"],
+    "cardLoginLowSpreadOffer": ["login", "other"],
+    "cardLoginLowTitle": ["login"],
+    "cardLoginLowWait": [],
+    "cardLoginSpentTitle": ["login"],
     "cardNoteAnnotate": [],
     "cardNoteCancel": [],
     "cardNoteCommentLabel": [],
@@ -118223,9 +118767,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedFinished": [],
     "feedFirstMateLoginRemoved": ["label"],
     "feedFirstMateLoginRemovedNoOther": ["label"],
+    "feedFirstMateMovedLogin": ["login"],
     "feedFirstMateProblem": ["problem"],
     "feedFirstMateSaid": ["text"],
     "feedFirstMateSet": ["text"],
+    "feedLoginInUse": ["login", "provider"],
+    "feedLoginMoved": ["from", "provider", "to"],
+    "feedLoginMovedLow": ["from", "provider", "to"],
     "feedMerged": [],
     "feedMergesOnItsOwn": [],
     "feedMoved": ["key"],
@@ -118269,6 +118817,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedStopped": [],
     "feedTagCheckFinished": ["count", "project"],
     "feedTagCheckFinishedMissed": ["count", "missed", "project"],
+    "feedTaskMovedLogin": ["from", "task", "to"],
     "feedUndelivered": ["why"],
     "feedUnsafeDataReaderReported": [],
     "feedUpdated": ["text"],
@@ -122707,6 +123256,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "keep-going-on-credits",
     "use-saved-reset",
     "use-saved-resets",
+    "move-login",
     "add-plugin",
     "decline-plugin",
     "apply-project-change",
@@ -134937,7 +135487,8 @@ ${FRAME_KEYBOARD_SCRIPT}
     "notifications",
     "cost-limit",
     "personal-resources",
-    "panels-switch"
+    "panels-switch",
+    "when-login-low"
   ];
   const panelSettingNameSchema = _enum(PANEL_SETTING_NAMES);
   const panelSettingNamesSchema = array(panelSettingNameSchema).min(1).max(PANEL_SETTING_NAMES.length);

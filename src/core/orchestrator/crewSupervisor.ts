@@ -73,6 +73,7 @@ import { InPlaceWork } from "./inPlaceWork";
 import { TaskIntake } from "./intake";
 import { IntegrationAsks } from "./integrationAsks";
 import { renderReviewBrief } from "./intentBrief";
+import { LoginMoves } from "./loginMoves";
 import { mergeHold, standingAuthorization } from "./mergeAuthorization";
 import { publicationRepo } from "./publicationRepo";
 import { ReportIntake } from "./reportIntake";
@@ -141,6 +142,8 @@ export class CrewSupervisor {
   readonly placement: TaskPlacement;
   /** A started task's moves: to another provider between turns, and to another computer at a safe pause. */
   readonly moves: TaskMoves;
+  /** A started task's move to another login of its provider (docs/quota.md). */
+  readonly loginMoves: LoginMoves;
   /** A started task with no commits of its own, moved to another repository of its project. */
   readonly repositoryMoves: RepositoryMoves;
   /** The captain's overrides of a soft hold: declared, withdrawn, and the words they cite. */
@@ -254,6 +257,9 @@ export class CrewSupervisor {
       },
       get inPlaceWork() {
         return supervisor.inPlaceWork;
+      },
+      get loginMoves() {
+        return supervisor.loginMoves;
       },
       get intake() {
         return supervisor.intake;
@@ -450,6 +456,16 @@ export class CrewSupervisor {
         this.cards.hostCards.clearAuthDecisionCard(crewSignInCardId(taskId)),
       disposed: () => this.disposed,
       broadcastCrewCounts: () => this.facts.broadcastCrewCounts(),
+    });
+    this.loginMoves = new LoginMoves(options, {
+      runtime: (taskId) => this.tasks.get(taskId),
+      releaseSession: (runtime) => this.sessions.releaseSession(runtime),
+      forgetRuntime: (taskId) => this.tasks.delete(taskId),
+      resumeTask: (taskId) => this.sessions.resumeTask(taskId),
+      deliverPendingToTask: (task) => this.turns.deliverPendingToTask(task),
+      deliverLane: (taskId) => this.watch.deliverLane(taskId),
+      machineOf: (taskId) => this.facts.machineOf(taskId),
+      disposed: () => this.disposed,
     });
     const runbooks = options.runbooks;
     this.settling = createSettleOwners({

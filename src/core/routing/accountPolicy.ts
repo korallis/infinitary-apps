@@ -28,6 +28,10 @@ import type { ChargeFact } from "./placedWork";
  *   by a fact beside its credential (no client, a standing cut-off).
  *   `connected: undefined` (not yet checked) keeps the account eligible.
  * - The pinned account always wins while it is healthy.
+ * - `onlyPin` serves the provider's login in use alone (docs/quota.md,
+ *   "When the login in use runs low"): an enabled pin is the one account
+ *   that serves, and when it cannot - spent, signed out, withheld - nothing
+ *   is picked, so no other login takes the work unasked.
  * - `protect` implements the one-pool asymmetric rule: the Firstmate
  *   flagship account is deprioritized - chosen only when it is the only
  *   candidate left - and the reasons say so.
@@ -79,6 +83,12 @@ export type AccountSelectionInput = {
   candidates: AccountCandidate[];
   /** The provider-level account pin: always wins while healthy. */
   pinnedAccountId?: string;
+  /**
+   * The pin is the login in use and no other login serves in its place
+   * (the `wait` and `ask` choices). A pin the captain turned off, or one
+   * that is not a candidate, leaves the pick as it is without this.
+   */
+  onlyPin?: boolean;
   /** The Firstmate flagship reservation (one pool, one asymmetric rule). */
   protect?: { accountId: string; floorPercent: number };
   /**
@@ -144,6 +154,12 @@ function statusOf(
 function choose(input: AccountSelectionInput): Omit<AccountSelectionDecision, "candidates"> {
   const reasons: string[] = [];
   const eligible: AccountCandidate[] = [];
+  const inUse = input.onlyPin
+    ? input.candidates.find(
+        (candidate) => candidate.accountId === input.pinnedAccountId && candidate.enabled,
+      )
+    : undefined;
+  if (inUse) return chooseLoginInUse(inUse, input.providerId);
   for (const candidate of input.candidates) {
     if (!candidate.enabled) {
       reasons.push(`skipped ${candidate.label}: disabled`);
@@ -255,6 +271,34 @@ function choose(input: AccountSelectionInput): Omit<AccountSelectionDecision, "c
   const chosen = unknown[0] as AccountCandidate;
   reasons.push(`picked ${chosen.label}: quota unknown, rotating least recently used`);
   return { accountId: chosen.accountId, reasons };
+}
+
+/** The `onlyPin` pick: the login in use while it can serve, else nothing. */
+function chooseLoginInUse(
+  inUse: AccountCandidate,
+  providerId: string,
+): Omit<AccountSelectionDecision, "candidates"> {
+  const status = statusOf(inUse, undefined, { providerId, candidates: [] });
+  if (status !== "eligible")
+    return {
+      reasons: [
+        // i18n-exempt: a decision ledger reason the first mate reads, never shown
+        status.replace("skipped:", `skipped ${inUse.label}:`),
+        // i18n-exempt: a decision ledger reason the first mate reads, never shown
+        `${inUse.label} is the ${providerId} login in use; no other login serves until it is moved`,
+      ],
+    };
+  return {
+    accountId: inUse.accountId,
+    reasons: [
+      inUse.onCredits
+        ? // i18n-exempt: a decision ledger reason the first mate reads, never shown
+          `picked ${inUse.label}: the login in use, keeps going on credits`
+        : // i18n-exempt: a decision ledger reason the first mate reads, never shown
+          `picked ${inUse.label}: the login in use`,
+    ],
+    pinned: true,
+  };
 }
 
 export function isExhausted(candidate: AccountCandidate): boolean {

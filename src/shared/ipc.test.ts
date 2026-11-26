@@ -613,6 +613,8 @@ describe("ipc contract", () => {
       "inf:settings:usage-connection:get",
       "inf:settings:usage-connection:remove",
       "inf:settings:usage-connection:save",
+      "inf:settings:when-login-low:get",
+      "inf:settings:when-login-low:set",
       "inf:shell:preferences",
       "inf:sql:query",
       "inf:standby:keep-home",

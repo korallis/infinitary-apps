@@ -1,3 +1,4 @@
+import type { WhenLoginLow } from "@shared/whenLoginLow";
 import type { CoreServices } from "./coreServices";
 
 /**
@@ -5,12 +6,13 @@ import type { CoreServices } from "./coreServices";
  * nothing: the runbook switches (docs/runbooks.md), the personal-resource
  * switch, which sends the home's set to its computers when it turns on, and
  * the app's cost limit (docs/usage.md, "The cost limit") and the reporting
- * connection (docs/usage-report.md). The dispatcher
+ * connection (docs/usage-report.md), and what happens when the login in use
+ * runs low (docs/quota.md). The dispatcher
  * spreads them into its table, so it stays under the size check's ceiling.
  */
 export function plainSettingsChannels(
   services: Pick<CoreServices, "runbooks" | "costLimit" | "settings" | "usage"> &
-    Partial<Pick<CoreServices, "placed">>,
+    Partial<Pick<CoreServices, "placed" | "whenLoginLowChanged">>,
 ) {
   return {
     "inf:settings:runbooks:get": () => services.runbooks.list(),
@@ -24,6 +26,13 @@ export function plainSettingsChannels(
       // Turned on, the home's set goes to each computer in reach at once.
       if (enabled) void services.placed?.bringPersonal?.();
       return services.settings.getPersonalResourcesEnabled();
+    },
+    "inf:settings:when-login-low:get": () => services.settings.getWhenLoginLow(),
+    "inf:settings:when-login-low:set": (choice: WhenLoginLow) => {
+      services.settings.setWhenLoginLow(choice);
+      // The new choice is read at once: a login already low is asked about or moved from now.
+      services.whenLoginLowChanged?.();
+      return services.settings.getWhenLoginLow();
     },
     "inf:settings:cost-limit:get": () => services.costLimit.view(),
     "inf:settings:cost-limit:set": (limit: Parameters<CoreServices["costLimit"]["set"]>[0]) =>

@@ -1,4 +1,5 @@
 import { type QuotaSnapshotView, rowMeasuresModel } from "@shared/quota";
+import { servesOnlyLoginInUse, type WhenLoginLow } from "@shared/whenLoginLow";
 import { quotaRowProviderOf } from "../quota/auth";
 import { effectiveFromProvider, spentScopes } from "../quota/catalog";
 import type { DecisionStore } from "../storage/decisionStore";
@@ -51,6 +52,17 @@ export type AccountSelectorOptions = {
    * sibling's list names the model.
    */
   accountModels?: () => { accountId: string; models: { provider: string; id: string }[] }[];
+  /**
+   * The login in use (docs/quota.md, "When the login in use runs low"):
+   * under `wait` and `ask` a provider's pin alone serves, and a provider
+   * with several logins and no pin gets the picked one as its pin, which
+   * `pin` saves and says once the pick stands. Absent, as on a computer
+   * that runs work, the pick is by spend priority alone.
+   */
+  loginInUse?: {
+    whenLow: () => WhenLoginLow;
+    pin: (providerId: string, accountId: string) => void;
+  };
 };
 
 export class AccountSelector {
@@ -138,7 +150,9 @@ export class AccountSelector {
       });
     };
     const selected = () => {
-      if (decision.accountId) this.options.pool.markSelected(decision.accountId);
+      if (!decision.accountId) return;
+      this.options.pool.markSelected(decision.accountId);
+      this.pinLoginInUse(piProviderId, decision.accountId);
     };
     return { ...(decision.accountId ? { accountId: decision.accountId } : {}), record, selected };
   }
@@ -182,6 +196,26 @@ export class AccountSelector {
     return this.decide(piProviderId, { model }, placed)?.accountId;
   }
 
+  /** Whether the provider's pin alone serves: the `wait` and `ask` choices. */
+  private onlyLoginInUse(): boolean {
+    const choice = this.options.loginInUse?.whenLow();
+    return choice !== undefined && servesOnlyLoginInUse(choice);
+  }
+
+  /**
+   * A provider with several logins and no login in use takes the one just
+   * picked as its pin, so later work stays on it. A pin naming a login the
+   * captain turned off or removed counts as none.
+   */
+  private pinLoginInUse(piProviderId: string, accountId: string): void {
+    if (!this.onlyLoginInUse()) return;
+    const logins = this.options.pool.list(piProviderId).filter((account) => account.enabled);
+    if (logins.length < 2) return;
+    const pin = this.options.pool.pinnedAccount(piProviderId);
+    if (pin && logins.some((account) => account.id === pin)) return;
+    this.options.loginInUse?.pin(piProviderId, accountId);
+  }
+
   private decide(
     piProviderId: string,
     crew: { model: string; passing?: readonly string[] } | undefined,
@@ -198,6 +232,7 @@ export class AccountSelector {
       providerId: piProviderId,
       candidates,
       ...(pinned ? { pinnedAccountId: pinned } : {}),
+      ...(this.onlyLoginInUse() ? { onlyPin: true } : {}),
       ...(flagship
         ? { protect: { accountId: flagship, floorPercent: FLAGSHIP_RESERVE_FLOOR_PERCENT } }
         : {}),
@@ -221,6 +256,11 @@ export class AccountSelector {
       candidate.withheld === undefined &&
       !isExhausted(candidate)
     );
+  }
+
+  /** A provider's logins as a pick reads them with no model named, for the low-login watch. */
+  logins(piProviderId: string): AccountCandidate[] {
+    return this.candidatesFor(piProviderId, undefined, undefined);
   }
 
   labelOf(accountId: string): string | undefined {

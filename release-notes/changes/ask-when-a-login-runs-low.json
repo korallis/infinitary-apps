@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ask-when-a-login-runs-low",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "Choose what happens when a login runs low",
+      "body": "When you keep several logins of one provider, Infinitary now asks before work moves from a login that is running low to another one. A card names the low login, when its allowance refills and the login with the most room, with Move and Wait for the refill. New work on your ChatGPT (Codex) logins no longer spreads across them on its own: it stays on one login until you choose. Tell your first mate to wait, ask, spread or move to change this; it names the risk under your provider's terms before it turns on spreading or moving. Your first mate asks the same way before it moves to another login of its provider.",
+      "picture": {
+        "dark": "ask-when-a-login-runs-low-dark.webp",
+        "light": "ask-when-a-login-runs-low-light.webp",
+        "alt": "A card titled Work is running low says it has 5% of its allowance left and that Personal has the most room, with Wait for the refill and Move to Personal buttons"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

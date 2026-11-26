@@ -9,6 +9,7 @@ import { eventScreenOfferCard } from "../decisions/eventScreenOffer";
 import type { CoreDispatch } from "../dispatcher";
 import { creditsOfferCard, firstmatePauseCard, hostCard } from "../orchestrator/hostCards";
 import { integrationApprovalCard } from "../orchestrator/integrationApprovalCard";
+import { loginLowCard } from "../orchestrator/loginCards";
 import { bringCardBody } from "../secrets/bringCard";
 import { frameWithoutTaskAllow, readsTaskAllow } from "./taskAllow";
 
@@ -389,4 +390,43 @@ it("sends a run-out card's Use saved resets on their own only to views that list
   expect(ids((await old.invoke("inf:cards:list", []))[0])).toEqual(["use-saved-reset"]);
   expect((await current.invoke("inf:cards:list", []))[0]).toEqual(card);
   for (const view of [old, current]) await view.close();
+});
+
+// The approved plan for several logins of one provider, piece 3: an older
+// desktop view's host does not know the move-login operation, so the home
+// sends Move to another login only to a view that lists
+// `when-login-runs-low`, or to the phone; the card's other button still goes.
+it("sends a low login's Move to another login only to views that read it", async () => {
+  const card = cardSchema.parse({
+    ...hostCard(
+      loginLowCard({
+        providerId: "openai-codex",
+        providerName: "ChatGPT",
+        login: "Personal",
+        percentLeft: 8,
+        other: { accountId: "codex-work", label: "Work" },
+      }),
+    ),
+    createdAt: 1000,
+  });
+  const ids = (value: unknown) =>
+    (value as { actions: { id: string }[] }).actions.map((action) => action.id);
+  expect(ids(card)).toEqual(["move-login", "wait-for-refill"]);
+  const at = await home({
+    dispatch: (async (channel) => {
+      if (channel === "inf:cards:list") return [card];
+      throw new Error("Unexpected request");
+    }) as CoreDispatch,
+  });
+  const grant = await at.join();
+  const old = await connectClient(grant, { protocolVersion: PROTOCOL_VERSION, changes: [] });
+  const phone = await connectClient(grant, { system: { system: "ios" }, changes: [] });
+  const current = await connectClient(grant, {
+    protocolVersion: PROTOCOL_VERSION,
+    changes: ["when-login-runs-low"],
+  });
+  expect(ids((await old.invoke("inf:cards:list", []))[0])).toEqual(["wait-for-refill"]);
+  expect((await phone.invoke("inf:cards:list", []))[0]).toEqual(card);
+  expect((await current.invoke("inf:cards:list", []))[0]).toEqual(card);
+  for (const view of [old, phone, current]) await view.close();
 });
