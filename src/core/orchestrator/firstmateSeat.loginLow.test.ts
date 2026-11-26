@@ -130,6 +130,24 @@ describe("the first mate's offer of another login, between turns", () => {
     expect(t.settings.getFirstmateAccount()).toBe("acct_a");
   });
 
+  it("puts its card back up with the offer when another login gets room after the captain answered the card", async () => {
+    const t = twoLogins();
+    await spendPersonal(t);
+    t.setHeadroom("acct_b", 0);
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(moveOn(t)).toBeUndefined();
+    // Any choice closes the card; Personal is still spent.
+    t.supervisor.cardActions.act("card-fm-no-headroom", "open-settings");
+    await tick();
+    expect(t.cards().some((each) => each.id === "card-fm-no-headroom")).toBe(false);
+    t.setHeadroom("acct_b", 40);
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(moveOn(t)?.label).toBe("Move to Work #2");
+    expect(notes(t.events).filter((text) => text.includes("paused"))).toHaveLength(1);
+  });
+
   it("moves nothing on a click the other login no longer bears out", async () => {
     const t = twoLogins();
     await spendPersonal(t);
