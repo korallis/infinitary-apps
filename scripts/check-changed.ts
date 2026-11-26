@@ -91,6 +91,21 @@ export function packageProgram(name: string, program = name): string {
 }
 
 /**
+ * A step that starts a package's program through Node. It reads the package
+ * when the step starts, not when the steps are listed, so a package it cannot
+ * read is that step's failure and every other check still runs and reports.
+ */
+function programStep(label: string, name: string, program: string, args: string[]): Step {
+  return {
+    label,
+    command: "node",
+    get args() {
+      return [packageProgram(name, program), ...args];
+    },
+  };
+}
+
+/**
  * Biome on every changed file, so Biome's own configuration picks which of
  * them it checks, as it does for the whole-project Biome in `pnpm check`: its
  * `files.includes` and the languages it knows. A list of extensions here
@@ -99,45 +114,39 @@ export function packageProgram(name: string, program = name): string {
  */
 export function biomeStep(files: string[]): Step | undefined {
   if (!files.length) return undefined;
-  return {
-    label: "biome",
-    command: "node",
-    args: [
-      packageProgram("@biomejs/biome", "biome"),
-      "check",
-      "--no-errors-on-unmatched",
-      "--files-ignore-unknown=true",
-      ...files,
-    ],
-  };
+  return programStep("biome", "@biomejs/biome", "biome", [
+    "check",
+    "--no-errors-on-unmatched",
+    "--files-ignore-unknown=true",
+    ...files,
+  ]);
 }
 
 export function adherenceStep(renderer: string[]): Step | undefined {
   if (!renderer.length) return undefined;
-  return {
-    label: "adherence",
-    command: "node",
-    args: [
-      packageProgram("eslint"),
-      "--config",
-      "eslint.adherence.config.mjs",
-      "--no-config-lookup",
-      ...renderer,
-    ],
-  };
+  return programStep("adherence", "eslint", "eslint", [
+    "--config",
+    "eslint.adherence.config.mjs",
+    "--no-config-lookup",
+    ...renderer,
+  ]);
 }
 
 /**
- * The most characters of file names one run of a lint is handed. Windows
- * starts a program with a command line of at most 32,767 characters and
- * answers `spawn ENAMETOOLONG` past it, which about 650 of this project's
- * file names reach; Linux and macOS hold a megabyte or more. The rest of
- * that line is left to the program and its flags.
+ * The most characters of file names one run of a lint is handed on Windows,
+ * which starts a program with a command line of at most 32,767 characters and
+ * answers `spawn ENAMETOOLONG` past it; about 650 of this project's file
+ * names reach that. The rest of the line is left to the program and its flags.
  */
 export const RUN_NAME_CHARACTERS = 24_000;
 
-/** The files in the runs that hold them: every name once, in order. */
-export function runsOf(files: readonly string[]): string[][] {
+/**
+ * The files in the runs that hold them: every name once, in order. Linux and
+ * macOS start a line of a megabyte or more, so there a lint takes every file
+ * in one run and reports on them together.
+ */
+export function runsOf(files: readonly string[], platform = process.platform): string[][] {
+  if (platform !== "win32") return files.length ? [[...files]] : [];
   const runs: string[][] = [];
   let room = 0;
   for (const file of files) {
@@ -153,18 +162,27 @@ export function runsOf(files: readonly string[]): string[][] {
   return runs;
 }
 
-function run(step: Step): Promise<{ step: Step; ok: boolean; output: string }> {
+export function run(step: Step): Promise<{ step: Step; ok: boolean; output: string }> {
   return new Promise((done) => {
-    const child = spawn(step.command, step.args, { stdio: ["ignore", "pipe", "pipe"] });
     let output = "";
-    child.stdout.on("data", (chunk) => {
-      output += chunk;
-    });
-    child.stderr.on("data", (chunk) => {
-      output += chunk;
-    });
-    child.on("error", (error) => done({ step, ok: false, output: `${output}${error.message}\n` }));
-    child.on("close", (status) => done({ step, ok: status === 0, output }));
+    const stopped = (error: unknown) =>
+      done({ step, ok: false, output: `${output}${error instanceof Error ? error.message : error}\n` });
+    // A step can fail before it starts: its package cannot be read, or the
+    // system refuses its command line. That is this step's failure, never a
+    // throw that ends the checks beside it.
+    try {
+      const child = spawn(step.command, step.args, { stdio: ["ignore", "pipe", "pipe"] });
+      child.stdout.on("data", (chunk) => {
+        output += chunk;
+      });
+      child.stderr.on("data", (chunk) => {
+        output += chunk;
+      });
+      child.on("error", stopped);
+      child.on("close", (status) => done({ step, ok: status === 0, output }));
+    } catch (error) {
+      stopped(error);
+    }
   });
 }
 

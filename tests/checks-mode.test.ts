@@ -1,6 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { extname, join, relative, sep } from "node:path";
+import { extname, join, relative, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   adherenceStep,
@@ -201,6 +202,35 @@ describe("where the heavy checks run", () => {
     expect(judged).toEqual([file]);
   });
 
+  // A lint whose package cannot be read is that lint's failure, as a lint that
+  // finds an error is, and the checks after it still run and report. A folder
+  // with no packages installed stands in for the package that cannot be read.
+  it("reports a lint whose package it cannot read as that step's failure and runs the checks after it", () => {
+    const quickCheck = pathToFileURL(resolve("scripts/check-changed.ts")).href;
+    const script = `
+      import { adherenceStep, biomeStep, run, sideBySide } from ${JSON.stringify(quickCheck)};
+      const next = { label: "next", command: "node", args: ["-e", "console.log('the next check ran')"] };
+      const results = await sideBySide([biomeStep(["a.ts"]), adherenceStep(["a.ts"]), next], 1, run);
+      console.log(JSON.stringify(results.map(({ step, ok, output }) => [step.label, ok, output])));
+    `;
+    const result = spawnSync("node", ["--input-type=module", "-e", script], {
+      cwd: scratchDir("infinitary-no-packages-"),
+      encoding: "utf8",
+    });
+    const results = JSON.parse(result.stdout || "[]") as [string, boolean, string][];
+    expect(
+      results.map(([label, ok]) => [label, ok]),
+      result.stderr,
+    ).toEqual([
+      ["biome", false],
+      ["adherence", false],
+      ["next", true],
+    ]);
+    expect(results[0]?.[2]).toContain("biome");
+    expect(results[1]?.[2]).toContain("eslint");
+    expect(results[2]?.[2]).toContain("the next check ran");
+  });
+
   // The bug a wide change meets on a Windows PC: Windows starts a program with
   // a command line of at most 32,767 characters, and Biome was handed every
   // changed file in one, so past about 650 files it answered
@@ -209,13 +239,17 @@ describe("where the heavy checks run", () => {
     const files = execFileSync("git", ["ls-files"], { encoding: "utf8", maxBuffer: 64 * 1024 ** 2 })
       .split("\n")
       .filter(Boolean);
-    const runs = runsOf(files);
+    const runs = runsOf(files, "win32");
     expect(runs.flat()).toEqual(files);
     for (const some of runs) {
       const step = biomeStep(some);
       const line = [step?.command, ...(step?.args ?? [])].map((word) => `"${word}"`).join(" ");
       expect(line.length).toBeLessThan(32_767);
     }
+    // Linux and macOS start a line that long, so a lint there still takes
+    // every file in one run and reports on them together.
+    expect(runsOf(files, "linux")).toEqual([files]);
+    expect(runsOf(files, "darwin")).toEqual([files]);
   });
 
   // The bug a main check found: its push checkout holds one commit and no main
