@@ -33,6 +33,11 @@ export function runsLow(login: LoginReading): boolean {
   );
 }
 
+/** No reading of the login yet: neither a typed run-out nor a measured allowance. */
+function unread(login: LoginReading): boolean {
+  return login.runOut === undefined && login.effectivePercentRemaining === undefined;
+}
+
 /** Whether work may move to the login: on, serving, on its included allowance and not low itself. */
 export function hasRoom(login: LoginReading): boolean {
   return (
@@ -83,6 +88,14 @@ export type LowLoginsOptions = {
   };
   /** Whether the captain answered the provider's card with Wait for the refill. */
   waitChosen: (providerId: string) => boolean;
+  /**
+   * The login the provider's saved card asked about when the captain last
+   * answered it Wait for the refill, while the refill that card named is
+   * still to come: what a launch reads its answer back from.
+   */
+  waitedOn?: (providerId: string) => string | undefined;
+  /** When a login's allowance refills, in milliseconds, when known. */
+  refillsAt?: (providerId: string, accountId: string) => number | undefined;
   /** One feed line. */
   note: (fact: Said) => void;
 };
@@ -104,14 +117,17 @@ export type LowLoginsOptions = {
  * (`waited`): the card is revised as the login it asks about, the login it
  * offers or their readings change, taken down when nothing can be offered
  * and put up again when something can, while a Wait answer holds until
- * that login has room again. Both are remembered only while the app runs:
- * after a restart the card goes up again for a login still low.
+ * that login has room again. The card up is remembered only while the app
+ * runs; a Wait answer is read back from the saved card after a relaunch
+ * (`waitedOn`), once the login it covered is read as still low.
  */
 export class LowLogins {
   /** Each provider's card that is up: the login it asks about, the one it offers, and its words. */
   private readonly offers = new Map<string, { from: string; to: string; words: string }>();
   /** The login each provider's captain chose to wait on, until it is no longer low. */
   private readonly waited = new Map<string, string>();
+  /** The providers whose saved Wait answer this launch has read back or found over. */
+  private readonly restored = new Set<string>();
 
   constructor(private readonly options: LowLoginsOptions) {}
 
@@ -172,13 +188,30 @@ export class LowLogins {
       this.offers.delete(provider.id);
       this.waited.set(provider.id, offer.from);
     }
+    this.restoreWait(provider.id, every);
     const waited = this.waited.get(provider.id);
     if (waited && !isLow(waited)) this.waited.delete(provider.id);
-    // Tasks leave a login only while it is low and work may move.
+    // Tasks leave a login only while it is low and work may move. A login
+    // not read yet, as at launch, is not known to have room again.
     for (const login of every)
-      if (choice === "wait" || !isLow(login.accountId)) this.options.forget(login.accountId);
+      if (choice === "wait" || (!isLow(login.accountId) && !unread(login)))
+        this.options.forget(login.accountId);
     if (choice === "move") this.moveUnasked(provider, logins, lowOnes);
     else this.ask(provider, logins, lowOnes, choice);
+  }
+
+  /**
+   * A launch's first reading of the login a saved Wait answer covered: still
+   * low, the answer holds for this run-out; with room again, it is over.
+   */
+  private restoreWait(providerId: string, logins: readonly LoginReading[]): void {
+    if (this.restored.has(providerId)) return;
+    const accountId = this.options.waitedOn?.(providerId);
+    const login = logins.find((entry) => entry.accountId === accountId);
+    if (login && unread(login)) return;
+    this.restored.add(providerId);
+    if (login && runsLow(login) && !this.offers.has(providerId))
+      this.waited.set(providerId, login.accountId);
   }
 
   /** `move`: a low pin moves to the login with the most room, and each low login's tasks follow. */
@@ -232,6 +265,7 @@ export class LowLogins {
     if (this.waited.get(provider.id) === subject.accountId) return;
     const percent = subject.effectivePercentRemaining ?? 0;
     const refills = this.options.refillsOf(provider.id, subject.accountId);
+    const refillsAt = this.options.refillsAt?.(provider.id, subject.accountId);
     const card = loginLowCard({
       providerId: provider.id,
       providerName: provider.name,
@@ -240,6 +274,7 @@ export class LowLogins {
       // A typed run-out is spent whatever the meter last read.
       ...(!subject.runOut && percent > 0 ? { percentLeft: percent } : {}),
       ...(refills ? { refills } : {}),
+      ...(refillsAt !== undefined ? { refillsAt } : {}),
       other: { accountId: other.accountId, label: other.label },
       ...(choice === "spread" ? { spread: true } : {}),
     });

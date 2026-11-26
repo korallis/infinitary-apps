@@ -345,6 +345,15 @@ export type CrewSupervisorOptions = {
   /** Optional account selection (broker phase 4); absent = base runtime. */
   accounts?: AccountAttachment;
   /**
+   * Where each task still to move to another login is saved across launches
+   * (`LoginMoves`, `SettingsStore.getLoginMoves`); absent, a move named is
+   * kept only while the app runs.
+   */
+  loginMoveRecord?: {
+    read(): Record<string, { from: string; to: string }>;
+    write(moves: Record<string, { from: string; to: string }>): void;
+  };
+  /**
    * A typed cut-off a crewmate's turn observed, recorded on its account
    * (`AccountVault.noteCutOff`): the fact every reader of serveability sees.
    */

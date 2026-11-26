@@ -27,6 +27,8 @@ export type LoginLowCard = {
   percentLeft?: number;
   /** When its allowance refills, worded for a person, when known. */
   refills?: string;
+  /** That time in milliseconds, which ends a Wait answer read back after a relaunch. */
+  refillsAt?: number;
   /** The login with the most room: where the click moves work. */
   other: { accountId: string; label: string };
   /** New work already runs across the logins: the click moves only running work. */
@@ -65,7 +67,7 @@ export function loginLowCard(
     id: loginLowCardId(input.providerId),
     title: englishOf(title),
     meta: CREW_WORK_META,
-    body: `${sentences.map((fact) => saidMark(fact)).join(" ")}${cardWordsMark([title, move, wait])}`,
+    body: `${sentences.map((fact) => saidMark(fact)).join(" ")}${cardWordsMark([title, move, wait])}${loginLowMark(input)}`,
     actions: [
       moveLoginAction(
         { who: "crew", from: input.accountId, accountId: input.other.accountId },
@@ -75,6 +77,35 @@ export function loginLowCard(
       { id: LOGIN_LOW_WAIT, label: englishOf(wait), variant: "secondary", declines: true },
     ],
   };
+}
+
+const LOGIN_LOW_MARK = "data-login-low";
+
+/** The login the card asks about and its refill time, kept in the saved card for `loginLowAsked`. */
+function loginLowMark(input: Pick<LoginLowCard, "accountId" | "refillsAt">): string {
+  const asked = encodeURIComponent(
+    JSON.stringify({ accountId: input.accountId, refillsAt: input.refillsAt }),
+  );
+  return `<template ${LOGIN_LOW_MARK}="${asked}"></template>`;
+}
+
+/** What a saved low-login card asked about, when its body says. */
+export function loginLowAsked(body: string): { accountId: string; refillsAt?: number } | undefined {
+  const raw = new RegExp(`${LOGIN_LOW_MARK}="([^"]*)"`).exec(body)?.[1];
+  if (raw === undefined) return undefined;
+  try {
+    const asked = JSON.parse(decodeURIComponent(raw)) as {
+      accountId?: unknown;
+      refillsAt?: unknown;
+    };
+    if (typeof asked.accountId !== "string") return undefined;
+    return {
+      accountId: asked.accountId,
+      ...(typeof asked.refillsAt === "number" ? { refillsAt: asked.refillsAt } : {}),
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 export const FIRSTMATE_ON_CREDITS_CARD_ID = "card-fm-on-credits";

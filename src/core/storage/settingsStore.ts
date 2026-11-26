@@ -73,6 +73,8 @@ const personalSeenSchema = z.object({ version: z.string(), since: z.number() });
 
 const dockSchema = z.object({ showInDock: z.boolean() });
 
+const loginMovesSchema = z.record(z.string(), z.object({ from: z.string(), to: z.string() }));
+
 const projectsFolderSchema = z.object({ path: z.string().min(1) });
 
 const firstmateMovedFromSchema = z.object({
@@ -595,6 +597,20 @@ export class SettingsStore {
 
   setWhenLoginLow(choice: WhenLoginLow): void {
     this.set("when-login-low", whenLoginLowSchema.parse(choice));
+  }
+
+  /**
+   * Each started task still to move to another login of its provider, by
+   * its id: the login it leaves and the one named for it (`LoginMoves`,
+   * its one writer). Kept so a relaunch before the task moves still moves it.
+   */
+  getLoginMoves(): Record<string, { from: string; to: string }> {
+    const parsed = loginMovesSchema.safeParse(this.get("login-moves"));
+    return parsed.success ? parsed.data : {};
+  }
+
+  setLoginMoves(moves: Record<string, { from: string; to: string }>): void {
+    this.set("login-moves", loginMovesSchema.parse(moves));
   }
 
   /** Global instructions and skills for new crewmate sessions, off by default. */

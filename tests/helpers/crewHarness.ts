@@ -242,6 +242,10 @@ export type SetupExtras = {
   automatic?: Pick<AutomaticPlacement, "choose">;
   reasoningChoice?: import("@core/routing/router").Router["reasoningChoice"];
   accounts?: AccountAttachment;
+  /** Where the tasks still to move to another login are saved, over the harness's database. */
+  loginMoveRecord?: (
+    db: ReturnType<typeof openInMemoryDatabase>,
+  ) => NonNullable<CrewSupervisorOptions["loginMoveRecord"]>;
   routedModel?: { provider: string; id: string };
   routeResult?: import("@core/routing/router").RouteResult;
   /**
@@ -595,6 +599,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.readerCheck ? { readerCheck: extras.readerCheck } : {}),
     ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
     ...(extras.costLimits ? { costLimits: extras.costLimits(db) } : {}),
+    ...(extras.loginMoveRecord ? { loginMoveRecord: extras.loginMoveRecord(db) } : {}),
     ...(extras.noteCutOff ? { noteCutOff: extras.noteCutOff } : {}),
     ...(extras.modelName ? { modelName: extras.modelName } : {}),
     ...(extras.serveability ? { serveability: extras.serveability } : {}),
